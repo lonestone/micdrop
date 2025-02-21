@@ -1,0 +1,44 @@
+{
+  "name": "@micdrop/server",
+  "version": "1.0.0",
+  "description": "A lib for Node.js that helps to use the mic and speaker for voice conversation",
+  "author": "Lonestone",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lonestone/micdrop.git",
+    "directory": "packages/server"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "microphone",
+    "audio",
+    "browser",
+    "voice",
+    "conversation"
+  ],
+  "dependencies": {
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/ws": "^8.5.14",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3"
+  }
+}
