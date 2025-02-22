@@ -4,6 +4,14 @@ A demo server implementation showcasing [Micdrop](../../README.md) server-side c
 
 ## Development
 
+First, copy the example environment file and fill in your API keys:
+
+```bash
+cp .env.example .env
+```
+
+Then, install dependencies and start the development server with hot reload:
+
 ```bash
 # Install dependencies
 npm install
@@ -17,8 +25,6 @@ npm run build
 # Start the production server
 npm run start
 ```
-
-## Configuration
 
 The server runs on port 3000 by default.
 

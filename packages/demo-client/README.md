@@ -18,9 +18,9 @@ npm run build
 npm run start
 ```
 
-## Configuration
-
 The development server runs on port 8080 by default.
+
+➡️ http://localhost:8080
 
 ## Dependencies
 

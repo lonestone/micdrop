@@ -41,6 +41,7 @@ const config: CallConfig = {
   systemPrompt: 'You are a helpful assistant',
 
   // Optional first message from assistant
+  // Omit to generate the first message
   firstMessage: 'Hello!',
 
   // Function to generate assistant responses
@@ -187,6 +188,24 @@ enum CallServerCommands {
 3. Client sends audio chunks when user speaks
 4. Server processes audio and responds with text/audio
 5. Process continues until interview ends
+
+## Ending the call
+
+The call has two ways to end:
+
+- When the client closes the websocket connection.
+- When the generated answer contains the keyword "END_INTERVIEW".
+
+You can prompt it like this:
+
+```typescript
+import { END_INTERVIEW } from '@micdrop/server'
+
+const systemPrompt = `
+You are a voice assistant interviewing the user.
+To end the interview, briefly thank the user and say good bye, then say "${END_INTERVIEW}".
+`
+```
 
 ## Error Handling
 

@@ -1,3 +1,7 @@
+// Load environment variables before importing anything else
+import * as dotenv from 'dotenv'
+dotenv.config()
+
 import fastifyWebsocket from '@fastify/websocket'
 import fastify from 'fastify'
 import call from './call'

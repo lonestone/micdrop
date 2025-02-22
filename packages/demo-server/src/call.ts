@@ -1,4 +1,5 @@
 import {
+  CallConfig,
   CallError,
   CallErrorCode,
   CallSocket,
@@ -6,9 +7,33 @@ import {
   waitForParams,
 } from '@micdrop/server'
 import { FastifyInstance } from 'fastify'
-import * as fs from 'fs'
-import * as path from 'path'
+import ai from './ai'
+import aiMock from './ai-mock'
 import { callParamsSchema } from './callParams'
+
+// Use AI models if env is set
+const isMock = !process.env.OPENAI_API_KEY || !process.env.ELEVENLABS_API_KEY
+
+const config: CallConfig = {
+  // System prompt passed to the LLM
+  systemPrompt:
+    'You are a voice assistant. It\s a conversation, keep your answers short and helpful.',
+  // First message from the assistant
+  // Optional, omit to generate the first message
+  firstMessage: 'Hello, what can I do for you today?',
+
+  // AI methods: generateAnswer, text2Speech, speech2Text
+  ...(isMock ? aiMock : ai),
+
+  // Optional: called when a message is received from the user
+  onMessage(message) {
+    console.log('Message:', message)
+  },
+  // Optional: called when the call ends
+  onEnd() {
+    console.log('End')
+  },
+}
 
 export default async (app: FastifyInstance) => {
   app.get('/call', { websocket: true }, async (socket, req) => {
@@ -21,32 +46,9 @@ export default async (app: FastifyInstance) => {
       }
 
       // Start call
-      new CallSocket(socket, {
-        systemPrompt: 'You are a helpful assistant',
-        firstMessage: 'Hello!',
-        generateAnswer,
-        speech2Text,
-        text2Speech,
-      })
+      new CallSocket(socket, config)
     } catch (error) {
       handleError(socket, error)
     }
   })
-}
-
-let i = 1
-async function generateAnswer() {
-  return `Assistant Message ${i++}`
-}
-
-const ttsCache = fs.readFileSync(
-  path.join(__dirname, '../../demo-client/public/test.mp3')
-)
-async function text2Speech() {
-  return ttsCache
-}
-
-let j = 1
-async function speech2Text() {
-  return `User Message ${j++}`
 }
