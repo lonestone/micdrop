@@ -1,6 +1,6 @@
 {
   "name": "@micdrop/client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A lib for browser that helps to use the mic and speaker for voice conversation",
   "author": "Lonestone",
   "license": "MIT",

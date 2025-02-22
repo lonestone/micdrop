@@ -1,6 +1,10 @@
-import { CallHandler, CallHandlerError, Mic } from '@micdrop/client'
+import {
+  CallHandler,
+  CallHandlerError,
+  Conversation,
+  Mic,
+} from '@micdrop/client'
 import type { CallParams } from '@micdrop/demo-server/src/callParams'
-import { Conversation } from '@micdrop/server'
 import React, {
   createContext,
   useCallback,

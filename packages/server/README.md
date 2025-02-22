@@ -79,6 +79,18 @@ wss.on('connection', (ws) => {
 })
 ```
 
+## Demo
+
+Check out the demo implementation in the [@micdrop/demo-server](../demo-server/README.md) package. It shows:
+
+- Setting up a Fastify server with WebSocket support
+- Configuring the CallSocket with custom handlers
+- Basic authentication flow
+- Example speech-to-text and text-to-speech implementations
+- Error handling patterns
+
+Here's a simplified version from the demo:
+
 ## Documentation
 
 The server package provides several core components:

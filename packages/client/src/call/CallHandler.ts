@@ -1,9 +1,5 @@
-import {
-  CallClientCommands,
-  CallServerCommands,
-  Conversation,
-} from '@micdrop/server'
 import EventEmitter from 'eventemitter3'
+import { CallClientCommands, CallServerCommands, Conversation } from '../..'
 import { MicRecorder } from '../audio/MicRecorder'
 import { startMicrophone, stopMicrophone } from '../audio/microphone'
 import { playAudioBlob, stopAudioBlob } from '../audio/speaker'
