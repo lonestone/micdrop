@@ -125,6 +125,15 @@ interface CallConfig {
   // Optional first message from assistant
   firstMessage?: string
 
+  // Enable debug logging with timestamps
+  debugLog?: boolean
+
+  // Save last speech audio file for debugging (speech.ogg)
+  debugSaveSpeech?: boolean
+
+  // Disable text-to-speech conversion
+  disableTTS?: boolean
+
   // Generate assistant's response
   generateAnswer(conversation: Conversation): Promise<string>
 
@@ -273,4 +282,6 @@ MIT
 
 ## Author
 
-[Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))
+Originally developed for [Raconte.ai](https://www.raconte.ai)
+
+by [Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))

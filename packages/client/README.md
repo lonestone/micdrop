@@ -120,4 +120,6 @@ MIT
 
 ## Author
 
-[Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))
+Originally developed for [Raconte.ai](https://www.raconte.ai)
+
+by [Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))

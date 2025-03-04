@@ -5,8 +5,6 @@ import { startMicrophone, stopMicrophone } from '../audio/microphone'
 import { playAudioBlob, stopAudioBlob } from '../audio/speaker'
 import { CallHandlerError, CallHandlerErrorCode } from './CallHandlerError'
 
-const debugEnabled = false
-
 export interface CallHandlerEvents {
   EndInterview: []
   Error: [CallHandlerError]
@@ -20,6 +18,7 @@ export class CallHandler<
   public params?: Params
   public micRecorder = new MicRecorder()
   public conversation: Conversation = []
+  public debug = false
 
   private ws?: WebSocket
   private micStream?: MediaStream
@@ -36,13 +35,13 @@ export class CallHandler<
 
     // Send chunk of user speech to server
     this.micRecorder.on('Chunk', (blob) => {
-      this.debug(`[Mic] onChunk`, blob)
+      this.log(`[Mic] onChunk`, blob)
       this.ws?.send(blob)
     })
 
     // Notify server that user started speaking
     this.micRecorder.on('StartSpeaking', () => {
-      this.debug('[Mic] onStartSpeaking')
+      this.log('[Mic] onStartSpeaking')
       this.ws?.send(CallClientCommands.StartSpeaking)
       // Interruption / Stop assistant speech if playing
       stopAudioBlob()
@@ -50,7 +49,7 @@ export class CallHandler<
 
     // Notify server that user speech is complete
     this.micRecorder.on('StopSpeaking', () => {
-      this.debug('[Mic] onSilence')
+      this.log('[Mic] onSilence')
       this.ws?.send(CallClientCommands.StopSpeaking)
     })
   }
@@ -164,7 +163,7 @@ export class CallHandler<
 
     // Events
     this.ws.onopen = () => {
-      this.debug('[WS] Opened')
+      this.log('[WS] Opened')
       this.notifyStateChange()
 
       // Send params
@@ -173,7 +172,7 @@ export class CallHandler<
       }
     }
     this.ws.onmessage = (event) => {
-      this.debug('[WS]', event.data)
+      this.log('[WS]', event.data)
       if (event.data instanceof Blob) {
         // Received assistant speech
         playAudioBlob(event.data)
@@ -204,7 +203,7 @@ export class CallHandler<
       }
     }
     this.ws.onclose = (event) => {
-      this.debug('[WS] Closed', event)
+      this.log('[WS] Closed', event)
       this.notifyStateChange()
 
       if (event.code >= 1001 && event.code <= 1011 && event.code !== 1005) {
@@ -243,8 +242,8 @@ export class CallHandler<
     this.emit('StateChange')
   }
 
-  private debug(...message: any[]) {
-    if (!debugEnabled) return
+  private log(...message: any[]) {
+    if (!this.debug) return
     console.log(`[Debug ${Date.now() - this.startTime}]`, ...message)
   }
 }

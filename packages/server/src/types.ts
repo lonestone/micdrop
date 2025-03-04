@@ -14,6 +14,9 @@ export enum CallServerCommands {
 export interface CallConfig {
   systemPrompt: string
   firstMessage?: string
+  debugLog?: boolean
+  debugSaveSpeech?: boolean
+  disableTTS?: boolean
   generateAnswer(conversation: Conversation): Promise<string>
   speech2Text(blob: Blob, prompt?: string): Promise<string>
   text2Speech(text: string): Promise<ArrayBuffer>

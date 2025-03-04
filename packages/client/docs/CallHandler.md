@@ -27,6 +27,7 @@ The `CallHandler` emits the following events:
 - `params`: Generic type parameters for the handler
 - `micRecorder`: Instance of `MicRecorder` for handling microphone input
 - `conversation`: Array storing the conversation history
+- `debug`: Boolean flag to enable/disable debug logging
 
 ### State Properties (Getters)
 

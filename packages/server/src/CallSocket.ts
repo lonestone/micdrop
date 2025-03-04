@@ -9,10 +9,6 @@ import {
   ConversationMessage,
 } from './types'
 
-const debugEnabled = false
-const debugSaveFile = false
-const disableTTS = false
-
 export const END_INTERVIEW = 'END_INTERVIEW'
 
 export class CallSocket {
@@ -36,7 +32,7 @@ export class CallSocket {
     public config: CallConfig
   ) {
     this.conversation = [{ role: 'system', content: config.systemPrompt }]
-    this.debug(`Call started`)
+    this.log(`Call started`)
 
     // Assistant speaks first
 
@@ -71,7 +67,7 @@ export class CallSocket {
   }
 
   private onClose() {
-    this.debug('Connection closed')
+    this.log('Connection closed')
     this.abortAnswer = true
     const duration = Math.round((Date.now() - this.startTime) / 1000)
 
@@ -97,7 +93,7 @@ export class CallSocket {
     // Commands
     if (message.byteLength < 15) {
       const cmd = message.toString()
-      this.debug(`Command: ${cmd}`)
+      this.log(`Command: ${cmd}`)
 
       if (cmd === CallClientCommands.StartSpeaking) {
         // User started speaking
@@ -117,7 +113,7 @@ export class CallSocket {
 
     // Audio chunk
     else if (Buffer.isBuffer(message) && this.isSpeaking) {
-      this.debug(`Received chunk (${message.byteLength} bytes)`)
+      this.log(`Received chunk (${message.byteLength} bytes)`)
       this.chunks.push(message)
     }
   }
@@ -136,7 +132,7 @@ export class CallSocket {
 
     try {
       // Save file to disk
-      if (debugSaveFile) {
+      if (this.config.debugSaveSpeech) {
         const filePath = path.join(__dirname, 'speech.ogg')
         fs.writeFileSync(filePath, Buffer.from(await blob.arrayBuffer()))
         return
@@ -148,24 +144,24 @@ export class CallSocket {
         this.conversation[this.conversation.length - 1]?.content
       )
       if (!transcript) {
-        this.debug('Ignoring empty transcript')
+        this.log('Ignoring empty transcript')
         return
       }
 
-      this.debug('User transcript:', transcript)
+      this.log('User transcript:', transcript)
 
       // Send transcript to client
       this.addMessage({ role: 'user', content: transcript })
 
       if (this.abortAnswer) {
-        this.debug('Answer aborted, no answer generated')
+        this.log('Answer aborted, no answer generated')
         return
       }
 
       // LLM: Generate answer
       const answer = await this.config.generateAnswer(this.conversation)
       if (this.abortAnswer) {
-        this.debug('Answer aborted, ignoring answer')
+        this.log('Answer aborted, ignoring answer')
         return
       }
 
@@ -187,15 +183,15 @@ export class CallSocket {
 
     if (message.length) {
       // Send answer to client
-      this.debug('Assistant message:', message)
+      this.log('Assistant message:', message)
       this.addMessage({ role: 'assistant', content: message })
 
       // TTS: Generate answer audio
-      if (!disableTTS) {
+      if (!this.config.disableTTS) {
         const audio = await this.config.text2Speech(message)
         if (this.abortAnswer) {
           // Remove last assistant message if aborted
-          this.debug('Answer aborted, removing last assistant message')
+          this.log('Answer aborted, removing last assistant message')
           const lastMessage = this.conversation[this.conversation.length - 1]
           if (lastMessage?.role === 'assistant') {
             this.conversation.pop()
@@ -205,25 +201,23 @@ export class CallSocket {
         }
 
         // Send audio to client
-        this.debug(`Send audio: (${audio.byteLength} bytes)`)
+        this.log(`Send audio: (${audio.byteLength} bytes)`)
         this.socket.send(audio)
       }
     }
 
     // End of call
     if (isEnd) {
-      this.debug('Interview ended')
+      this.log('Interview ended')
       this.socket.send(CallServerCommands.EndInterview)
     }
   }
 
-  private debug(...message: any[]) {
-    if (!debugEnabled) return
-    const nowTime = Date.now()
-    console.log(
-      `[WS] [${nowTime - this.startTime} | ${nowTime - this.lastDebug}ms]`,
-      ...message
-    )
-    this.lastDebug = nowTime
+  private log(...message: any[]) {
+    if (!this.config.debugLog) return
+    const now = Date.now()
+    const delta = now - this.lastDebug
+    this.lastDebug = now
+    console.log(`[Debug +${delta}ms]`, ...message)
   }
 }

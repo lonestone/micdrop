@@ -25,6 +25,9 @@ const config: CallConfig = {
   // AI methods: generateAnswer, text2Speech, speech2Text
   ...(isMock ? aiMock : ai),
 
+  // Enable debug logging
+  debugLog: true,
+
   // Optional: called when a message is received from the user
   onMessage(message) {
     console.log('Message:', message)
