@@ -63,7 +63,7 @@ export default function MicThreshold({ className = '' }: Props) {
           className="absolute w-full h-full opacity-0 cursor-pointer"
         />
         <div
-          className="absolute h-4 w-4 bg-white rounded-full shadow transform -translate-y-1/2 top-1/2"
+          className="absolute h-4 w-4 -mx-2 bg-white rounded-full border-2 border-gray-700 transform -translate-y-1/2 top-1/2 pointer-events-none"
           style={{ left: `${sliderValue}%` }}
         />
       </div>
