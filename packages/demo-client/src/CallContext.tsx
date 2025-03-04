@@ -5,13 +5,7 @@ import {
   Mic,
 } from '@micdrop/client'
 import type { CallParams } from '@micdrop/demo-server/src/callParams'
-import React, {
-  createContext,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import React, { createContext, useCallback, useEffect, useState } from 'react'
 
 export interface CallContextValue {
   start: () => Promise<void>
@@ -40,7 +34,7 @@ interface CallContextProviderProps {
 
 export function CallContextProvider({ children }: CallContextProviderProps) {
   // Setup call handler
-  const call = useMemo(() => new CallHandler<CallParams>(), [])
+  const call = CallHandler.getInstance<CallParams>()
 
   // Start call
   const handleStart = useCallback(async () => {
@@ -53,6 +47,7 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     call.params = {
       authorization: '1234',
     }
+    call.debug = true
     call.start()
   }, [])
 
@@ -64,7 +59,6 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
   useEffect(() => {
     // Handle state changes
     call.on('StateChange', () => {
-      console.log('Call state changed:', call)
       setValue((v) => ({
         ...v,
         isStarted: call.isStarted,
@@ -92,7 +86,6 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
 
     return () => {
       call.removeAllListeners()
-      call.micRecorder.removeAllListeners()
     }
   }, [])
 

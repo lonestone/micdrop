@@ -14,6 +14,15 @@ export interface CallHandlerEvents {
 export class CallHandler<
   Params extends {},
 > extends EventEmitter<CallHandlerEvents> {
+  private static instance: CallHandler<any>
+
+  public static getInstance<T extends {}>(): CallHandler<T> {
+    if (!CallHandler.instance) {
+      CallHandler.instance = new CallHandler<T>()
+    }
+    return CallHandler.instance
+  }
+
   public url?: string
   public params?: Params
   public micRecorder = new MicRecorder()
@@ -25,7 +34,7 @@ export class CallHandler<
   private startTime = 0
   private lastAudioBlob?: Blob
 
-  constructor() {
+  private constructor() {
     super()
 
     // Notify mic recorder state change

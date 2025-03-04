@@ -13,7 +13,7 @@ interface CallContextValue {
   changeMicThreshold: (threshold: number) => void
 }
 
-export default function MicThreshold({ className = '' }: Props) {
+export default function MicThreshold() {
   const { micThreshold, changeMicThreshold } = useContext(
     CallContext
   )! as CallContextValue
@@ -38,7 +38,7 @@ export default function MicThreshold({ className = '' }: Props) {
   }
 
   return (
-    <div className={`relative w-full ${className}`}>
+    <div className="relative w-full">
       <div className="relative h-2 bg-gray-200 rounded-full">
         <div
           className="absolute h-full rounded-full transition-all duration-100"

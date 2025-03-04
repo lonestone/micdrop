@@ -10,6 +10,7 @@ The `CallHandler` class manages real-time audio communication between a client a
 - Speech detection (start/stop speaking events)
 - Conversation state management
 - Error handling and state notifications
+- Singleton pattern implementation for consistent state management
 
 ## Events
 
@@ -28,6 +29,14 @@ The `CallHandler` emits the following events:
 - `micRecorder`: Instance of `MicRecorder` for handling microphone input
 - `conversation`: Array storing the conversation history
 - `debug`: Boolean flag to enable/disable debug logging
+
+### Static Methods
+
+```typescript
+static getInstance<T extends {}>(): CallHandler<T>
+```
+
+Gets the singleton instance of the CallHandler. Creates a new instance if one doesn't exist.
 
 ### State Properties (Getters)
 
@@ -125,7 +134,8 @@ handler.on('Error', (error: CallHandlerError) => {
 ## Usage Example
 
 ```typescript
-const handler = new CallHandler<YourParamsType>()
+// Get the singleton instance with your params type
+const handler = CallHandler.getInstance<YourParamsType>()
 
 // Configure the handler
 handler.url = 'wss://your-server.com/ws'
@@ -160,3 +170,5 @@ await handler.stop()
 - Audio playback is automatically interrupted when the user starts speaking
 - Debug mode can be enabled for detailed logging
 - The handler supports TypeScript generics for custom parameter types
+- The class implements the singleton pattern, ensuring only one instance exists throughout the application
+- The constructor is private to enforce the singleton pattern - always use `getInstance()` to get the handler instance
