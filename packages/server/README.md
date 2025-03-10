@@ -110,6 +110,12 @@ The main class for managing WebSocket connections and audio streaming.
 ```typescript
 class CallSocket {
   constructor(socket: WebSocket, config: CallConfig)
+
+  // Add assistant message and send to client with audio (TTS)
+  answer(message: string): Promise<void>
+
+  // Reset conversation (including system prompt)
+  resetConversation(conversation: Conversation): void
 }
 ```
 

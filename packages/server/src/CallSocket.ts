@@ -54,6 +54,12 @@ export class CallSocket {
     this.socket.on('message', this.onMessage.bind(this))
   }
 
+  // Reset conversation
+  public resetConversation(conversation: Conversation) {
+    this.log('Reset conversation')
+    this.conversation = conversation
+  }
+
   private addMessage(message: ConversationMessage) {
     this.conversation.push(message)
     this.socket.send(
@@ -172,7 +178,8 @@ export class CallSocket {
     }
   }
 
-  private async answer(message: string) {
+  // Add assistant message and send to client with audio (TTS)
+  public async answer(message: string) {
     let isEnd = false
 
     // Detect end of interview
