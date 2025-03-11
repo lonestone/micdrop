@@ -30,56 +30,33 @@ pnpm add @micdrop/client
 import { CallHandler } from '@micdrop/client'
 
 // Create a new call handler instance
-const call = new CallHandler()
+const call = CallHandler.getInstance<YourParamsType>()
 
-// Listen for state changes
+// Configure the call
+call.url = 'wss://your-server.com/ws'
+call.params = {
+  /* your parameters (to check auth, etc) */
+}
+
+// Listen for events
 call.on('StateChange', () => {
-  console.log('Call state:', call)
-  /*
-    {
-      "conversation": [
-        { "role": "assistant", "content": "Hello!" },
-        { "role": "user", "content": "User Message 1" },
-        { "role": "assistant", "content": "Assistant Message 1" }
-      ],
-      "isMicStarted": false,
-      "isStarted": false,
-      "isStarting": false,
-      "isWSStarted": false,
-      "isWSStarting": false
-    }
-  */
-
-  console.log('MicRecorder state:', call.micRecorder.state)
-  /*
-    {
-      "isStarting": false,
-      "isStarted": false,
-      "isMuted": false,
-      "isSpeaking": false,
-      "threshold": -50
-    }
-  */
+  console.log('State changed')
+})
+call.on('EndInterview', () => {
+  console.log('Interview ended')
+})
+call.on('Error', (error) => {
+  console.error('Error occurred:', error)
 })
 
 // Start the call
 await call.start()
 
-// Pause/resume microphone
+// Pause/resume
 call.pause()
 call.resume()
 
-// Listen for end of interview
-call.on('EndInterview', () => {
-  console.log('Interview ended')
-})
-
-// Listen for errors
-call.on('Error', (error) => {
-  console.error('Error occurred:', error)
-})
-
-// Stop the call when done
+// Stop the call
 await call.stop()
 ```
 

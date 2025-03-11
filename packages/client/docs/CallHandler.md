@@ -135,32 +135,64 @@ handler.on('Error', (error: CallHandlerError) => {
 
 ```typescript
 // Get the singleton instance with your params type
-const handler = CallHandler.getInstance<YourParamsType>()
+const call = CallHandler.getInstance<YourParamsType>()
 
-// Configure the handler
-handler.url = 'wss://your-server.com/ws'
-handler.params = {
-  /* your parameters */
+// Configure the call
+call.url = 'wss://your-server.com/ws'
+call.params = {
+  /* your parameters (to check auth, etc) */
 }
 
-// Listen for events
-handler.on('EndInterview', () => {
+// Listen for state changes
+call.on('StateChange', () => {
+  console.log('Call state:', call)
+  /*
+    {
+      "conversation": [
+        { "role": "assistant", "content": "Hello!" },
+        { "role": "user", "content": "User Message 1" },
+        { "role": "assistant", "content": "Assistant Message 1" }
+      ],
+      "isMicStarted": false,
+      "isStarted": false,
+      "isStarting": false,
+      "isWSStarted": false,
+      "isWSStarting": false
+    }
+  */
+
+  console.log('MicRecorder state:', call.micRecorder.state)
+  /*
+    {
+      "isStarting": false,
+      "isStarted": false,
+      "isMuted": false,
+      "isSpeaking": false,
+      "threshold": -50
+    }
+  */
+})
+
+// Listen for end of call
+// Can be triggered via prompting (see server docs)
+call.on('EndInterview', () => {
   console.log('Interview ended')
 })
 
-handler.on('Error', (error) => {
+// Listen for errors
+call.on('Error', (error) => {
   console.error('Error occurred:', error)
 })
 
-handler.on('StateChange', () => {
-  console.log('State changed')
-})
+// Start the call
+await call.start()
 
-// Start the handler
-await handler.start()
+// Pause/resume
+call.pause()
+call.resume()
 
-// Stop when done
-await handler.stop()
+// Stop the call
+await call.stop()
 ```
 
 ## Notes
