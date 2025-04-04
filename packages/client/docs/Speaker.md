@@ -5,10 +5,12 @@ The Speaker module provides functionality for managing audio output devices and 
 ## Features
 
 - 🔊 Audio output device management
-- 🎵 Audio blob playback
-- 📊 Audio analysis capabilities
+- 🎵 Streaming audio playback
+- 📊 Real-time audio analysis
 - 💾 Persistent device selection
 - 🔄 Dynamic device switching
+- ⏯️ Pause and resume capabilities
+- 🔄 Automatic stream recovery
 
 ## API Reference
 
@@ -34,31 +36,55 @@ async function changeSpeakerDevice(speakerId: string): Promise<void>
 
 - `speakerId`: The ID of the audio output device to use
 - Saves the selected device ID to local storage
-- Throws an error if setting the device fails
+- Automatically initializes audio pipeline if needed
 
-#### `playAudioBlob(blob: Blob)`
+#### `playAudio(blob: Blob)`
 
-Plays an audio blob through the current audio output device.
+Plays an audio blob through the current audio output device using MediaSource Extensions.
 
 ```typescript
-async function playAudioBlob(blob: Blob): Promise<void>
+async function playAudio(blob: Blob): Promise<void>
 ```
 
 - `blob`: The audio blob to play
-- Creates an AudioBufferSourceNode to play the audio
-- Connects to the audio analyser for visualization
-- Automatically cleans up resources when playback ends
+- Queues blobs for continuous playback
+- Automatically handles audio pipeline initialization
+- Connects to audio analyser for visualization (see `speakerAnalyser`)
+- Supports streaming playback with automatic buffer management
 
-#### `stopAudioBlob()`
+#### `pauseAudio()`
 
-Stops the currently playing audio blob.
+Pauses the currently playing audio.
 
 ```typescript
-function stopAudioBlob(): void
+function pauseAudio(): void
 ```
 
-- Stops playback of the current audio blob if one is playing
-- Disconnects and cleans up the audio source node
+- Pauses playback while maintaining the audio pipeline
+- Can be resumed using `resumeAudio()`
+
+#### `resumeAudio()`
+
+Resumes paused audio playback.
+
+```typescript
+function resumeAudio(): void
+```
+
+- Resumes playback from where it was paused
+
+#### `stopAudio()`
+
+Stops audio playback and cleans up resources.
+
+```typescript
+function stopAudio(): void
+```
+
+- Stops playback completely
+- Cleans up all audio resources including MediaSource and buffers
+- Disconnects from audio analyser
+- Stops and cleans up any active media streams
 
 ### Variables
 
@@ -86,12 +112,18 @@ const audioBlob = new Blob(
   [
     /* audio data */
   ],
-  { type: 'audio/wav' }
+  { type: 'audio/mpeg' }
 )
-await Speaker.playAudioBlob(audioBlob)
+await Speaker.playAudio(audioBlob)
 
-// Stop playback
-Speaker.stopAudioBlob()
+// Pause playback
+Speaker.pauseAudio()
+
+// Resume playback
+Speaker.resumeAudio()
+
+// Stop playback and cleanup
+Speaker.stopAudio()
 
 // Access the audio analyser for visualization
 if (Speaker.speakerAnalyser) {
@@ -105,12 +137,17 @@ if (Speaker.speakerAnalyser) {
 Requires browsers with support for:
 
 - Web Audio API
+- MediaSource Extensions (MSE)
 - `HTMLMediaElement.setSinkId()` for device selection
+- `HTMLMediaElement.captureStream()` for audio analysis
 - AudioContext and related APIs
 
 ## Notes
 
-- Device selection is persisted in localStorage
+- Device selection is persisted in localStorage under `micdrop.speakerDevice`
+- Uses MediaSource Extensions for efficient streaming playback
+- Supports queueing of audio blobs for continuous playback
+- Automatically handles audio context initialization and unlocking
+- Implements automatic recovery from invalid states
 - Audio analysis is available through the `speakerAnalyser` instance
-- The module automatically handles audio context initialization and unlocking
-- Error handling is implemented with console logging for debugging
+- Error handling is implemented with detailed console logging for debugging

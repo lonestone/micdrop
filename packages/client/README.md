@@ -7,7 +7,12 @@ For server implementation, see [@micdrop/server](../server/README.md) package.
 ## Features
 
 - 🎤 Real-time microphone recording with voice activity detection (VAD)
-- 🔊 Audio playback management
+- 🔊 Advanced audio playback:
+  - Streaming support via MediaSource
+  - Pause/resume functionality
+  - Volume control
+  - Device selection and testing
+  - Real-time audio analysis
 - 🌐 WebSocket-based audio streaming
 - 📊 Audio analysis and volume monitoring
 - 🎛️ Configurable speech detection settings

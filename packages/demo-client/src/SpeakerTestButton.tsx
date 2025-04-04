@@ -1,5 +1,5 @@
 import { Speaker } from '@micdrop/client'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { FaPlay } from 'react-icons/fa'
 
 interface SpeakerTestButtonProps
@@ -24,7 +24,7 @@ export default function SpeakerTestButton(props: SpeakerTestButtonProps) {
       // Play audio
       setPlaying(true)
       setBlob(audioBlob)
-      Speaker.playAudioBlob(audioBlob)
+      Speaker.playAudio(audioBlob)
 
       setTimeout(() => {
         setPlaying(false)

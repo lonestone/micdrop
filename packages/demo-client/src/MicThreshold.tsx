@@ -4,19 +4,8 @@ import { CallContext } from './CallContext'
 
 const volumeColor = '#00bb00'
 
-interface Props {
-  className?: string
-}
-
-interface CallContextValue {
-  micThreshold: number
-  changeMicThreshold: (threshold: number) => void
-}
-
 export default function MicThreshold() {
-  const { micThreshold, changeMicThreshold } = useContext(
-    CallContext
-  )! as CallContextValue
+  const { micThreshold, changeMicThreshold } = useContext(CallContext)!
   const [volume, setVolume] = useState(0) // 0-100
 
   // Update volume

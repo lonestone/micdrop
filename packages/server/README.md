@@ -7,11 +7,11 @@ For browser implementation, see [@micdrop/client](../client/README.md) package.
 ## Features
 
 - 🌐 WebSocket server for real-time audio streaming
-- 🔊 Audio data handling and processing
+- 🔊 Advanced audio processing:
+  - Streaming TTS support
+  - Efficient audio chunk delivery
+  - Interrupt handling
 - 💬 Conversation state management
-- ⚡ Event-based architecture
-- 🔄 Bi-directional communication
-- 🛡️ Built-in error handling
 - 🎙️ Speech-to-text and text-to-speech integration
 - 🤖 AI conversation generation support
 - 💾 Debug mode with optional audio saving
@@ -57,7 +57,10 @@ const config: CallConfig = {
   },
 
   // Function to convert text to speech
-  async text2Speech(text) {
+  // Can return either a complete ArrayBuffer or a ReadableStream for streaming
+  async text2Speech(
+    text: string
+  ): Promise<ArrayBuffer | NodeJS.ReadableStream> {
     // Implement your TTS logic
     return new ArrayBuffer(0) // Audio data
   },
@@ -147,7 +150,8 @@ interface CallConfig {
   speech2Text(blob: Blob, prompt?: string): Promise<string>
 
   // Convert text to audio
-  text2Speech(text: string): Promise<ArrayBuffer>
+  // Can return either a complete ArrayBuffer or a ReadableStream for streaming
+  text2Speech(text: string): Promise<ArrayBuffer | NodeJS.ReadableStream>
 
   // Optional callbacks
   onMessage?(message: ConversationMessage): void
@@ -264,6 +268,8 @@ server.get('/call', { websocket: true }, (socket) => {
 
 server.listen({ port: 8080 })
 ```
+
+See [@micdrop/demo-server](../demo-server/src/ai/index.ts) for a complete example using OpenAI and ElevenLabs.
 
 ## Debug Mode
 

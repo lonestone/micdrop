@@ -196,20 +196,36 @@ export class CallSocket {
       // TTS: Generate answer audio
       if (!this.config.disableTTS) {
         const audio = await this.config.text2Speech(message)
-        if (this.abortAnswer) {
-          // Remove last assistant message if aborted
+
+        // Remove last assistant message if aborted
+        const abort = () => {
           this.log('Answer aborted, removing last assistant message')
           const lastMessage = this.conversation[this.conversation.length - 1]
           if (lastMessage?.role === 'assistant') {
             this.conversation.pop()
             this.socket.send(CallServerCommands.CancelLastAssistantMessage)
           }
+        }
+
+        if (this.abortAnswer) {
+          abort()
           return
         }
 
         // Send audio to client
-        this.log(`Send audio: (${audio.byteLength} bytes)`)
-        this.socket.send(audio)
+        if (audio instanceof ArrayBuffer) {
+          this.log(`Send audio: (${audio.byteLength} bytes)`)
+          this.socket.send(audio)
+        } else {
+          for await (const chunk of audio) {
+            if (this.abortAnswer) {
+              abort()
+              return
+            }
+            this.log(`Send audio: (${chunk.length} bytes)`)
+            this.socket.send(chunk)
+          }
+        }
       }
     }
 

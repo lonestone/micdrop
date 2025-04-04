@@ -2,7 +2,7 @@ import EventEmitter from 'eventemitter3'
 import { CallClientCommands, CallServerCommands, Conversation } from '../..'
 import { MicRecorder } from '../audio/MicRecorder'
 import { startMicrophone, stopMicrophone } from '../audio/microphone'
-import { playAudioBlob, stopAudioBlob } from '../audio/speaker'
+import { pauseAudio, playAudio, resumeAudio, stopAudio } from '../audio/speaker'
 import { CallHandlerError, CallHandlerErrorCode } from './CallHandlerError'
 
 export interface CallHandlerEvents {
@@ -52,8 +52,8 @@ export class CallHandler<
     this.micRecorder.on('StartSpeaking', () => {
       this.log('[Mic] onStartSpeaking')
       this.ws?.send(CallClientCommands.StartSpeaking)
-      // Interruption / Stop assistant speech if playing
-      stopAudioBlob()
+      // Interruption: Stop speaker if playing
+      stopAudio()
     })
 
     // Notify server that user speech is complete
@@ -115,12 +115,14 @@ export class CallHandler<
   pause() {
     this.micRecorder.mute()
     this.notifyStateChange()
+    pauseAudio()
   }
 
   resume() {
     if (this.lastAudioBlob) {
-      playAudioBlob(this.lastAudioBlob)
+      playAudio(this.lastAudioBlob)
     }
+    resumeAudio()
     this.micRecorder.unmute()
     this.notifyStateChange()
   }
@@ -184,7 +186,7 @@ export class CallHandler<
       this.log('[WS]', event.data)
       if (event.data instanceof Blob) {
         // Received assistant speech
-        playAudioBlob(event.data)
+        playAudio(event.data)
         this.lastAudioBlob = event.data
       } else if (typeof event.data !== 'string') {
         console.warn(`[WS] Unknown message type: ${event.data}`)

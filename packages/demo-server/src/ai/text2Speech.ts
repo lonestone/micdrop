@@ -4,7 +4,7 @@ export async function text2Speech(text: string): Promise<ArrayBuffer> {
   }
 
   const response = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${process.env.ELEVENLABS_VOICE_ID}?optimize_streaming_latency=3&output_format=mp3_44100_32`,
+    `https://api.elevenlabs.io/v1/text-to-speech/${process.env.ELEVENLABS_VOICE_ID}?output_format=mp3_44100_32`,
     {
       method: 'POST',
       headers: {

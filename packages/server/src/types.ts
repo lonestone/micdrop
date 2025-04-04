@@ -19,7 +19,7 @@ export interface CallConfig {
   disableTTS?: boolean
   generateAnswer(conversation: Conversation): Promise<string>
   speech2Text(blob: Blob, prompt?: string): Promise<string>
-  text2Speech(text: string): Promise<ArrayBuffer>
+  text2Speech(text: string): Promise<ArrayBuffer | NodeJS.ReadableStream>
   onMessage?(message: ConversationMessage): void
   onEnd?(call: CallSummary): void
 }

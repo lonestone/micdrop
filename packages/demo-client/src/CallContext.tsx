@@ -81,6 +81,7 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
 
     // Handle end of interview
     call.on('EndInterview', () => {
+      call.stop()
       console.log('EndInterview')
     })
 

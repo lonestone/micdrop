@@ -22,12 +22,16 @@ This modular approach gives you the flexibility to build voice applications that
 ## 🌟 Features
 
 - 🎙️ Microphone handling and audio streaming
-- 🔊 Speaker output management
-- 🌐 Real-time network communication
+- 🔊 Advanced audio playback with:
+  - Streaming support via MediaSource
+  - Pause/resume capabilities
+  - Volume control
+  - Device selection
+- 🌐 WebSocket communication
 - 🔌 Framework-agnostic AI integration
 - 🛠️ Bring your own AI components:
   - Large Language Models (LLM)
-  - Text-to-Speech (TTS)
+  - Text-to-Speech (TTS) with streaming support
   - Speech-to-Text (STT)
 
 ## 📦 Packages

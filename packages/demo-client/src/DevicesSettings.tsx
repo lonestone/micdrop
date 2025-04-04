@@ -4,6 +4,7 @@ import { FaMicrophone, FaVolumeUp } from 'react-icons/fa'
 import { CallContext } from './CallContext'
 import MicThreshold from './MicThreshold'
 import SpeakerTestButton from './SpeakerTestButton'
+import SpeakerVolume from './SpeakerVolume'
 
 export default function DevicesSettings() {
   const [loading, setLoading] = useState(true)
@@ -104,8 +105,11 @@ export default function DevicesSettings() {
               </option>
             ))}
           </select>
-          <div className="w-[150px] max-w-[30%]">
+          <div className="w-[150px] max-w-[30%] flex items-center gap-2">
             <SpeakerTestButton />
+            <div className="flex-shrink-0">
+              <SpeakerVolume size={36} />
+            </div>
           </div>
         </div>
       )}

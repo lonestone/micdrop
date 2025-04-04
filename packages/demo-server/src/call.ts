@@ -3,6 +3,7 @@ import {
   CallError,
   CallErrorCode,
   CallSocket,
+  END_INTERVIEW,
   handleError,
   waitForParams,
 } from '@micdrop/server'
@@ -16,8 +17,10 @@ const isMock = !process.env.OPENAI_API_KEY || !process.env.ELEVENLABS_API_KEY
 
 const config: CallConfig = {
   // System prompt passed to the LLM
-  systemPrompt:
-    'You are a voice assistant. It\s a conversation, keep your answers short and helpful.',
+  systemPrompt: `You are a voice assistant, your name is micdrop (pronounced like "mic drop").
+    It's a conversation, keep your answers short and helpful.
+    If the user asks to end the call, say goodbye and say ${END_INTERVIEW}.`,
+
   // First message from the assistant
   // Optional, omit to generate the first message
   firstMessage: 'Hello, what can I do for you today?',
