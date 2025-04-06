@@ -30,6 +30,8 @@ const config: CallConfig = {
 
   // Enable debug logging
   debugLog: true,
+  // disableTTS: true,
+  // debugSaveSpeech: true,
 
   // Optional: called when a message is received from the user
   onMessage(message) {

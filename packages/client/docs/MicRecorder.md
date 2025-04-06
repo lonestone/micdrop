@@ -1,6 +1,6 @@
 # MicRecorder
 
-The `MicRecorder` class provides functionality for recording audio from a microphone with voice activity detection (VAD). It uses the browser's MediaRecorder API and the `hark` library for speech detection.
+The `MicRecorder` class provides functionality for recording audio from a microphone with voice activity detection (VAD). It uses the browser's MediaRecorder API and integrates with a VAD (Voice Activity Detection) system for speech detection.
 
 ## Overview
 
@@ -24,10 +24,13 @@ This flexibility allows you to either use the full voice conversation capabiliti
 ## Usage
 
 ```typescript
-import { MicRecorder } from '../audio/MicRecorder'
+import { MicRecorder, VolumeVAD } from '@micdrop/client'
 
-// Create a new instance
-const recorder = new MicRecorder()
+// Create a VAD instance
+const vad = new VolumeVAD() // or SileroVAD or a custom VAD implementation
+
+// Create a new recorder instance with VAD
+const recorder = new MicRecorder(vad)
 
 // Get microphone stream
 const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -75,6 +78,10 @@ The recorder emits the following events:
 
 ## Methods
 
+### `constructor(vad: VAD)`
+
+Creates a new MicRecorder instance with the provided VAD (Voice Activity Detection) instance.
+
 ### `start(stream: MediaStream): Promise<void>`
 
 Starts the recorder with the provided audio stream.
@@ -95,27 +102,19 @@ Unmutes the recorder (resumes recording).
 
 Sets the speech detection threshold. Lower values make speech detection more sensitive.
 
+## VAD
+
+The `MicRecorder` class uses a VAD (Voice Activity Detection) system to detect speech.
+
+See [VAD documentation](./VAD.md) for more information.
+
 ## Technical Details
 
 - Uses a delayed stream to avoid cutting off speech at the beginning of detection
-- Audio is recorded in chunks of 500ms when speech is detected
+- Audio is recorded in chunks of 100ms when speech is detected
 - Default audio settings: 128kbps bitrate
 - Supports multiple audio formats with fallback options
 - Persists threshold settings in localStorage
-
-## Example Implementation
-
-```typescript
-const recorder = new MicRecorder()
-
-recorder.on('Chunk', this.handleAudioChunk)
-recorder.on('StartSpeaking', this.handleStartSpeaking)
-recorder.on('StopSpeaking', this.handleStopSpeaking)
-
-// Start recording
-const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-await recorder.start(stream)
-```
 
 ## Notes
 

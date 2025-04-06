@@ -134,6 +134,8 @@ handler.on('Error', (error: CallHandlerError) => {
 ## Usage Example
 
 ```typescript
+import { CallHandler } from '@micdrop/client'
+
 // Get the singleton instance with your params type
 const call = CallHandler.getInstance<YourParamsType>()
 
@@ -194,6 +196,10 @@ call.resume()
 // Stop the call
 await call.stop()
 ```
+
+## VAD
+
+Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and send chunks of audio to server only when speech is detected. For detailed information about the VAD implementations and configuration options, please refer to the [VAD documentation](./VAD.md).
 
 ## Notes
 

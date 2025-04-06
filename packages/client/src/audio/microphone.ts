@@ -4,7 +4,7 @@ import { stopStream } from './stopStream'
 
 let currentDeviceId: string | undefined
 let audioStream: MediaStream | undefined
-let audioContext: AudioContext | undefined
+export let audioContext: AudioContext | undefined
 let sourceNode: MediaStreamAudioSourceNode | undefined
 
 export let micAnalyser: AudioAnalyser | undefined
@@ -28,8 +28,7 @@ document.addEventListener('click', () => {
   }
 })
 
-// eslint-disable-next-line
-export function getMicConstraints(deviceId?: string): MediaStreamConstraints {
+function getMicConstraints(deviceId?: string): MediaStreamConstraints {
   return {
     audio: {
       deviceId: { ideal: deviceId },
@@ -42,6 +41,11 @@ export function getMicConstraints(deviceId?: string): MediaStreamConstraints {
   }
 }
 
+/**
+ * Starts the microphone
+ * @param deviceId - The deviceId to use
+ * @returns The microphone stream
+ */
 export async function startMicrophone(deviceId?: string): Promise<MediaStream> {
   if (!audioContext || !micAnalyser) {
     throw new Error('AudioContext not initialized')
@@ -87,6 +91,9 @@ export async function startMicrophone(deviceId?: string): Promise<MediaStream> {
   return audioStream
 }
 
+/**
+ * Stops the microphone
+ */
 export function stopMicrophone() {
   if (sourceNode) {
     sourceNode.disconnect()
@@ -96,17 +103,4 @@ export function stopMicrophone() {
     stopStream(audioStream)
     audioStream = undefined
   }
-}
-
-export function createDelayedStream(stream: MediaStream): MediaStream {
-  if (!audioContext) {
-    throw new Error('AudioContext not initialized')
-  }
-  const audioSource = audioContext.createMediaStreamSource(stream)
-  const delayNode = audioContext.createDelay()
-  delayNode.delayTime.value = 0.3
-  const audioDestination = audioContext.createMediaStreamDestination()
-  audioSource.connect(delayNode)
-  delayNode.connect(audioDestination)
-  return audioDestination.stream
 }

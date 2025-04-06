@@ -146,6 +146,10 @@ async function playNextBlob() {
   }
 }
 
+/**
+ * Checks if the speaker device can be changed
+ * @returns True if the speaker device can be changed, false otherwise
+ */
 export function canChangeSpeakerDevice(): boolean {
   return (
     window.HTMLMediaElement && 'sinkId' in window.HTMLMediaElement.prototype
@@ -159,6 +163,10 @@ async function setSinkId(speakerId?: string) {
   }
 }
 
+/**
+ * Changes the speaker device
+ * @param speakerId - The speakerId to use
+ */
 export async function changeSpeakerDevice(speakerId: string) {
   if (!canChangeSpeakerDevice()) return
   try {
@@ -169,18 +177,28 @@ export async function changeSpeakerDevice(speakerId: string) {
   }
 }
 
+/**
+ * Pauses the audio
+ */
 export function pauseAudio() {
   if (audioElement) {
     audioElement.pause()
   }
 }
 
+/**
+ * Resumes the audio
+ */
 export function resumeAudio() {
   if (audioElement) {
     audioElement.play()
   }
 }
 
+/**
+ * Plays the audio
+ * @param blob - The blob to play (adds to the queue if already playing)
+ */
 export async function playAudio(blob: Blob) {
   if (!audioContext || !speakerAnalyser) return
 
@@ -209,6 +227,9 @@ export async function playAudio(blob: Blob) {
   }
 }
 
+/**
+ * Stops the audio
+ */
 export function stopAudio() {
   // Clear pending blobs
   pendingBlobs.length = 0

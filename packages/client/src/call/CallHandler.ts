@@ -3,6 +3,9 @@ import { CallClientCommands, CallServerCommands, Conversation } from '../..'
 import { MicRecorder } from '../audio/MicRecorder'
 import { startMicrophone, stopMicrophone } from '../audio/microphone'
 import { pauseAudio, playAudio, resumeAudio, stopAudio } from '../audio/speaker'
+import { SileroVAD } from '../audio/vad/SileroVAD'
+import { VAD } from '../audio/vad/VAD'
+import { VolumeVAD } from '../audio/vad/VolumeVAD'
 import { CallHandlerError, CallHandlerErrorCode } from './CallHandlerError'
 
 export interface CallHandlerEvents {
@@ -11,21 +14,29 @@ export interface CallHandlerEvents {
   StateChange: void
 }
 
+export interface CallHandlerOptions {
+  vad?: VAD | 'volume' | 'silero'
+}
+
 export class CallHandler<
   Params extends {},
+  Options extends CallHandlerOptions = CallHandlerOptions,
 > extends EventEmitter<CallHandlerEvents> {
   private static instance: CallHandler<any>
 
-  public static getInstance<T extends {}>(): CallHandler<T> {
+  public static getInstance<
+    T extends {},
+    Options extends CallHandlerOptions = CallHandlerOptions,
+  >(options?: Options): CallHandler<T, Options> {
     if (!CallHandler.instance) {
-      CallHandler.instance = new CallHandler<T>()
+      CallHandler.instance = new CallHandler<T, Options>(options)
     }
     return CallHandler.instance
   }
 
   public url?: string
   public params?: Params
-  public micRecorder = new MicRecorder()
+  public micRecorder: MicRecorder
   public conversation: Conversation = []
   public debug = false
 
@@ -34,8 +45,10 @@ export class CallHandler<
   private startTime = 0
   private lastAudioBlob?: Blob
 
-  private constructor() {
+  private constructor(options?: Options) {
     super()
+
+    this.micRecorder = new MicRecorder(this.getVAD(options?.vad))
 
     // Notify mic recorder state change
     this.micRecorder.on('StateChange', () => {
@@ -44,13 +57,13 @@ export class CallHandler<
 
     // Send chunk of user speech to server
     this.micRecorder.on('Chunk', (blob) => {
-      this.log(`[Mic] onChunk`, blob)
+      this.log(`[Mic] Received chunk`, blob)
       this.ws?.send(blob)
     })
 
     // Notify server that user started speaking
     this.micRecorder.on('StartSpeaking', () => {
-      this.log('[Mic] onStartSpeaking')
+      this.log('[Mic] Start speaking')
       this.ws?.send(CallClientCommands.StartSpeaking)
       // Interruption: Stop speaker if playing
       stopAudio()
@@ -58,9 +71,16 @@ export class CallHandler<
 
     // Notify server that user speech is complete
     this.micRecorder.on('StopSpeaking', () => {
-      this.log('[Mic] onSilence')
+      this.log('[Mic] Stop speaking')
       this.ws?.send(CallClientCommands.StopSpeaking)
     })
+  }
+
+  private getVAD(vad?: VAD | 'volume' | 'silero'): VAD {
+    if (!vad) return new VolumeVAD()
+    if (vad === 'volume') return new VolumeVAD()
+    if (vad === 'silero') return new SileroVAD()
+    return vad
   }
 
   get isStarted() {

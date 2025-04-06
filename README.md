@@ -22,6 +22,8 @@ This modular approach gives you the flexibility to build voice applications that
 ## 🌟 Features
 
 - 🎙️ Microphone handling and audio streaming
+  - Voice Activity Detection (VAD) to optimize audio transmission
+  - Configurable silence detection
 - 🔊 Advanced audio playback with:
   - Streaming support via MediaSource
   - Pause/resume capabilities

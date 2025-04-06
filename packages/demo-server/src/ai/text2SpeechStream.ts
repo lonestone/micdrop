@@ -1,7 +1,7 @@
 import { ElevenLabsClient } from 'elevenlabs'
 
 const client = new ElevenLabsClient({
-  apiKey: process.env.ELEVENLABS_API_KEY,
+  apiKey: process.env.ELEVENLABS_API_KEY || '',
 })
 
 export async function text2SpeechStream(

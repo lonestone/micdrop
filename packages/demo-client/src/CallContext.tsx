@@ -34,7 +34,9 @@ interface CallContextProviderProps {
 
 export function CallContextProvider({ children }: CallContextProviderProps) {
   // Setup call handler
-  const call = CallHandler.getInstance<CallParams>()
+  const call = CallHandler.getInstance<CallParams>({
+    vad: 'silero',
+  })
 
   // Start call
   const handleStart = useCallback(async () => {

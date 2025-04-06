@@ -1,10 +1,11 @@
 import EventEmitter from 'eventemitter3'
-import hark, { Harker } from 'hark'
+import { createDelayedStream } from './createDelayedStream'
 import { LocalStorageKeys } from './localStorage'
-import { createDelayedStream, defaultMicThreshold } from './microphone'
+import { defaultMicThreshold } from './microphone'
 import { stopStream } from './stopStream'
+import { VAD } from './vad/VAD'
 
-const timeSlice = 500
+const timeSlice = 100
 
 export interface MicRecorderState {
   isStarting: boolean
@@ -38,11 +39,13 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   public state: MicRecorderState
 
   private audioInfo = this.getAudioInfo()
-  private hark: Harker | undefined
+  private vad: VAD
   private recorder: MediaRecorder | undefined
   private delayedStream: MediaStream | undefined
+  private speakingConfirmed = false
+  private queuedChunks: Blob[] = []
 
-  constructor() {
+  constructor(vad: VAD) {
     super()
 
     // Threshold for speech detection
@@ -52,6 +55,7 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
 
     // Set initial state
     this.state = { ...defaultMicRecorderState, threshold }
+    this.vad = vad
   }
 
   async start(stream: MediaStream) {
@@ -67,17 +71,21 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       })
 
       // Create a delayed stream to avoid cutting after speech detection
-      const delayedStream = createDelayedStream(stream)
+      const delayedStream = createDelayedStream(
+        stream,
+        this.vad.delay / 1000 + 0.05
+      )
       this.delayedStream = delayedStream
 
       // Setup RTC recorder
-      if (!this.recorder) {
-        this.recorder = new window.MediaRecorder(delayedStream, {
-          mimeType: this.audioInfo.mimeType,
-          audioBitsPerSecond: 128000,
-        })
-        this.recorder.ondataavailable = this.onDataAvailable.bind(this)
+      if (this.recorder) {
+        this.recorder.stop()
       }
+      this.recorder = new window.MediaRecorder(delayedStream, {
+        mimeType: this.audioInfo.mimeType,
+        audioBitsPerSecond: 128000,
+      })
+      this.recorder.ondataavailable = this.onDataAvailable.bind(this)
 
       // Start speaking detection
       await this.startSpeakingDetection(stream)
@@ -127,50 +135,69 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   setThreshold(threshold: number) {
     this.changeState({ threshold })
     localStorage.setItem(LocalStorageKeys.MicThreshold, threshold.toString())
-    this.hark?.setThreshold(threshold)
+    this.vad.setThreshold(threshold)
   }
 
   private async startSpeakingDetection(stream: MediaStream) {
-    if (this.hark) return
-    this.hark = hark(stream, {
-      interval: 100,
-      play: false,
-      threshold: this.state.threshold,
-    })
-    this.hark.on('speaking', this.onStartSpeaking)
-    this.hark.on('stopped_speaking', this.onStopSpeaking)
+    if (this.vad.isStarted) {
+      this.vad.stop()
+    }
+    this.vad.on('StartSpeaking', this.onStartSpeaking)
+    this.vad.on('ConfirmSpeaking', this.onConfirmSpeaking)
+    this.vad.on('CancelSpeaking', this.onCancelSpeaking)
+    this.vad.on('StopSpeaking', this.onStopSpeaking)
+    await this.vad.start(stream, this.state.threshold)
   }
 
-  private stopSpeakingDetection() {
-    if (!this.hark) return
-    // @ts-ignore
-    this.hark.off('speaking', this.onStartSpeaking)
-    // @ts-ignore
-    this.hark.off('stopped_speaking', this.onStopSpeaking)
-    this.hark.stop()
-    this.hark = undefined
+  private async stopSpeakingDetection() {
+    this.vad.off('StartSpeaking', this.onStartSpeaking)
+    this.vad.off('ConfirmSpeaking', this.onConfirmSpeaking)
+    this.vad.off('CancelSpeaking', this.onCancelSpeaking)
+    this.vad.off('StopSpeaking', this.onStopSpeaking)
+    await this.vad.stop()
   }
 
   private onStartSpeaking = (async () => {
     if (!this.recorder || this.state.isMuted) return
     this.recorder.start(timeSlice)
+    this.queuedChunks.length = 0
+  }).bind(this)
+
+  private onConfirmSpeaking = (async () => {
     this.emit('StartSpeaking')
     this.changeState({ isSpeaking: true })
+    this.speakingConfirmed = true
+  }).bind(this)
+
+  private onCancelSpeaking = (async () => {
+    if (!this.recorder) return
+    this.recorder.stop()
+    this.queuedChunks.length = 0
   }).bind(this)
 
   private onStopSpeaking = (async () => {
-    if (!this.recorder || this.state.isMuted) return
+    if (!this.recorder) return
     this.recorder.stop()
     this.changeState({ isSpeaking: false })
+    this.emit('StopSpeaking')
+    this.speakingConfirmed = false
   }).bind(this)
 
   private async onDataAvailable(blobEvent: BlobEvent) {
-    this.emit('Chunk', blobEvent.data)
-
-    if (!this.state.isSpeaking) {
-      // It was the last used data until the user stopped speaking
-      this.emit('StopSpeaking')
+    if (!this.speakingConfirmed) {
+      // Queue the chunk until speech is confirmed
+      this.queuedChunks.push(blobEvent.data)
+      return
     }
+
+    // Emit all queued chunks if there are any
+    for (const chunk of this.queuedChunks) {
+      this.emit('Chunk', chunk)
+    }
+    this.queuedChunks.length = 0
+
+    // Emit the last chunk
+    this.emit('Chunk', blobEvent.data)
   }
 
   private changeState(state: Partial<MicRecorderState>) {

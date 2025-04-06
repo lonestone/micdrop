@@ -14,17 +14,6 @@ The Mic module provides functionality for managing microphone input and audio re
 
 ### Functions
 
-#### `getMicConstraints(deviceId?: string)`
-
-Returns the constraints object for configuring microphone input.
-
-```typescript
-function getMicConstraints(deviceId?: string): MediaStreamConstraints
-```
-
-- `deviceId`: Optional ID of the microphone device to use
-- Returns an object with audio constraints including sample rate, channel count, and noise settings
-
 #### `startMicrophone(deviceId?: string)`
 
 Starts the microphone and returns the audio stream.
@@ -49,17 +38,6 @@ function stopMicrophone(): void
 - Disconnects the audio source
 - Stops the media stream
 - Cleans up internal references
-
-#### `createDelayedStream(stream: MediaStream)`
-
-Creates a delayed version of the input audio stream.
-
-```typescript
-function createDelayedStream(stream: MediaStream): MediaStream
-```
-
-- `stream`: The input MediaStream to delay
-- Returns a new MediaStream with a 300ms delay
 
 ### Variables
 
@@ -89,9 +67,6 @@ const stream = await Mic.startMicrophone()
 
 // Start microphone with specific device
 const deviceStream = await Mic.startMicrophone('device-id-123')
-
-// Create a delayed stream
-const delayedStream = Mic.createDelayedStream(stream)
 
 // Monitor volume changes using the audio analyser
 if (Mic.micAnalyser) {

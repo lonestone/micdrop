@@ -1,8 +1,9 @@
+import { CallConfig } from '@micdrop/server'
 import * as fs from 'fs'
 import * as path from 'path'
 
 // Mock LLM, STT, TTS
-// This mock is used when env is not set.
+// This mock is used when env is not set (otherwise, folder `ai` is used)
 // It can be useful to test some parts of micdrop without needing to call AI systems.
 
 let i = 1
@@ -21,4 +22,4 @@ export default {
   async speech2Text() {
     return `User Message ${j++}`
   },
-}
+} satisfies Partial<CallConfig>

@@ -1,5 +1,4 @@
 import * as fs from 'fs'
-import * as path from 'path'
 import { WebSocket } from 'ws'
 import {
   CallClientCommands,
@@ -72,6 +71,34 @@ export class CallSocket {
     this.config.onMessage?.(message)
   }
 
+  private async sendAudio(
+    audio: ArrayBuffer | NodeJS.ReadableStream,
+    abort?: () => void
+  ) {
+    if (this.abortAnswer) {
+      abort?.()
+      return
+    }
+
+    if (Buffer.isBuffer(audio) || audio instanceof ArrayBuffer) {
+      // Whole audio as a single buffer
+      this.log(`Send audio: (${audio.byteLength} bytes)`)
+      this.socket.send(audio)
+    } else if ('paused' in audio) {
+      // Audio as a stream
+      for await (const chunk of audio) {
+        if (this.abortAnswer) {
+          abort?.()
+          return
+        }
+        this.log(`Send audio chunk (${chunk.length} bytes)`)
+        this.socket.send(chunk)
+      }
+    } else {
+      this.log(`Unknown audio type: ${audio}`)
+    }
+  }
+
   private onClose() {
     this.log('Connection closed')
     this.abortAnswer = true
@@ -139,9 +166,9 @@ export class CallSocket {
     try {
       // Save file to disk
       if (this.config.debugSaveSpeech) {
-        const filePath = path.join(__dirname, 'speech.ogg')
-        fs.writeFileSync(filePath, Buffer.from(await blob.arrayBuffer()))
-        return
+        const filename = `speech-${Date.now()}.ogg`
+        fs.writeFileSync(filename, Buffer.from(await blob.arrayBuffer()))
+        this.log(`Saved speech: ${filename}`)
       }
 
       // STT: Get transcript and send to client
@@ -207,25 +234,8 @@ export class CallSocket {
           }
         }
 
-        if (this.abortAnswer) {
-          abort()
-          return
-        }
-
         // Send audio to client
-        if (audio instanceof ArrayBuffer) {
-          this.log(`Send audio: (${audio.byteLength} bytes)`)
-          this.socket.send(audio)
-        } else {
-          for await (const chunk of audio) {
-            if (this.abortAnswer) {
-              abort()
-              return
-            }
-            this.log(`Send audio: (${chunk.length} bytes)`)
-            this.socket.send(chunk)
-          }
-        }
+        await this.sendAudio(audio, abort)
       }
     }
 
