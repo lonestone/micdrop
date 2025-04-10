@@ -3,7 +3,7 @@ import { openai } from './openai'
 
 export async function speech2Text(
   file: Blob | Uploadable,
-  prompt?: string
+  prevMessage?: string
 ): Promise<string> {
   const response = await openai.audio.transcriptions.create({
     model: 'whisper-1',
@@ -14,7 +14,7 @@ export async function speech2Text(
             blob: async () => file,
           }
         : file,
-    prompt,
+    prompt: prevMessage,
   })
 
   return response.text

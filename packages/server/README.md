@@ -147,7 +147,7 @@ interface CallConfig {
   generateAnswer(conversation: Conversation): Promise<string>
 
   // Convert audio to text
-  speech2Text(blob: Blob, prompt?: string): Promise<string>
+  speech2Text(blob: Blob, prevMessage?: string): Promise<string>
 
   // Convert text to audio
   // Can return either a complete ArrayBuffer or a ReadableStream for streaming
