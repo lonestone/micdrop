@@ -43,8 +43,9 @@ export class CallSocket {
         .generateAnswer(this.conversation)
         .then((answer) => this.answer(answer))
         .catch((error) => {
-          console.error('[WS]', error)
+          console.error('[CallSocket]', error)
           socket?.close()
+          // TODO: Implement retry
         })
     }
 
@@ -120,7 +121,7 @@ export class CallSocket {
 
   private async onMessage(message: Buffer) {
     if (!Buffer.isBuffer(message)) {
-      console.warn(`[WS] Message is not a buffer`)
+      console.warn(`[CallSocket] Message is not a buffer`)
       return
     }
 
@@ -153,7 +154,7 @@ export class CallSocket {
   }
 
   private async onStopSpeaking() {
-    if (!this.socket || !this.config) return
+    if (!this.config) return
 
     // Do nothing if there is no chunk
     if (this.chunks.length === 0) return
@@ -203,8 +204,8 @@ export class CallSocket {
 
       await this.answer(answer)
     } catch (error) {
-      console.error('[WS]', error)
-      this.socket.close()
+      console.error('[CallSocket]', error)
+      // TODO: Implement retry
     }
   }
 
@@ -226,20 +227,25 @@ export class CallSocket {
 
       // TTS: Generate answer audio
       if (!this.config.disableTTS) {
-        const audio = await this.config.text2Speech(message)
+        try {
+          const audio = await this.config.text2Speech(message)
 
-        // Remove last assistant message if aborted
-        const abort = () => {
-          this.log('Answer aborted, removing last assistant message')
-          const lastMessage = this.conversation[this.conversation.length - 1]
-          if (lastMessage?.role === 'assistant') {
-            this.conversation.pop()
-            this.socket?.send(CallServerCommands.CancelLastAssistantMessage)
+          // Remove last assistant message if aborted
+          const abort = () => {
+            this.log('Answer aborted, removing last assistant message')
+            const lastMessage = this.conversation[this.conversation.length - 1]
+            if (lastMessage?.role === 'assistant') {
+              this.conversation.pop()
+              this.socket?.send(CallServerCommands.CancelLastAssistantMessage)
+            }
           }
-        }
 
-        // Send audio to client
-        await this.sendAudio(audio, abort)
+          // Send audio to client
+          await this.sendAudio(audio, abort)
+        } catch (error) {
+          console.error('[CallSocket]', error)
+          // TODO: Implement retry
+        }
       }
     }
 
