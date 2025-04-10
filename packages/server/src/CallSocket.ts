@@ -11,6 +11,9 @@ import {
 export const END_INTERVIEW = 'END_INTERVIEW'
 
 export class CallSocket {
+  public socket: WebSocket | null = null
+  public config: CallConfig | null = null
+
   private startTime = Date.now()
   private lastDebug = Date.now()
 
@@ -26,16 +29,13 @@ export class CallSocket {
   // Conversation history
   private conversation: Conversation
 
-  constructor(
-    public socket: WebSocket,
-    public config: CallConfig
-  ) {
+  constructor(socket: WebSocket, config: CallConfig) {
+    this.socket = socket
+    this.config = config
     this.conversation = [{ role: 'system', content: config.systemPrompt }]
     this.log(`Call started`)
 
     // Assistant speaks first
-
-    // LLM: Generate answer
     if (config.firstMessage) {
       this.answer(config.firstMessage)
     } else {
@@ -44,13 +44,13 @@ export class CallSocket {
         .then((answer) => this.answer(answer))
         .catch((error) => {
           console.error('[WS]', error)
-          this.socket.close()
+          socket?.close()
         })
     }
 
     // Listen to events
-    this.socket.on('close', this.onClose.bind(this))
-    this.socket.on('message', this.onMessage.bind(this))
+    socket.on('close', this.onClose.bind(this))
+    socket.on('message', this.onMessage.bind(this))
   }
 
   // Reset conversation
@@ -60,6 +60,7 @@ export class CallSocket {
   }
 
   private addMessage(message: ConversationMessage) {
+    if (!this.socket || !this.config) return
     this.conversation.push(message)
     this.socket.send(
       `${
@@ -75,6 +76,7 @@ export class CallSocket {
     audio: ArrayBuffer | NodeJS.ReadableStream,
     abort?: () => void
   ) {
+    if (!this.socket) return
     if (this.abortAnswer) {
       abort?.()
       return
@@ -100,6 +102,7 @@ export class CallSocket {
   }
 
   private onClose() {
+    if (!this.config) return
     this.log('Connection closed')
     this.abortAnswer = true
     const duration = Math.round((Date.now() - this.startTime) / 1000)
@@ -111,9 +114,7 @@ export class CallSocket {
     })
 
     // Unset params
-    // @ts-ignore
     this.socket = null
-    // @ts-ignore
     this.config = null
   }
 
@@ -152,6 +153,8 @@ export class CallSocket {
   }
 
   private async onStopSpeaking() {
+    if (!this.socket || !this.config) return
+
     // Do nothing if there is no chunk
     if (this.chunks.length === 0) return
 
@@ -207,6 +210,7 @@ export class CallSocket {
 
   // Add assistant message and send to client with audio (TTS)
   public async answer(message: string) {
+    if (!this.socket || !this.config) return
     let isEnd = false
 
     // Detect end of interview
@@ -230,7 +234,7 @@ export class CallSocket {
           const lastMessage = this.conversation[this.conversation.length - 1]
           if (lastMessage?.role === 'assistant') {
             this.conversation.pop()
-            this.socket.send(CallServerCommands.CancelLastAssistantMessage)
+            this.socket?.send(CallServerCommands.CancelLastAssistantMessage)
           }
         }
 
@@ -247,7 +251,7 @@ export class CallSocket {
   }
 
   private log(...message: any[]) {
-    if (!this.config.debugLog) return
+    if (!this.config?.debugLog) return
     const now = Date.now()
     const delta = now - this.lastDebug
     this.lastDebug = now
