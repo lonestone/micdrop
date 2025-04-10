@@ -1,8 +1,8 @@
-import { ChatCompletionMessageParam } from 'openai/resources'
+import { ConversationMessage } from '@micdrop/server'
 import { openai } from './openai'
 
 export async function generateAnswer(
-  conversation: ChatCompletionMessageParam[]
+  conversation: ConversationMessage[]
 ): Promise<string> {
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',

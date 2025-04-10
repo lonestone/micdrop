@@ -5,8 +5,7 @@ export enum CallClientCommands {
 }
 
 export enum CallServerCommands {
-  UserMessage = 'userMessage',
-  AssistantMessage = 'assistantMessage',
+  Message = 'message',
   CancelLastAssistantMessage = 'cancelLastAssistantMessage',
   EndInterview = 'endInterview',
 }
@@ -17,8 +16,10 @@ export interface CallConfig {
   debugLog?: boolean
   debugSaveSpeech?: boolean
   disableTTS?: boolean
-  generateAnswer(conversation: Conversation): Promise<string>
-  speech2Text(blob: Blob, prevMessage?: string): Promise<string>
+  generateAnswer(
+    conversation: Conversation
+  ): Promise<string | ConversationMessage>
+  speech2Text(audioBlob: Blob, prevMessage?: string): Promise<string>
   text2Speech(text: string): Promise<ArrayBuffer | NodeJS.ReadableStream>
   onMessage?(message: ConversationMessage): void
   onEnd?(call: CallSummary): void
@@ -31,7 +32,8 @@ export interface CallSummary {
 
 export type Conversation = ConversationMessage[]
 
-export interface ConversationMessage {
+export interface ConversationMessage<Data = any> {
   role: 'system' | 'user' | 'assistant'
   content: string
+  metadata?: Data
 }

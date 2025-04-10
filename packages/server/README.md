@@ -144,10 +144,12 @@ interface CallConfig {
   disableTTS?: boolean
 
   // Generate assistant's response
-  generateAnswer(conversation: Conversation): Promise<string>
+  generateAnswer(
+    conversation: Conversation
+  ): Promise<string | ConversationMessage>
 
   // Convert audio to text
-  speech2Text(blob: Blob, prevMessage?: string): Promise<string>
+  speech2Text(audioBlob: Blob, prevMessage?: string): Promise<string>
 
   // Convert text to audio
   // Can return either a complete ArrayBuffer or a ReadableStream for streaming
@@ -165,6 +167,7 @@ interface CallConfig {
 interface ConversationMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
+  metadata?: any
 }
 
 type Conversation = ConversationMessage[]
@@ -193,8 +196,7 @@ enum CallClientCommands {
 
 ```typescript
 enum CallServerCommands {
-  UserMessage = 'userMessage',
-  AssistantMessage = 'assistantMessage',
+  Message = 'message',
   CancelLastAssistantMessage = 'cancelLastAssistantMessage',
   EndInterview = 'endInterview',
 }

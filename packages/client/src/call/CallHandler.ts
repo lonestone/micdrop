@@ -1,5 +1,10 @@
 import EventEmitter from 'eventemitter3'
-import { CallClientCommands, CallServerCommands, Conversation } from '../..'
+import {
+  CallClientCommands,
+  CallServerCommands,
+  Conversation,
+  ConversationMessage,
+} from '../..'
 import { MicRecorder } from '../audio/MicRecorder'
 import { startMicrophone, stopMicrophone } from '../audio/microphone'
 import { pauseAudio, playAudio, resumeAudio, stopAudio } from '../audio/speaker'
@@ -210,18 +215,12 @@ export class CallHandler<
         this.lastAudioBlob = event.data
       } else if (typeof event.data !== 'string') {
         console.warn(`[WS] Unknown message type: ${event.data}`)
-      } else if (event.data.startsWith(CallServerCommands.UserMessage)) {
-        // Received user speech transcript
-        this.addMessage(
-          'user',
-          event.data.substring(CallServerCommands.UserMessage.length + 1)
+      } else if (event.data.startsWith(CallServerCommands.Message)) {
+        // Received user/assistant message
+        const message = JSON.parse(
+          event.data.substring(CallServerCommands.Message.length + 1)
         )
-      } else if (event.data.startsWith(CallServerCommands.AssistantMessage)) {
-        // Received assistant answer
-        this.addMessage(
-          'assistant',
-          event.data.substring(CallServerCommands.AssistantMessage.length + 1)
-        )
+        this.addMessage(message)
       } else if (event.data === CallServerCommands.EndInterview) {
         // Interview ended
         setTimeout(() => {
@@ -229,8 +228,11 @@ export class CallHandler<
         }, 2000) // Wait to prevent conflict
       } else if (event.data === CallServerCommands.CancelLastAssistantMessage) {
         // Remove last assistant message if aborted
-        this.conversation = this.conversation.slice(0, -1)
-        this.notifyStateChange()
+        const lastMessage = this.conversation[this.conversation.length - 1]
+        if (lastMessage?.role === 'assistant') {
+          this.conversation = this.conversation.slice(0, -1)
+          this.notifyStateChange()
+        }
       }
     }
     this.ws.onclose = (event) => {
@@ -264,8 +266,8 @@ export class CallHandler<
     this.notifyStateChange()
   }
 
-  private addMessage(role: 'user' | 'assistant', message: string) {
-    this.conversation.push({ role, content: message })
+  private addMessage(message: ConversationMessage) {
+    this.conversation.push(message)
     this.notifyStateChange()
   }
 

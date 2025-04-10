@@ -63,13 +63,7 @@ export class CallSocket {
   private addMessage(message: ConversationMessage) {
     if (!this.socket || !this.config) return
     this.conversation.push(message)
-    this.socket.send(
-      `${
-        message.role === 'user'
-          ? CallServerCommands.UserMessage
-          : CallServerCommands.AssistantMessage
-      } ${message.content}`
-    )
+    this.socket.send(`${CallServerCommands.Message} ${JSON.stringify(message)}`)
     this.config.onMessage?.(message)
   }
 
@@ -210,25 +204,28 @@ export class CallSocket {
   }
 
   // Add assistant message and send to client with audio (TTS)
-  public async answer(message: string) {
+  public async answer(message: string | ConversationMessage) {
     if (!this.socket || !this.config) return
     let isEnd = false
 
+    let content = typeof message === 'string' ? message : message.content
+    const metadata = typeof message === 'string' ? undefined : message.metadata
+
     // Detect end of interview
-    if (message.includes(END_INTERVIEW)) {
-      message = message.replace(END_INTERVIEW, '').trim()
+    if (content.includes(END_INTERVIEW)) {
+      content = content.replace(END_INTERVIEW, '').trim()
       isEnd = true
     }
 
-    if (message.length) {
+    if (content.length) {
       // Send answer to client
       this.log('Assistant message:', message)
-      this.addMessage({ role: 'assistant', content: message })
+      this.addMessage({ role: 'assistant', content, metadata })
 
       // TTS: Generate answer audio
       if (!this.config.disableTTS) {
         try {
-          const audio = await this.config.text2Speech(message)
+          const audio = await this.config.text2Speech(content)
 
           // Remove last assistant message if aborted
           const abort = () => {
