@@ -45,6 +45,7 @@ Gets the singleton instance of the CallHandler. Creates a new instance if one do
 - `isWSStarted`: Returns true if WebSocket connection is open
 - `isWSStarting`: Returns true if WebSocket is connecting
 - `isMicStarted`: Returns true if microphone stream is active
+- `isProcessing`: Returns true if the call is processing (i.e. waiting for answer and audio generation)
 
 ## Methods
 
@@ -159,7 +160,8 @@ call.on('StateChange', () => {
       "isStarted": false,
       "isStarting": false,
       "isWSStarted": false,
-      "isWSStarting": false
+      "isWSStarting": false,
+      "isProcessing": false
     }
   */
 

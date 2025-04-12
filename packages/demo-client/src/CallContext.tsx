@@ -19,6 +19,7 @@ export interface CallContextValue {
   isPaused: boolean
   isSpeaking: boolean
   isMicStarted: boolean
+  isProcessing: boolean
   micThreshold: number
   conversation: Conversation
   error: CallHandlerError | undefined
@@ -69,6 +70,7 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
         conversation: call.conversation,
         isPaused: call.micRecorder.state.isMuted,
         isSpeaking: call.micRecorder.state.isSpeaking,
+        isProcessing: call.isProcessing,
         micThreshold: call.micRecorder.state.threshold,
       }))
     })
@@ -105,6 +107,7 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     isPaused: false,
     isSpeaking: false,
     isMicStarted: false,
+    isProcessing: false,
     micThreshold: Mic.defaultMicThreshold,
     conversation: [],
     error: undefined,

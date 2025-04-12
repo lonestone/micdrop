@@ -2,7 +2,7 @@ import { useContext } from 'react'
 import { FaPause, FaPlay, FaStop } from 'react-icons/fa'
 import { CallContext } from './CallContext'
 import DevicesSettings from './DevicesSettings'
-
+import StatusCircle from './StatusCircle'
 export default function CallPanel() {
   const call = useContext(CallContext)!
 
@@ -11,15 +11,7 @@ export default function CallPanel() {
       <div className="flex items-center gap-2">
         {call.isStarted ? (
           <>
-            <div
-              className={`w-5 h-5 rounded-full ${
-                call.isPaused
-                  ? 'bg-gray-500'
-                  : call.isSpeaking
-                    ? 'bg-green-500'
-                    : 'bg-blue-500'
-              }`}
-            />
+            <StatusCircle size={40} />
             {call.isPaused ? (
               <button
                 className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"

@@ -49,6 +49,7 @@ export class CallHandler<
   private micStream?: MediaStream
   private startTime = 0
   private lastAudioBlob?: Blob
+  private _isProcessing = false
 
   private constructor(options?: Options) {
     super()
@@ -78,6 +79,8 @@ export class CallHandler<
     this.micRecorder.on('StopSpeaking', () => {
       this.log('[Mic] Stop speaking')
       this.ws?.send(CallClientCommands.StopSpeaking)
+      this._isProcessing = true
+      this.notifyStateChange()
     })
   }
 
@@ -108,10 +111,15 @@ export class CallHandler<
     return !!this.micStream
   }
 
+  get isProcessing() {
+    return this._isProcessing
+  }
+
   async start() {
     // Reset state
     this.startTime = Date.now()
     this.conversation = []
+    this._isProcessing = true
 
     // Start mic if not already started
     await this.startMic(undefined, true)
@@ -213,6 +221,8 @@ export class CallHandler<
         // Received assistant speech
         playAudio(event.data)
         this.lastAudioBlob = event.data
+        this._isProcessing = false
+        this.notifyStateChange()
       } else if (typeof event.data !== 'string') {
         console.warn(`[WS] Unknown message type: ${event.data}`)
       } else if (event.data.startsWith(CallServerCommands.Message)) {
