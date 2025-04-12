@@ -90,6 +90,7 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     })
 
     return () => {
+      call.stop()
       call.removeAllListeners()
     }
   }, [])

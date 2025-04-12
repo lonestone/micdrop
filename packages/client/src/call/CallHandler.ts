@@ -71,7 +71,9 @@ export class CallHandler<
     this.micRecorder.on('StartSpeaking', () => {
       this.log('[Mic] Start speaking')
       this.ws?.send(CallClientCommands.StartSpeaking)
-      // Interruption: Stop speaker if playing
+      // Interruption
+      this._isProcessing = false
+      this.notifyStateChange()
       stopAudio()
     })
 

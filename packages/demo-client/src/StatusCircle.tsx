@@ -42,9 +42,9 @@ export default function StatusCircle({ size }: Props) {
       style={{ width: size, height: size }}
     >
       <div
-        className={`rounded-full transition-all duration-100 ease-out ${getColor(
+        className={`rounded-full transition-all duration-500 ease-out ${getColor(
           call
-        )} ${call.isProcessing ? 'animate-pulse' : ''}`}
+        )} ${call.isProcessing ? 'animate-bounce' : ''}`}
         style={{
           width: circleSize,
           height: circleSize,

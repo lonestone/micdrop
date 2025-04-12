@@ -164,6 +164,7 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }).bind(this)
 
   private onConfirmSpeaking = (async () => {
+    if (this.state.isMuted) return
     this.emit('StartSpeaking')
     this.changeState({ isSpeaking: true })
     this.speakingConfirmed = true
