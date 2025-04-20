@@ -1,4 +1,4 @@
-import { audioContext } from './microphone'
+import { audioContext } from './audioContext'
 
 /**
  * Creates a delayed stream with a delay in seconds

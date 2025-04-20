@@ -1,32 +1,14 @@
-import { AudioAnalyser } from './AudioAnalyser'
-import { LocalStorageKeys } from './localStorage'
-import { stopStream } from './stopStream'
+import { AudioAnalyser } from './utils/AudioAnalyser'
+import { audioContext } from './utils/audioContext'
+import { LocalStorageKeys } from './utils/localStorage'
+import { stopStream } from './utils/stopStream'
 
 let currentDeviceId: string | undefined
 let audioStream: MediaStream | undefined
-export let audioContext: AudioContext | undefined
 let sourceNode: MediaStreamAudioSourceNode | undefined
 
-export let micAnalyser: AudioAnalyser | undefined
+export const micAnalyser = new AudioAnalyser(audioContext)
 export const defaultMicThreshold = -50 // in dB
-
-function init() {
-  if (audioContext) return
-
-  // Setup audio context
-  audioContext = new (window.AudioContext ||
-    (window as any).webkitAudioContext)()
-  micAnalyser = new AudioAnalyser(audioContext)
-}
-
-init()
-
-// Resume AudioContext on click, see https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
-document.addEventListener('click', () => {
-  if (audioContext?.state === 'suspended') {
-    audioContext?.resume()
-  }
-})
 
 function getMicConstraints(deviceId?: string): MediaStreamConstraints {
   return {

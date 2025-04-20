@@ -29,6 +29,9 @@ export class CallSocket {
   // Conversation history
   private conversation: Conversation
 
+  // Enable speaker streaming
+  private speakerStreamingEnabled = false
+
   constructor(socket: WebSocket, config: CallConfig) {
     this.socket = socket
     this.config = config
@@ -82,6 +85,12 @@ export class CallSocket {
       this.log(`Send audio: (${audio.byteLength} bytes)`)
       this.socket.send(audio)
     } else if ('paused' in audio) {
+      // Enable speaker streaming if not already enabled
+      if (!this.speakerStreamingEnabled) {
+        this.socket.send(CallServerCommands.EnableSpeakerStreaming)
+        this.speakerStreamingEnabled = true
+      }
+
       // Audio as a stream
       for await (const chunk of audio) {
         if (this.abortAnswer) {

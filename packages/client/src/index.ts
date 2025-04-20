@@ -1,7 +1,7 @@
-export * from './audio/localStorage'
 export * from './audio/MicRecorder'
 export * as Mic from './audio/microphone'
 export * as Speaker from './audio/speaker'
+export * from './audio/utils/localStorage'
 export * from './audio/vad'
 export * from './call/CallHandler'
 export * from './call/CallHandlerError'

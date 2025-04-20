@@ -7,7 +7,13 @@ import {
 } from '../..'
 import { MicRecorder } from '../audio/MicRecorder'
 import { startMicrophone, stopMicrophone } from '../audio/microphone'
-import { pauseAudio, playAudio, resumeAudio, stopAudio } from '../audio/speaker'
+import {
+  enableStreaming,
+  pauseAudio,
+  playAudio,
+  resumeAudio,
+  stopAudio,
+} from '../audio/speaker'
 import { SileroVAD } from '../audio/vad/SileroVAD'
 import { VAD } from '../audio/vad/VAD'
 import { VolumeVAD } from '../audio/vad/VolumeVAD'
@@ -245,6 +251,9 @@ export class CallHandler<
           this.conversation = this.conversation.slice(0, -1)
           this.notifyStateChange()
         }
+      } else if (event.data === CallServerCommands.EnableSpeakerStreaming) {
+        // Enable speaker streaming
+        enableStreaming()
       }
     }
     this.ws.onclose = (event) => {

@@ -4,7 +4,8 @@ import { CallContext } from './CallContext'
 import DevicesSettings from './DevicesSettings'
 import StatusCircle from './StatusCircle'
 export default function CallPanel() {
-  const call = useContext(CallContext)!
+  const call = useContext(CallContext)
+  if (!call) return null
 
   return (
     <div className="flex flex-col space-y-5">

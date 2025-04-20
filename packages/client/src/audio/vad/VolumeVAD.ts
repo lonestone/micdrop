@@ -1,3 +1,4 @@
+import { audioContext } from '../utils/audioContext'
 import { VAD } from './VAD'
 
 /**
@@ -5,7 +6,6 @@ import { VAD } from './VAD'
  * Based on the hark library implementation
  */
 export class VolumeVAD extends VAD {
-  private audioContext: AudioContext | undefined
   private analyser: AnalyserNode | undefined
   private sourceNode: MediaStreamAudioSourceNode | undefined
   private fftBins: Float32Array | undefined
@@ -50,10 +50,8 @@ export class VolumeVAD extends VAD {
     }
 
     // Create audio context and nodes
-    this.audioContext = new (window.AudioContext ||
-      (window as any).webkitAudioContext)()
-    this.analyser = this.audioContext.createAnalyser()
-    this.sourceNode = this.audioContext.createMediaStreamSource(stream)
+    this.analyser = audioContext.createAnalyser()
+    this.sourceNode = audioContext.createMediaStreamSource(stream)
 
     // Configure analyser
     this.analyser.fftSize = 512
@@ -142,11 +140,6 @@ export class VolumeVAD extends VAD {
     if (this.analyser) {
       this.analyser.disconnect()
       this.analyser = undefined
-    }
-
-    if (this.audioContext) {
-      await this.audioContext.close()
-      this.audioContext = undefined
     }
 
     this.fftBins = undefined

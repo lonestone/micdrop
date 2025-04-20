@@ -46,7 +46,7 @@ function stopMicrophone(): void
 An instance of `AudioAnalyser` that can be used to analyze the microphone input.
 
 ```typescript
-let micAnalyser: AudioAnalyser | undefined
+const micAnalyser: AudioAnalyser
 ```
 
 #### `defaultMicThreshold`

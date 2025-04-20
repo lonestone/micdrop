@@ -71,48 +71,44 @@ export default function DevicesSettings() {
         </div>
       )}
 
-      {audioInputs.length !== 0 && (
-        <div className="flex items-center gap-3">
-          <FaMicrophone className="text-gray-600 text-xl" />
-          <select
-            value={audioInputId}
-            className="flex-1 form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
-            onChange={handleAudioInputChange}
-          >
-            {audioInputs.map(({ deviceId, label }) => (
-              <option key={deviceId} value={deviceId}>
-                {label || 'Microphone'}
-              </option>
-            ))}
-          </select>
-          <div className="w-[150px] max-w-[30%]">
-            <MicThreshold />
-          </div>
+      <div className="flex items-center gap-3">
+        <FaMicrophone className="text-gray-600 text-xl" />
+        <select
+          value={audioInputId}
+          className="flex-1 form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
+          onChange={handleAudioInputChange}
+        >
+          {audioInputs.map(({ deviceId, label }) => (
+            <option key={deviceId} value={deviceId}>
+              {label || 'Microphone'}
+            </option>
+          ))}
+        </select>
+        <div className="w-[150px] max-w-[30%]">
+          <MicThreshold />
         </div>
-      )}
+      </div>
 
-      {audioOutputs.length !== 0 && (
-        <div className="flex items-center gap-3 mt-3">
-          <FaVolumeUp className="text-gray-600 text-xl" />
-          <select
-            value={audioOutputId}
-            className="flex-1 form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
-            onChange={handleAudioOutputChange}
-          >
-            {audioOutputs.map(({ deviceId, label }) => (
-              <option key={deviceId} value={deviceId}>
-                {label || 'Speaker'}
-              </option>
-            ))}
-          </select>
-          <div className="w-[150px] max-w-[30%] flex items-center gap-2">
-            <SpeakerTestButton />
-            <div className="flex-shrink-0">
-              <SpeakerVolume size={36} />
-            </div>
+      <div className="flex items-center gap-3 mt-3">
+        <FaVolumeUp className="text-gray-600 text-xl" />
+        <select
+          value={audioOutputId}
+          className="flex-1 form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
+          onChange={handleAudioOutputChange}
+        >
+          {audioOutputs.map(({ deviceId, label }) => (
+            <option key={deviceId} value={deviceId}>
+              {label || 'Speaker'}
+            </option>
+          ))}
+        </select>
+        <div className="w-[150px] max-w-[30%] flex items-center gap-2">
+          <SpeakerTestButton />
+          <div className="flex-shrink-0">
+            <SpeakerVolume size={36} />
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }

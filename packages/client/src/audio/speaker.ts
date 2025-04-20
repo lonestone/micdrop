@@ -1,149 +1,76 @@
-import { AudioAnalyser } from './AudioAnalyser'
-import { LocalStorageKeys } from './localStorage'
-import { unlock } from './unlock'
+import { SpeakerConcatPlayer } from './player/SpeakerConcatPlayer'
+import { SpeakerMediaSourcePlayer } from './player/SpeakerMediaSourcePlayer'
+import { SpeakerPlayer } from './player/SpeakerPlayer'
+import { SpeakerSequencePlayer } from './player/SpeakerSequencePlayer'
+import { AudioAnalyser } from './utils/AudioAnalyser'
+import { audioContext } from './utils/audioContext'
+import { LocalStorageKeys } from './utils/localStorage'
+import { unlock } from './utils/unlock'
 
 let audioElement: HTMLAudioElement | undefined
-let audioContext: AudioContext | undefined
-let mediaSource: MediaSource | undefined
-let sourceBuffer: SourceBuffer | undefined
-let currentMediaStream: MediaStream | undefined
-let isProcessingQueue = false
-const pendingBlobs: Blob[] = []
+let player: SpeakerPlayer | undefined
+let streamingEnabled = false
 
-export let speakerAnalyser: AudioAnalyser | undefined
+export const speakerAnalyser = new AudioAnalyser(audioContext)
 
-function init() {
-  if (audioContext) return
-  // Setup audio context
-  audioContext = new (window.AudioContext ||
-    (window as any).webkitAudioContext)()
-  speakerAnalyser = new AudioAnalyser(audioContext)
+async function init() {
   unlock(audioContext)
-}
-
-init()
-
-async function setupAudioElement(speakerId?: string) {
-  if (!audioContext || !speakerAnalyser) return
-
-  // Get speakerId from local storage if not provided
-  if (!speakerId) {
-    speakerId =
-      localStorage.getItem(LocalStorageKeys.SpeakerDevice) || undefined
-  }
 
   // Create audio element if it doesn't exist
-  if (!audioElement) {
-    audioElement = new Audio()
-    audioElement.autoplay = true
-    mediaSource = new MediaSource()
-    if (!mediaSource) {
-      throw new Error('Failed to create MediaSource')
-    }
-    audioElement.src = URL.createObjectURL(mediaSource)
+  audioElement = new Audio()
+  audioElement.autoplay = true
 
-    // Setup MediaSource when it opens
-    const ms = mediaSource
-    ms.addEventListener('sourceopen', () => {
-      sourceBuffer = ms.addSourceBuffer('audio/mpeg')
-
-      // Add a single updateend listener that will process the queue
-      sourceBuffer.addEventListener('updateend', () => {
-        processQueue()
-      })
-
-      // Process any pending blobs
-      if (pendingBlobs.length > 0) {
-        processQueue()
-      }
-    })
-
-    // Connect audio element to analyser when we have data
-    audioElement.addEventListener('timeupdate', function onTimeUpdate() {
-      if (!audioContext || !speakerAnalyser || !audioElement) return
-
-      try {
-        // Use type assertion for captureStream which is available in modern browsers
-        const mediaStream = (audioElement as any).captureStream() as MediaStream
-
-        // Check if we have an audio track
-        if (mediaStream.getAudioTracks().length === 0) return
-
-        currentMediaStream = mediaStream
-        const sourceNode = audioContext.createMediaStreamSource(mediaStream)
-        sourceNode.connect(speakerAnalyser.node)
-
-        // Remove the listener once we've successfully connected
-        audioElement.removeEventListener('timeupdate', onTimeUpdate)
-      } catch (error) {
-        console.error('Error creating media stream source:', error)
-      }
-    })
-  }
-
-  // Set sink ID if provided
+  // Select speaker device if speakerId is in local storage
+  const speakerId = localStorage.getItem(LocalStorageKeys.SpeakerDevice)
   if (speakerId) {
     try {
       await setSinkId(speakerId)
     } catch (error) {
-      console.error(`Error setting Audio Output to ${speakerId}`, error)
+      console.error('Failed to set sink ID:', error)
     }
   }
 
-  return audioElement
+  // Source -> Analyser
+  await setupSpeakerPlayer()
+
+  // Analyser -> Destination
+  const destinationNode = audioContext.createMediaStreamDestination()
+  speakerAnalyser.node.connect(destinationNode)
+
+  // Destination -> Speaker
+  audioElement.srcObject = destinationNode.stream
 }
 
-async function processQueue() {
-  if (!sourceBuffer || !mediaSource || pendingBlobs.length === 0) return
-  if (isProcessingQueue || sourceBuffer.updating) return
+init()
 
-  isProcessingQueue = true
+async function setupSpeakerPlayer() {
   try {
-    await playNextBlob()
-  } finally {
-    isProcessingQueue = false
-    // If there are more blobs and we're not updating, process the next one
-    if (pendingBlobs.length > 0 && !sourceBuffer.updating) {
-      processQueue()
-    }
-  }
-}
-
-async function playNextBlob() {
-  if (!sourceBuffer || !mediaSource || pendingBlobs.length === 0) return
-  if (sourceBuffer.updating) return
-
-  // Check if MediaSource is still valid
-  if (mediaSource.readyState !== 'open') {
-    console.warn('MediaSource is no longer open, resetting audio pipeline')
-    stopAudio()
-    await setupAudioElement()
-    return
-  }
-
-  const blob = pendingBlobs.shift()!
-
-  try {
-    // Double check sourceBuffer is still valid before appending
-    if (
-      sourceBuffer &&
-      Array.from(mediaSource.sourceBuffers).includes(sourceBuffer)
-    ) {
-      const arrayBuffer = await blob.arrayBuffer()
-      sourceBuffer.appendBuffer(arrayBuffer)
-    } else {
-      console.warn('SourceBuffer is no longer valid, resetting audio pipeline')
-      stopAudio()
-      await setupAudioElement()
-    }
+    player?.destroy()
+    player = streamingEnabled
+      ? SpeakerMediaSourcePlayer.isCompatible
+        ? new SpeakerMediaSourcePlayer(speakerAnalyser.node)
+        : new SpeakerConcatPlayer(speakerAnalyser.node)
+      : new SpeakerSequencePlayer(speakerAnalyser.node)
+    await player?.setup()
   } catch (error) {
-    console.error('Error appending buffer', error)
-    if (error instanceof Error && error.name === 'InvalidStateError') {
-      console.warn('Resetting audio pipeline due to invalid state')
-      stopAudio()
-      await setupAudioElement()
-    }
+    console.error('Error setting up speaker player', error)
   }
+}
+
+export async function isStreamingEnabled() {
+  return streamingEnabled
+}
+
+export async function enableStreaming() {
+  if (streamingEnabled) return
+  streamingEnabled = true
+  await setupSpeakerPlayer()
+}
+
+export async function disableStreaming() {
+  if (!streamingEnabled) return
+  streamingEnabled = false
+  await setupSpeakerPlayer()
 }
 
 /**
@@ -170,7 +97,7 @@ async function setSinkId(speakerId?: string) {
 export async function changeSpeakerDevice(speakerId: string) {
   if (!canChangeSpeakerDevice()) return
   try {
-    await setupAudioElement(speakerId)
+    await setSinkId(speakerId)
     localStorage.setItem(LocalStorageKeys.SpeakerDevice, speakerId)
   } catch (error) {
     console.error(`Error setting Audio Output to ${speakerId}`, error)
@@ -200,27 +127,14 @@ export function resumeAudio() {
  * @param blob - The blob to play (adds to the queue if already playing)
  */
 export async function playAudio(blob: Blob) {
-  if (!audioContext || !speakerAnalyser) return
-
-  // Add blob to pending queue
-  pendingBlobs.push(blob)
-
-  // Initialize audio element if needed
-  if (!audioElement) {
-    await setupAudioElement()
-  }
-
-  if (!audioElement) return
-
+  if (!audioElement || !player) return
   try {
+    // Add blob to stream
+    player.addBlob(blob)
+
     // Start playing if not already playing
     if (audioElement.paused) {
       audioElement.play()
-    }
-
-    // Try to process the queue if we can
-    if (sourceBuffer && !sourceBuffer.updating && !isProcessingQueue) {
-      processQueue()
     }
   } catch (error) {
     console.error('Error playing audio blob', error, blob)
@@ -231,35 +145,6 @@ export async function playAudio(blob: Blob) {
  * Stops the audio
  */
 export function stopAudio() {
-  // Clear pending blobs
-  pendingBlobs.length = 0
-
-  // Reset the MediaSource if needed
-  if (mediaSource) {
-    try {
-      if (mediaSource.readyState === 'open') {
-        mediaSource.endOfStream()
-      }
-      if (sourceBuffer && mediaSource.readyState !== 'closed') {
-        mediaSource.removeSourceBuffer(sourceBuffer)
-      }
-    } catch (error) {
-      console.error('Error cleaning up media source', error)
-    }
-    mediaSource = undefined
-    sourceBuffer = undefined
-  }
-
-  // Destroy audio element
-  if (audioElement) {
-    audioElement.pause()
-    audioElement.src = ''
-    audioElement = undefined
-  }
-
-  // Clean up media stream
-  if (currentMediaStream) {
-    currentMediaStream.getTracks().forEach((track) => track.stop())
-    currentMediaStream = undefined
-  }
+  audioElement?.pause()
+  player?.stop()
 }

@@ -1,8 +1,8 @@
 import EventEmitter from 'eventemitter3'
-import { createDelayedStream } from './createDelayedStream'
-import { LocalStorageKeys } from './localStorage'
 import { defaultMicThreshold } from './microphone'
-import { stopStream } from './stopStream'
+import { createDelayedStream } from './utils/createDelayedStream'
+import { LocalStorageKeys } from './utils/localStorage'
+import { stopStream } from './utils/stopStream'
 import { VAD } from './vad/VAD'
 
 const timeSlice = 100

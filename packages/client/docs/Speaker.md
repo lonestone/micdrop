@@ -93,7 +93,7 @@ function stopAudio(): void
 An instance of `AudioAnalyser` that can be used to analyze the audio output.
 
 ```typescript
-let speakerAnalyser: AudioAnalyser | undefined
+const speakerAnalyser: AudioAnalyser
 ```
 
 ## Example Usage

@@ -7,6 +7,7 @@ export enum CallClientCommands {
 export enum CallServerCommands {
   Message = 'message',
   CancelLastAssistantMessage = 'cancelLastAssistantMessage',
+  EnableSpeakerStreaming = 'enableSpeakerStreaming',
   EndInterview = 'endInterview',
 }
 
