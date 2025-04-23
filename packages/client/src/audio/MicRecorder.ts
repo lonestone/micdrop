@@ -159,8 +159,12 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
 
   private onStartSpeaking = (async () => {
     if (!this.recorder || this.state.isMuted) return
-    this.recorder.start(timeSlice)
-    this.queuedChunks.length = 0
+    try {
+      this.recorder.start(timeSlice)
+      this.queuedChunks.length = 0
+    } catch (error) {
+      console.error(error)
+    }
   }).bind(this)
 
   private onConfirmSpeaking = (async () => {
@@ -172,13 +176,21 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
 
   private onCancelSpeaking = (async () => {
     if (!this.recorder) return
-    this.recorder.stop()
+    try {
+      this.recorder.stop()
+    } catch (error) {
+      console.error(error)
+    }
     this.queuedChunks.length = 0
   }).bind(this)
 
   private onStopSpeaking = (async () => {
     if (!this.recorder) return
-    this.recorder.stop()
+    try {
+      this.recorder.stop()
+    } catch (error) {
+      console.error(error)
+    }
     this.changeState({ isSpeaking: false })
     this.emit('StopSpeaking')
     this.speakingConfirmed = false
