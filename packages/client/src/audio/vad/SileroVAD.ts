@@ -26,13 +26,15 @@ export class SileroVAD extends VAD {
 
     this.vad = await MicVAD.new({
       stream,
+      model: 'v5',
       onSpeechStart: () => this.emit('StartSpeaking'),
       onSpeechRealStart: () => this.emit('ConfirmSpeaking'),
       onVADMisfire: () => this.emit('CancelSpeaking'),
       onSpeechEnd: () => this.emit('StopSpeaking'),
       positiveSpeechThreshold: speechThreshold,
-      negativeSpeechThreshold: speechThreshold * 0.7, // Adjust negative threshold proportionally
-      redemptionFrames: 5,
+      negativeSpeechThreshold: speechThreshold * 0.7,
+      minSpeechFrames: 3,
+      redemptionFrames: 9,
     })
 
     this.vad.start()
@@ -40,7 +42,7 @@ export class SileroVAD extends VAD {
 
   async stop(): Promise<void> {
     if (!this.vad) return
-    this.vad.pause()
+    this.vad.destroy()
     this.vad = undefined
   }
 

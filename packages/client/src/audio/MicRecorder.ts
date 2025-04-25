@@ -1,11 +1,15 @@
 import EventEmitter from 'eventemitter3'
-import { defaultMicThreshold } from './microphone'
-import { createDelayedStream } from './utils/createDelayedStream'
+import { defaultMicThreshold } from './mic'
+import { createDelayedStream } from './utils/delayedStream'
 import { LocalStorageKeys } from './utils/localStorage'
 import { stopStream } from './utils/stopStream'
+import { SileroVAD } from './vad/SileroVAD'
 import { VAD } from './vad/VAD'
+import { VolumeVAD } from './vad/VolumeVAD'
 
 const timeSlice = 100
+
+export type MicRecorderVAD = VAD | 'volume' | 'silero'
 
 export interface MicRecorderState {
   isStarting: boolean
@@ -39,13 +43,13 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   public state: MicRecorderState
 
   private audioInfo = this.getAudioInfo()
-  private vad: VAD
+  private vad?: VAD
   private recorder: MediaRecorder | undefined
   private delayedStream: MediaStream | undefined
   private speakingConfirmed = false
   private queuedChunks: Blob[] = []
 
-  constructor(vad: VAD) {
+  constructor(private vadConfig?: MicRecorderVAD) {
     super()
 
     // Threshold for speech detection
@@ -55,7 +59,6 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
 
     // Set initial state
     this.state = { ...defaultMicRecorderState, threshold }
-    this.vad = vad
   }
 
   async start(stream: MediaStream) {
@@ -69,6 +72,10 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
         isMuted: false,
         isSpeaking: false,
       })
+
+      if (!this.vad) {
+        this.vad = this.initVAD(this.vadConfig)
+      }
 
       // Create a delayed stream to avoid cutting after speech detection
       const delayedStream = createDelayedStream(
@@ -135,10 +142,20 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   setThreshold(threshold: number) {
     this.changeState({ threshold })
     localStorage.setItem(LocalStorageKeys.MicThreshold, threshold.toString())
-    this.vad.setThreshold(threshold)
+    this.vad?.setThreshold(threshold)
+  }
+
+  private initVAD(vad?: VAD | 'volume' | 'silero'): VAD {
+    if (!vad) return new VolumeVAD()
+    if (vad === 'volume') return new VolumeVAD()
+    if (vad === 'silero') return new SileroVAD()
+    return vad
   }
 
   private async startSpeakingDetection(stream: MediaStream) {
+    if (!this.vad) {
+      throw new Error('VAD not initialized')
+    }
     if (this.vad.isStarted) {
       this.vad.stop()
     }
@@ -150,6 +167,9 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }
 
   private async stopSpeakingDetection() {
+    if (!this.vad) {
+      throw new Error('VAD not initialized')
+    }
     this.vad.off('StartSpeaking', this.onStartSpeaking)
     this.vad.off('ConfirmSpeaking', this.onConfirmSpeaking)
     this.vad.off('CancelSpeaking', this.onCancelSpeaking)

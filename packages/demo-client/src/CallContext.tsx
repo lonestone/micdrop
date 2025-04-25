@@ -68,10 +68,10 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
         isStarting: call.isStarting,
         isMicStarted: call.isMicStarted,
         conversation: call.conversation,
-        isPaused: call.micRecorder.state.isMuted,
-        isSpeaking: call.micRecorder.state.isSpeaking,
+        isPaused: call.isMicMuted,
+        isSpeaking: call.isMicSpeaking,
         isProcessing: call.isProcessing,
-        micThreshold: call.micRecorder.state.threshold,
+        micThreshold: call.micThreshold,
       }))
     })
 
@@ -89,6 +89,7 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
       console.log('EndInterview')
     })
 
+    // Stop call on unmount
     return () => {
       call.stop()
       call.removeAllListeners()
@@ -100,7 +101,8 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     start: handleStart,
     stop: handleStop,
     startMic: call.startMic.bind(call),
-    changeMicThreshold: call.micRecorder.setThreshold.bind(call.micRecorder),
+    changeMicThreshold: (threshold: number) =>
+      call.micRecorder?.setThreshold(threshold),
     pause: call.pause.bind(call),
     resume: call.resume.bind(call),
     isStarting: false,
@@ -109,7 +111,7 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     isSpeaking: false,
     isMicStarted: false,
     isProcessing: false,
-    micThreshold: Mic.defaultMicThreshold,
+    micThreshold: Mic.defaultThreshold,
     conversation: [],
     error: undefined,
   }))

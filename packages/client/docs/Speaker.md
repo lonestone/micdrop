@@ -16,69 +16,69 @@ The Speaker module provides functionality for managing audio output devices and 
 
 ### Functions
 
-#### `canChangeSpeakerDevice()`
+#### `canChangeDevice(): boolean`
 
 Checks if the browser supports changing audio output devices.
 
 ```typescript
-function canChangeSpeakerDevice(): boolean
+console.log(Speaker.canChangeDevice())
 ```
 
 Returns `true` if the browser supports changing audio output devices, `false` otherwise.
 
-#### `changeSpeakerDevice(speakerId: string)`
+#### `changeDevice(speakerId: string): Promise<void>`
 
 Changes the current audio output device.
 
 ```typescript
-async function changeSpeakerDevice(speakerId: string): Promise<void>
+await Speaker.changeDevice(deviceId)
 ```
 
 - `speakerId`: The ID of the audio output device to use
 - Saves the selected device ID to local storage
 - Automatically initializes audio pipeline if needed
 
-#### `playAudio(blob: Blob)`
+#### `playAudio(blob: Blob): Promise<void>`
 
 Plays an audio blob through the current audio output device using MediaSource Extensions.
 
 ```typescript
-async function playAudio(blob: Blob): Promise<void>
+await Speaker.playAudio(audioBlob)
 ```
 
 - `blob`: The audio blob to play
 - Queues blobs for continuous playback
 - Automatically handles audio pipeline initialization
-- Connects to audio analyser for visualization (see `speakerAnalyser`)
+- Connects to audio analyser for visualization (see `analyser`)
 - Supports streaming playback with automatic buffer management
 
-#### `pauseAudio()`
+#### `pauseAudio(): void`
 
 Pauses the currently playing audio.
 
 ```typescript
-function pauseAudio(): void
+Speaker.pauseAudio()
 ```
 
 - Pauses playback while maintaining the audio pipeline
 - Can be resumed using `resumeAudio()`
 
-#### `resumeAudio()`
+#### `resumeAudio(): void`
 
 Resumes paused audio playback.
 
 ```typescript
-function resumeAudio(): void
+Speaker.resumeAudio()
 ```
 
 - Resumes playback from where it was paused
 
-#### `stopAudio()`
+#### `stopAudio(): void`
 
 Stops audio playback and cleans up resources.
 
 ```typescript
-function stopAudio(): void
+Speaker.stopAudio()
 ```
 
 - Stops playback completely
@@ -88,12 +88,18 @@ function stopAudio(): void
 
 ### Variables
 
-#### `speakerAnalyser`
+#### `analyser`
 
 An instance of `AudioAnalyser` that can be used to analyze the audio output.
 
 ```typescript
-const speakerAnalyser: AudioAnalyser
+Speaker.analyser.on('volume', (volume: number) => {
+  console.log('Current volume:', volume)
+})
+
+// AnalyserNode
+// See https://developer.mozilla.org/docs/Web/API/AnalyserNode
+console.log(Speaker.analyser.node)
 ```
 
 ## Example Usage
@@ -102,9 +108,9 @@ const speakerAnalyser: AudioAnalyser
 import { Speaker } from '@micdrop/client'
 
 // Check if device selection is supported
-if (Speaker.canChangeSpeakerDevice()) {
+if (Speaker.canChangeDevice()) {
   // Change to a specific output device
-  await Speaker.changeSpeakerDevice('device-id')
+  await Speaker.changeDevice('device-id')
 }
 
 // Play an audio blob
@@ -119,17 +125,19 @@ await Speaker.playAudio(audioBlob)
 // Pause playback
 Speaker.pauseAudio()
 
+// Monitor volume changes using the audio analyser
+// Volume is in dB range -100 to 0
+Speaker.analyser.on('volume', (volume: number) => {
+  // Convert to 0-100 range for visualization if needed
+  const normalizedVolume = Math.max(0, volume + 100)
+  console.log('Current volume:', normalizedVolume)
+})
+
 // Resume playback
 Speaker.resumeAudio()
 
 // Stop playback and cleanup
 Speaker.stopAudio()
-
-// Access the audio analyser for visualization
-if (Speaker.speakerAnalyser) {
-  const analyserData = Speaker.speakerAnalyser.getByteFrequencyData()
-  // Use the data for visualization
-}
 ```
 
 ## Browser Support
@@ -149,5 +157,5 @@ Requires browsers with support for:
 - Supports queueing of audio blobs for continuous playback
 - Automatically handles audio context initialization and unlocking
 - Implements automatic recovery from invalid states
-- Audio analysis is available through the `speakerAnalyser` instance
+- Audio analysis is available through the `analyser` instance
 - Error handling is implemented with detailed console logging for debugging

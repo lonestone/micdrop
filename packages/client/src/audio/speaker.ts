@@ -5,146 +5,134 @@ import { SpeakerSequencePlayer } from './player/SpeakerSequencePlayer'
 import { AudioAnalyser } from './utils/AudioAnalyser'
 import { audioContext } from './utils/audioContext'
 import { LocalStorageKeys } from './utils/localStorage'
-import { unlock } from './utils/unlock'
 
-let audioElement: HTMLAudioElement | undefined
-let player: SpeakerPlayer | undefined
-let streamingEnabled = false
+export let speaker: Speaker
 
-export const speakerAnalyser = new AudioAnalyser(audioContext)
+class Speaker {
+  private audioElement?: HTMLAudioElement
+  private player?: SpeakerPlayer
+  private streamingEnabled = false
+  public analyser: AudioAnalyser
 
-async function init() {
-  unlock(audioContext)
+  constructor() {
+    this.analyser = new AudioAnalyser(audioContext)
 
-  // Create audio element if it doesn't exist
-  audioElement = new Audio()
-  audioElement.autoplay = true
+    // Create audio element if it doesn't exist
+    this.audioElement = new Audio()
+    this.audioElement.autoplay = true
 
-  // Select speaker device if speakerId is in local storage
-  const speakerId = localStorage.getItem(LocalStorageKeys.SpeakerDevice)
-  if (speakerId) {
+    // Select speaker device if speakerId is in local storage
+    const speakerId = localStorage.getItem(LocalStorageKeys.SpeakerDevice)
+    if (speakerId) {
+      this.setSinkId(speakerId).catch((error) => {
+        console.error('Failed to set sink ID:', error)
+      })
+    }
+
+    // Source -> Analyser
+    this.setupSpeakerPlayer()
+
+    // Analyser -> Destination
+    const destinationNode = audioContext.createMediaStreamDestination()
+    this.analyser.node.connect(destinationNode)
+
+    // Destination -> Speaker
+    this.audioElement.srcObject = destinationNode.stream
+  }
+
+  private async setupSpeakerPlayer() {
     try {
-      await setSinkId(speakerId)
+      this.player?.destroy()
+      this.player = this.streamingEnabled
+        ? SpeakerMediaSourcePlayer.isCompatible
+          ? new SpeakerMediaSourcePlayer(this.analyser.node)
+          : new SpeakerConcatPlayer(this.analyser.node)
+        : new SpeakerSequencePlayer(this.analyser.node)
+      await this.player?.setup()
     } catch (error) {
-      console.error('Failed to set sink ID:', error)
+      console.error('Error setting up speaker player', error)
     }
   }
 
-  // Source -> Analyser
-  await setupSpeakerPlayer()
-
-  // Analyser -> Destination
-  const destinationNode = audioContext.createMediaStreamDestination()
-  speakerAnalyser.node.connect(destinationNode)
-
-  // Destination -> Speaker
-  audioElement.srcObject = destinationNode.stream
-}
-
-init()
-
-async function setupSpeakerPlayer() {
-  try {
-    player?.destroy()
-    player = streamingEnabled
-      ? SpeakerMediaSourcePlayer.isCompatible
-        ? new SpeakerMediaSourcePlayer(speakerAnalyser.node)
-        : new SpeakerConcatPlayer(speakerAnalyser.node)
-      : new SpeakerSequencePlayer(speakerAnalyser.node)
-    await player?.setup()
-  } catch (error) {
-    console.error('Error setting up speaker player', error)
+  get isStreamingEnabled() {
+    return this.streamingEnabled
   }
-}
 
-export async function isStreamingEnabled() {
-  return streamingEnabled
-}
-
-export async function enableStreaming() {
-  if (streamingEnabled) return
-  streamingEnabled = true
-  await setupSpeakerPlayer()
-}
-
-export async function disableStreaming() {
-  if (!streamingEnabled) return
-  streamingEnabled = false
-  await setupSpeakerPlayer()
-}
-
-/**
- * Checks if the speaker device can be changed
- * @returns True if the speaker device can be changed, false otherwise
- */
-export function canChangeSpeakerDevice(): boolean {
-  return (
-    window.HTMLMediaElement && 'sinkId' in window.HTMLMediaElement.prototype
-  )
-}
-
-async function setSinkId(speakerId?: string) {
-  if (speakerId && canChangeSpeakerDevice() && audioElement) {
-    // @ts-ignore
-    return audioElement.setSinkId(speakerId)
+  async enableStreaming() {
+    if (this.streamingEnabled) return
+    this.streamingEnabled = true
+    await this.setupSpeakerPlayer()
   }
-}
 
-/**
- * Changes the speaker device
- * @param speakerId - The speakerId to use
- */
-export async function changeSpeakerDevice(speakerId: string) {
-  if (!canChangeSpeakerDevice()) return
-  try {
-    await setSinkId(speakerId)
-    localStorage.setItem(LocalStorageKeys.SpeakerDevice, speakerId)
-  } catch (error) {
-    console.error(`Error setting Audio Output to ${speakerId}`, error)
+  async disableStreaming() {
+    if (!this.streamingEnabled) return
+    this.streamingEnabled = false
+    await this.setupSpeakerPlayer()
   }
-}
 
-/**
- * Pauses the audio
- */
-export function pauseAudio() {
-  if (audioElement) {
-    audioElement.pause()
+  canChangeDevice(): boolean {
+    return (
+      window.HTMLMediaElement && 'sinkId' in window.HTMLMediaElement.prototype
+    )
   }
-}
 
-/**
- * Resumes the audio
- */
-export function resumeAudio() {
-  if (audioElement) {
-    audioElement.play()
-  }
-}
-
-/**
- * Plays the audio
- * @param blob - The blob to play (adds to the queue if already playing)
- */
-export async function playAudio(blob: Blob) {
-  if (!audioElement || !player) return
-  try {
-    // Add blob to stream
-    player.addBlob(blob)
-
-    // Start playing if not already playing
-    if (audioElement.paused) {
-      audioElement.play()
+  private async setSinkId(speakerId?: string) {
+    if (speakerId && this.canChangeDevice() && this.audioElement) {
+      // @ts-ignore
+      return this.audioElement.setSinkId(speakerId)
     }
-  } catch (error) {
-    console.error('Error playing audio blob', error, blob)
+  }
+
+  async changeDevice(speakerId: string) {
+    if (!this.canChangeDevice()) return
+    try {
+      await this.setSinkId(speakerId)
+      localStorage.setItem(LocalStorageKeys.SpeakerDevice, speakerId)
+    } catch (error) {
+      console.error(`Error setting Audio Output to ${speakerId}`, error)
+    }
+  }
+
+  pauseAudio() {
+    if (this.audioElement) {
+      this.audioElement.pause()
+    }
+  }
+
+  resumeAudio() {
+    if (this.audioElement) {
+      this.audioElement.play()
+    }
+  }
+
+  async playAudio(blob: Blob) {
+    if (!this.audioElement || !this.player) return
+    try {
+      // Add blob to stream
+      this.player.addBlob(blob)
+
+      // Start playing if not already playing
+      if (this.audioElement.paused) {
+        this.audioElement.play()
+      }
+    } catch (error) {
+      console.error('Error playing audio blob', error, blob)
+    }
+  }
+
+  stopAudio() {
+    this.audioElement?.pause()
+    this.player?.stop()
   }
 }
 
-/**
- * Stops the audio
- */
-export function stopAudio() {
-  audioElement?.pause()
-  player?.stop()
+declare global {
+  interface Window {
+    micdropSpeaker: Speaker
+  }
 }
+
+if (!window.micdropSpeaker) {
+  window.micdropSpeaker = new Speaker()
+}
+speaker = window.micdropSpeaker

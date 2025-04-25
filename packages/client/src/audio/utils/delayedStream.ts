@@ -10,9 +10,6 @@ export function createDelayedStream(
   stream: MediaStream,
   delay: number
 ): MediaStream {
-  if (!audioContext) {
-    throw new Error('AudioContext not initialized')
-  }
   const audioSource = audioContext.createMediaStreamSource(stream)
   const delayNode = audioContext.createDelay(delay)
   delayNode.delayTime.value = delay

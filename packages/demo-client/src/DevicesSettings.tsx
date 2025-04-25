@@ -24,20 +24,20 @@ export default function DevicesSettings() {
   )
 
   // Get available devices
+  const getDevices = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      setAudioInputs(devices.filter((device) => device.kind === 'audioinput'))
+      setAudioOutputs(devices.filter((device) => device.kind === 'audiooutput'))
+    } catch (error) {
+      setError(error as Error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    // Create a Promise for error handling
-    Promise.resolve()
-      // Try to get devices
-      .then(() => navigator.mediaDevices.enumerateDevices())
-      // Add devices to states
-      .then((devices) => {
-        setAudioInputs(devices.filter((device) => device.kind === 'audioinput'))
-        setAudioOutputs(
-          devices.filter((device) => device.kind === 'audiooutput')
-        )
-        setLoading(false)
-      })
-      .catch((error) => setError(error))
+    getDevices()
   }, [])
 
   // Change audio input (mic)
@@ -55,7 +55,7 @@ export default function DevicesSettings() {
   ) => {
     const deviceId = event.target.value
     setAudioOutputId(deviceId)
-    Speaker.changeSpeakerDevice(deviceId)
+    Speaker.changeDevice(deviceId)
   }
 
   return (
@@ -76,6 +76,7 @@ export default function DevicesSettings() {
         <select
           value={audioInputId}
           className="flex-1 form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
+          onClick={getDevices}
           onChange={handleAudioInputChange}
         >
           {audioInputs.map(({ deviceId, label }) => (
@@ -94,6 +95,7 @@ export default function DevicesSettings() {
         <select
           value={audioOutputId}
           className="flex-1 form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
+          onClick={getDevices}
           onChange={handleAudioOutputChange}
         >
           {audioOutputs.map(({ deviceId, label }) => (

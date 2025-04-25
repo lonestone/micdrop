@@ -1,6 +1,6 @@
+export { mic as Mic } from './audio/mic'
 export * from './audio/MicRecorder'
-export * as Mic from './audio/microphone'
-export * as Speaker from './audio/speaker'
+export { speaker as Speaker } from './audio/speaker'
 export * from './audio/utils/localStorage'
 export * from './audio/vad'
 export * from './call/CallHandler'

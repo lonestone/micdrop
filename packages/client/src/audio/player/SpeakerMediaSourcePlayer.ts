@@ -1,3 +1,4 @@
+import { stopStream } from '../utils/stopStream'
 import { SpeakerPlayer } from './SpeakerPlayer'
 
 export class SpeakerMediaSourcePlayer extends SpeakerPlayer {
@@ -146,7 +147,7 @@ export class SpeakerMediaSourcePlayer extends SpeakerPlayer {
 
     // Clean up media stream
     if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach((track) => track.stop())
+      stopStream(this.mediaStream)
       this.mediaStream = undefined
     }
 

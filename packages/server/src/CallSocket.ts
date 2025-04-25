@@ -10,6 +10,10 @@ import {
 
 export const END_INTERVIEW = 'END_INTERVIEW'
 
+interface Processing {
+  aborted: boolean
+}
+
 export class CallSocket {
   public socket: WebSocket | null = null
   public config: CallConfig | null = null
@@ -18,7 +22,7 @@ export class CallSocket {
   private lastDebug = Date.now()
 
   // An answer can be aborted if user is speaking
-  private abortAnswer = false
+  private processing?: Processing
 
   // When user is speaking, we're waiting to chunks or to stop
   private isSpeaking = false
@@ -63,6 +67,12 @@ export class CallSocket {
     this.conversation = conversation
   }
 
+  private abortProcessing() {
+    if (!this.processing) return
+    this.processing.aborted = true
+    this.processing = undefined
+  }
+
   private addMessage(message: ConversationMessage) {
     if (!this.socket || !this.config) return
     this.conversation.push(message)
@@ -72,11 +82,12 @@ export class CallSocket {
 
   private async sendAudio(
     audio: ArrayBuffer | NodeJS.ReadableStream,
-    abort?: () => void
+    processing: Processing,
+    onAbort?: () => void
   ) {
     if (!this.socket) return
-    if (this.abortAnswer) {
-      abort?.()
+    if (processing.aborted) {
+      onAbort?.()
       return
     }
 
@@ -93,8 +104,8 @@ export class CallSocket {
 
       // Audio as a stream
       for await (const chunk of audio) {
-        if (this.abortAnswer) {
-          abort?.()
+        if (processing.aborted) {
+          onAbort?.()
           return
         }
         this.log(`Send audio chunk (${chunk.length} bytes)`)
@@ -108,7 +119,7 @@ export class CallSocket {
   private onClose() {
     if (!this.config) return
     this.log('Connection closed')
-    this.abortAnswer = true
+    this.abortProcessing()
     const duration = Math.round((Date.now() - this.startTime) / 1000)
 
     // End call callback
@@ -137,11 +148,11 @@ export class CallSocket {
         // User started speaking
         this.isSpeaking = true
         // Abort answer if there is generation in progress
-        this.abortAnswer = true
+        this.abortProcessing()
       } else if (cmd === CallClientCommands.Mute) {
         // User muted the call
         // Abort answer if there is generation in progress
-        this.abortAnswer = true
+        this.abortProcessing()
       } else if (cmd === CallClientCommands.StopSpeaking) {
         // User stopped speaking
         this.isSpeaking = false
@@ -162,7 +173,8 @@ export class CallSocket {
     // Do nothing if there is no chunk
     if (this.chunks.length === 0) return
 
-    this.abortAnswer = false
+    this.abortProcessing()
+    const processing = (this.processing = { aborted: false })
 
     // Combine audio blob
     const blob = new Blob(this.chunks, { type: 'audio/ogg' })
@@ -193,19 +205,19 @@ export class CallSocket {
       // Send transcript to client
       this.addMessage({ role: 'user', content: transcript })
 
-      if (this.abortAnswer) {
+      if (processing.aborted) {
         this.log('Answer aborted, no answer generated')
         return
       }
 
       // LLM: Generate answer
       const answer = await this.config.generateAnswer(this.conversation)
-      if (this.abortAnswer) {
+      if (processing.aborted) {
         this.log('Answer aborted, ignoring answer')
         return
       }
 
-      await this.answer(answer)
+      await this.answer(answer, processing)
     } catch (error) {
       console.error('[CallSocket]', error)
       // TODO: Implement retry
@@ -213,8 +225,17 @@ export class CallSocket {
   }
 
   // Add assistant message and send to client with audio (TTS)
-  public async answer(message: string | ConversationMessage) {
+  public async answer(
+    message: string | ConversationMessage,
+    processing?: Processing
+  ) {
     if (!this.socket || !this.config) return
+
+    if (!processing) {
+      this.abortProcessing()
+      processing = this.processing = { aborted: false }
+    }
+
     let isEnd = false
 
     let content = typeof message === 'string' ? message : message.content
@@ -234,10 +255,8 @@ export class CallSocket {
       // TTS: Generate answer audio
       if (!this.config.disableTTS) {
         try {
-          const audio = await this.config.text2Speech(content)
-
           // Remove last assistant message if aborted
-          const abort = () => {
+          const onAbort = () => {
             this.log('Answer aborted, removing last assistant message')
             const lastMessage = this.conversation[this.conversation.length - 1]
             if (lastMessage?.role === 'assistant') {
@@ -246,8 +265,15 @@ export class CallSocket {
             }
           }
 
+          if (processing.aborted) {
+            onAbort()
+            return
+          }
+
+          const audio = await this.config.text2Speech(content)
+
           // Send audio to client
-          await this.sendAudio(audio, abort)
+          await this.sendAudio(audio, processing, onAbort)
         } catch (error) {
           console.error('[CallSocket]', error)
           // TODO: Implement retry

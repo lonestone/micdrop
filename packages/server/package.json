@@ -1,6 +1,6 @@
 {
   "name": "@micdrop/server",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "A lib for Node.js that helps to use the mic and speaker for voice conversation",
   "author": "Lonestone",
   "license": "MIT",

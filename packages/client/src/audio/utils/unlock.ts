@@ -1,17 +1,18 @@
 // Inspired https://www.mattmontag.com/web/unlock-web-audio-in-safari-for-ios-and-macos
 export function unlock(audioContext: AudioContext): void {
   const events = ['touchstart', 'touchend', 'mousedown', 'keydown']
-  events.forEach((e) => document.body.addEventListener(e, unlock, false))
-  async function unlock() {
+
+  const unlock = async () => {
     unlockSafari(audioContext)
     if (audioContext.state === 'suspended') {
       await audioContext.resume()
     }
-    clean()
-  }
-  function clean() {
+    // Clean events
     events.forEach((e) => document.body.removeEventListener(e, unlock))
   }
+
+  // Add events
+  events.forEach((e) => document.body.addEventListener(e, unlock, false))
 }
 
 // safari/ios hack - inspired by https://codepen.io/kslstn/pen/pagLqL

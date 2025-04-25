@@ -5,18 +5,9 @@ import {
   Conversation,
   ConversationMessage,
 } from '../..'
-import { MicRecorder } from '../audio/MicRecorder'
-import { startMicrophone, stopMicrophone } from '../audio/microphone'
-import {
-  enableStreaming,
-  pauseAudio,
-  playAudio,
-  resumeAudio,
-  stopAudio,
-} from '../audio/speaker'
-import { SileroVAD } from '../audio/vad/SileroVAD'
-import { VAD } from '../audio/vad/VAD'
-import { VolumeVAD } from '../audio/vad/VolumeVAD'
+import { MicRecorder, MicRecorderVAD } from '../audio/MicRecorder'
+import { mic } from '../audio/mic'
+import { speaker } from '../audio/speaker'
 import { CallHandlerError, CallHandlerErrorCode } from './CallHandlerError'
 
 export interface CallHandlerEvents {
@@ -26,28 +17,32 @@ export interface CallHandlerEvents {
 }
 
 export interface CallHandlerOptions {
-  vad?: VAD | 'volume' | 'silero'
+  vad?: MicRecorderVAD
+}
+
+declare global {
+  interface Window {
+    micdropCallHandler: CallHandler<any>
+  }
 }
 
 export class CallHandler<
   Params extends {},
   Options extends CallHandlerOptions = CallHandlerOptions,
 > extends EventEmitter<CallHandlerEvents> {
-  private static instance: CallHandler<any>
-
   public static getInstance<
     T extends {},
     Options extends CallHandlerOptions = CallHandlerOptions,
   >(options?: Options): CallHandler<T, Options> {
-    if (!CallHandler.instance) {
-      CallHandler.instance = new CallHandler<T, Options>(options)
+    if (!window.micdropCallHandler) {
+      window.micdropCallHandler = new CallHandler(options)
     }
-    return CallHandler.instance
+    return window.micdropCallHandler as CallHandler<T, Options>
   }
 
   public url?: string
   public params?: Params
-  public micRecorder: MicRecorder
+  public micRecorder?: MicRecorder
   public conversation: Conversation = []
   public debug = false
 
@@ -57,69 +52,43 @@ export class CallHandler<
   private lastAudioBlob?: Blob
   private _isProcessing = false
 
-  private constructor(options?: Options) {
+  private constructor(private options?: Options) {
     super()
-
-    this.micRecorder = new MicRecorder(this.getVAD(options?.vad))
-
-    // Notify mic recorder state change
-    this.micRecorder.on('StateChange', () => {
-      this.notifyStateChange()
-    })
-
-    // Send chunk of user speech to server
-    this.micRecorder.on('Chunk', (blob) => {
-      this.log(`[Mic] Received chunk`, blob)
-      this.ws?.send(blob)
-    })
-
-    // Notify server that user started speaking
-    this.micRecorder.on('StartSpeaking', () => {
-      this.log('[Mic] Start speaking')
-      this.ws?.send(CallClientCommands.StartSpeaking)
-      // Interruption
-      this._isProcessing = false
-      this.notifyStateChange()
-      stopAudio()
-    })
-
-    // Notify server that user speech is complete
-    this.micRecorder.on('StopSpeaking', () => {
-      this.log('[Mic] Stop speaking')
-      this.ws?.send(CallClientCommands.StopSpeaking)
-      this._isProcessing = true
-      this.notifyStateChange()
-    })
   }
 
-  private getVAD(vad?: VAD | 'volume' | 'silero'): VAD {
-    if (!vad) return new VolumeVAD()
-    if (vad === 'volume') return new VolumeVAD()
-    if (vad === 'silero') return new SileroVAD()
-    return vad
+  get isStarted(): boolean {
+    return (this.isWSStarted && this.micRecorder?.state.isStarted) || false
   }
 
-  get isStarted() {
-    return this.isWSStarted && this.micRecorder.state.isStarted
+  get isStarting(): boolean {
+    return this.isWSStarting || this.micRecorder?.state.isStarting || false
   }
 
-  get isStarting() {
-    return this.isWSStarting || this.micRecorder.state.isStarting
-  }
-
-  get isWSStarted() {
+  get isWSStarted(): boolean {
     return this.ws?.readyState === WebSocket.OPEN
   }
 
-  get isWSStarting() {
+  get isWSStarting(): boolean {
     return this.ws?.readyState === WebSocket.CONNECTING
   }
 
-  get isMicStarted() {
+  get isMicStarted(): boolean {
     return !!this.micStream
   }
 
-  get isProcessing() {
+  get isMicMuted(): boolean {
+    return this.micRecorder?.state.isMuted ?? false
+  }
+
+  get isMicSpeaking(): boolean {
+    return this.micRecorder?.state.isSpeaking ?? false
+  }
+
+  get micThreshold(): number {
+    return this.micRecorder?.state.threshold ?? mic.defaultThreshold
+  }
+
+  get isProcessing(): boolean {
     return this._isProcessing
   }
 
@@ -146,7 +115,7 @@ export class CallHandler<
 
     try {
       // Stop microphone
-      this.micRecorder.stop()
+      this.micRecorder?.stop()
       this.stopMic()
     } catch (error) {
       console.error('[CallHandler] stop mic', error)
@@ -154,30 +123,65 @@ export class CallHandler<
   }
 
   pause() {
-    this.micRecorder.mute()
+    this.micRecorder?.mute()
+    this._isProcessing = false
     this.notifyStateChange()
-    pauseAudio()
+    speaker.pauseAudio()
+    this.ws?.send(CallClientCommands.Mute)
   }
 
   resume() {
     if (this.lastAudioBlob) {
-      playAudio(this.lastAudioBlob)
+      speaker.playAudio(this.lastAudioBlob)
     }
-    resumeAudio()
-    this.micRecorder.unmute()
+    speaker.resumeAudio()
+    this.micRecorder?.unmute()
     this.notifyStateChange()
   }
 
   async startMic(deviceId?: string, record = true) {
     try {
+      if (!this.micRecorder) {
+        this.micRecorder = new MicRecorder(this.options?.vad)
+
+        // Notify mic recorder state change
+        this.micRecorder.on('StateChange', () => {
+          this.notifyStateChange()
+        })
+
+        // Send chunk of user speech to server
+        this.micRecorder.on('Chunk', (blob) => {
+          this.log(`[Mic] Received chunk`, blob)
+          this.ws?.send(blob)
+        })
+
+        // Notify server that user started speaking
+        this.micRecorder.on('StartSpeaking', () => {
+          this.log('[Mic] Start speaking')
+          this.ws?.send(CallClientCommands.StartSpeaking)
+          // Interruption
+          this._isProcessing = false
+          this.notifyStateChange()
+          speaker.stopAudio()
+        })
+
+        // Notify server that user speech is complete
+        this.micRecorder.on('StopSpeaking', () => {
+          this.log('[Mic] Stop speaking')
+          this.ws?.send(CallClientCommands.StopSpeaking)
+          this._isProcessing = true
+          this.notifyStateChange()
+        })
+      }
+
       // Stop recorder if it was running
       const isRecorderStarted = this.micRecorder.state.isStarted
       if (isRecorderStarted) {
-        this.micRecorder.stop()
+        this.micRecorder?.stop()
       }
 
       // Start microphone
-      this.micStream = await startMicrophone(deviceId)
+      this.micStream = await mic.start(deviceId)
       this.notifyStateChange()
 
       // Restart recorder if it was running
@@ -192,7 +196,9 @@ export class CallHandler<
   }
 
   private stopMic() {
-    stopMicrophone()
+    this.micRecorder?.stop()
+    this.micRecorder = undefined
+    mic.stop()
     this.micStream = undefined
     this.notifyStateChange()
   }
@@ -227,7 +233,7 @@ export class CallHandler<
       this.log('[WS]', event.data)
       if (event.data instanceof Blob) {
         // Received assistant speech
-        playAudio(event.data)
+        speaker.playAudio(event.data)
         this.lastAudioBlob = event.data
         this._isProcessing = false
         this.notifyStateChange()
@@ -253,7 +259,7 @@ export class CallHandler<
         }
       } else if (event.data === CallServerCommands.EnableSpeakerStreaming) {
         // Enable speaker streaming
-        enableStreaming()
+        speaker.enableStreaming()
       }
     }
     this.ws.onclose = (event) => {

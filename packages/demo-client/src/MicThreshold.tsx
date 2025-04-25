@@ -5,7 +5,8 @@ import { CallContext } from './CallContext'
 const volumeColor = '#00bb00'
 
 export default function MicThreshold() {
-  const { micThreshold, changeMicThreshold } = useContext(CallContext)!
+  const { micThreshold, changeMicThreshold, isSpeaking } =
+    useContext(CallContext)!
   const [volume, setVolume] = useState(0) // 0-100
 
   // Update volume
@@ -13,9 +14,9 @@ export default function MicThreshold() {
     const onVolumeChange = (volume: number) => {
       setVolume(Math.max(0, volume + 100))
     }
-    Mic.micAnalyser?.on('volume', onVolumeChange)
+    Mic.analyser?.on('volume', onVolumeChange)
     return () => {
-      Mic.micAnalyser?.off('volume', onVolumeChange)
+      Mic.analyser?.off('volume', onVolumeChange)
     }
   }, [])
 
@@ -52,7 +53,11 @@ export default function MicThreshold() {
           className="absolute w-full h-full opacity-0 cursor-pointer"
         />
         <div
-          className="absolute h-4 w-4 -mx-2 bg-white rounded-full border-2 border-gray-700 transform -translate-y-1/2 top-1/2 pointer-events-none"
+          className={`absolute h-4 w-4 -mx-2 rounded-full border-2 transform -translate-y-1/2 top-1/2 pointer-events-none ${
+            isSpeaking
+              ? 'bg-green-500 border-green-700'
+              : 'bg-white border-gray-700'
+          }`}
           style={{ left: `${sliderValue}%` }}
         />
       </div>
