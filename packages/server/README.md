@@ -161,92 +161,80 @@ interface CallConfig {
 }
 ```
 
-### Message Types
-
-```typescript
-interface ConversationMessage {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-  metadata?: any
-}
-
-type Conversation = ConversationMessage[]
-
-interface CallSummary {
-  conversation: Conversation
-  duration: number
-}
-```
-
 ## WebSocket Protocol
 
 The server implements a specific protocol for client-server communication:
 
 ### Client Commands
 
-```typescript
-enum CallClientCommands {
-  StartSpeaking = 'startSpeaking',
-  StopSpeaking = 'stopSpeaking',
-  Mute = 'mute',
-}
-```
+The client can send the following commands to the server:
+
+- `CallClientCommands.StartSpeaking` - The user starts speaking
+- `CallClientCommands.StopSpeaking` - The user stops speaking
+- `CallClientCommands.Mute` - The user mutes the microphone
 
 ### Server Commands
 
-```typescript
-enum CallServerCommands {
-  Message = 'message',
-  CancelLastAssistantMessage = 'cancelLastAssistantMessage',
-  EndInterview = 'endInterview',
-}
-```
+The server can send the following commands to the client:
+
+- `CallServerCommands.Message` - A message from the assistant.
+- `CallServerCommands.CancelLastAssistantMessage` - Cancel the last assistant message.
+- `CallServerCommands.CancelLastUserMessage` - Cancel the last user message.
+- `CallServerCommands.SkipAnswer` - Notify that the last generated answer was ignored, it's listening again.
+- `CallServerCommands.EnableSpeakerStreaming` - Enable speaker streaming.
+- `CallServerCommands.EndCall` - End the call.
 
 ### Message Flow
 
 1. Client connects to WebSocket server
-2. Server sends initial assistant message (if configured)
+2. Server sends initial assistant message (generated if not provided)
 3. Client sends audio chunks when user speaks
-4. Server processes audio and responds with text/audio
-5. Process continues until interview ends
+4. Server processes audio and responds with text+audio
+5. Process continues until call ends
+
+See detailed protocol in [README.md](../README.md).
 
 ## Ending the call
 
 The call has two ways to end:
 
 - When the client closes the websocket connection.
-- When the generated answer contains the keyword "END_INTERVIEW".
+- When the generated answer contains the metadata command `endCall: true`.
 
-You can prompt it like this:
+Example:
 
 ```typescript
-import { END_INTERVIEW } from '@micdrop/server'
-
+const END_CALL = 'END_CALL'
 const systemPrompt = `
 You are a voice assistant interviewing the user.
-To end the interview, briefly thank the user and say good bye, then say "${END_INTERVIEW}".
+To end the interview, briefly thank the user and say good bye, then say ${END_CALL}.
 `
-```
 
-## Error Handling
+async function generateAnswer(
+  conversation: ConversationMessage[]
+): Promise<ConversationMessage> {
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: conversation,
+    temperature: 0.5,
+    max_tokens: 250,
+  })
 
-The server implements standardized error handling with specific codes:
+  let text = response.choices[0].message.content
+  if (!text) throw new Error('Empty response')
 
-```typescript
-enum CallErrorCode {
-  BadRequest = 4400,
-  Unauthorized = 4401,
-  NotFound = 4404,
+  // Add metadata
+  const metadata: CallMetadata = {}
+  if (text.includes(END_CALL)) {
+    text = text.replace(END_CALL, '').trim()
+    metadata.commands = { endCall: true }
+  }
+
+  return { role: 'assistant', content: text, metadata }
 }
 ```
 
-Common error scenarios:
-
-- Invalid WebSocket messages
-- Authentication failures
-- Missing or invalid parameters
-- Audio processing errors
-- Connection timeouts
+See demo [system prompt](../demo-server/src/call.ts) and [generateAnswer](../demo-server/src/ai/generateAnswer.ts) for a complete example.
 
 ## Integration Example
 
@@ -271,7 +259,7 @@ server.get('/call', { websocket: true }, (socket) => {
 server.listen({ port: 8080 })
 ```
 
-See [@micdrop/demo-server](../demo-server/src/ai/index.ts) for a complete example using OpenAI and ElevenLabs.
+See [@micdrop/demo-server](../demo-server/src/call.ts) for a complete example using OpenAI and ElevenLabs.
 
 ## Debug Mode
 
@@ -281,6 +269,8 @@ The server includes a debug mode that can:
 - Save audio files for debugging (optional)
 - Track conversation state
 - Monitor WebSocket events
+
+See `debugLog`, `debugSaveSpeech` and `disableTTS` options in [CallConfig](#callconfig).
 
 ## Browser Support
 

@@ -16,7 +16,7 @@ The `CallHandler` class manages real-time audio communication between a client a
 
 The `CallHandler` emits the following events:
 
-- `EndInterview`: Emitted when the interview/conversation session ends
+- `EndCall`: Emitted when the call ends
 - `Error`: Emitted when an error occurs, provides a `CallHandlerError` object
 - `StateChange`: Emitted when any state change occurs in the handler
 
@@ -179,8 +179,8 @@ call.on('StateChange', () => {
 
 // Listen for end of call
 // Can be triggered via prompting (see server docs)
-call.on('EndInterview', () => {
-  console.log('Interview ended')
+call.on('EndCall', () => {
+  console.log('Call ended by assistant')
 })
 
 // Listen for errors

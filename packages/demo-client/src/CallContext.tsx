@@ -83,10 +83,10 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
       }))
     })
 
-    // Handle end of interview
-    call.on('EndInterview', () => {
+    // Handle end of call
+    call.on('EndCall', () => {
       call.stop()
-      console.log('EndInterview')
+      console.log('Call ended by assistant')
     })
 
     // Stop call on unmount

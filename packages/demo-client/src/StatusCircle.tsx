@@ -19,11 +19,11 @@ export default function StatusCircle({ size }: Props) {
     const onMicVolumeChange = (volume: number) => {
       setMicVolume(Math.max(0, volume + 100))
     }
-    Speaker.analyser?.on('volume', onSpeakerVolumeChange)
-    Mic.analyser?.on('volume', onMicVolumeChange)
+    Speaker.analyser.on('volume', onSpeakerVolumeChange)
+    Mic.analyser.on('volume', onMicVolumeChange)
     return () => {
-      Speaker.analyser?.off('volume', onSpeakerVolumeChange)
-      Mic.analyser?.off('volume', onMicVolumeChange)
+      Speaker.analyser.off('volume', onSpeakerVolumeChange)
+      Mic.analyser.off('volume', onMicVolumeChange)
     }
   }, [])
 

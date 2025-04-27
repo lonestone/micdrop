@@ -47,8 +47,8 @@ call.params = {
 call.on('StateChange', () => {
   console.log('State changed')
 })
-call.on('EndInterview', () => {
-  console.log('Interview ended')
+call.on('EndCall', () => {
+  console.log('Call ended by assistant')
 })
 call.on('Error', (error) => {
   console.error('Error occurred:', error)

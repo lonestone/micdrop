@@ -11,7 +11,7 @@ import { speaker } from '../audio/speaker'
 import { CallHandlerError, CallHandlerErrorCode } from './CallHandlerError'
 
 export interface CallHandlerEvents {
-  EndInterview: []
+  EndCall: []
   Error: [CallHandlerError]
   StateChange: void
 }
@@ -22,7 +22,7 @@ export interface CallHandlerOptions {
 
 declare global {
   interface Window {
-    micdropCallHandler: CallHandler<any>
+    micdropCallHandler: CallHandler<any, CallHandlerOptions>
   }
 }
 
@@ -245,16 +245,28 @@ export class CallHandler<
           event.data.substring(CallServerCommands.Message.length + 1)
         )
         this.addMessage(message)
-      } else if (event.data === CallServerCommands.EndInterview) {
-        // Interview ended
+      } else if (event.data === CallServerCommands.EndCall) {
+        // Call ended
         setTimeout(() => {
-          this.emit('EndInterview')
+          this.emit('EndCall')
         }, 2000) // Wait to prevent conflict
       } else if (event.data === CallServerCommands.CancelLastAssistantMessage) {
         // Remove last assistant message if aborted
         const lastMessage = this.conversation[this.conversation.length - 1]
         if (lastMessage?.role === 'assistant') {
           this.conversation = this.conversation.slice(0, -1)
+          this.notifyStateChange()
+        }
+      } else if (event.data === CallServerCommands.SkipAnswer) {
+        // Answer was skipped, listen again
+        this._isProcessing = false
+        this.notifyStateChange()
+      } else if (event.data === CallServerCommands.CancelLastUserMessage) {
+        // Remove last user message if aborted
+        const lastMessage = this.conversation[this.conversation.length - 1]
+        if (lastMessage?.role === 'user') {
+          this.conversation = this.conversation.slice(0, -1)
+          this._isProcessing = false
           this.notifyStateChange()
         }
       } else if (event.data === CallServerCommands.EnableSpeakerStreaming) {
@@ -264,7 +276,7 @@ export class CallHandler<
     }
     this.ws.onclose = (event) => {
       this.log('[WS] Closed', event)
-      this.notifyStateChange()
+      this.stop()
 
       if (event.code >= 1001 && event.code <= 1011 && event.code !== 1005) {
         // Internal server error

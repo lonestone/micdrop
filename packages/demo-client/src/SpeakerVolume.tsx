@@ -13,9 +13,9 @@ export default function SpeakerVolume({ size }: Props) {
     const onVolumeChange = (volume: number) => {
       setVolume(Math.max(0, volume + 100))
     }
-    Speaker.analyser?.on('volume', onVolumeChange)
+    Speaker.analyser.on('volume', onVolumeChange)
     return () => {
-      Speaker.analyser?.off('volume', onVolumeChange)
+      Speaker.analyser.off('volume', onVolumeChange)
     }
   }, [])
 

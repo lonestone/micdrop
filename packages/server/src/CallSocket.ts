@@ -8,8 +8,6 @@ import {
   ConversationMessage,
 } from './types'
 
-export const END_INTERVIEW = 'END_INTERVIEW'
-
 interface Processing {
   aborted: boolean
 }
@@ -197,6 +195,7 @@ export class CallSocket {
       )
       if (!transcript) {
         this.log('Ignoring empty transcript')
+        this.socket?.send(CallServerCommands.SkipAnswer)
         return
       }
 
@@ -220,6 +219,7 @@ export class CallSocket {
       await this.answer(answer, processing)
     } catch (error) {
       console.error('[CallSocket]', error)
+      this.socket?.send(CallServerCommands.SkipAnswer)
       // TODO: Implement retry
     }
   }
@@ -236,55 +236,64 @@ export class CallSocket {
       processing = this.processing = { aborted: false }
     }
 
-    let isEnd = false
-
     let content = typeof message === 'string' ? message : message.content
     const metadata = typeof message === 'string' ? undefined : message.metadata
 
-    // Detect end of interview
-    if (content.includes(END_INTERVIEW)) {
-      content = content.replace(END_INTERVIEW, '').trim()
-      isEnd = true
+    // Cancel last user message
+    if (!content.length || metadata?.commands?.cancelLastUserMessage) {
+      this.log('Cancelling last user message')
+      const lastMessage = this.conversation[this.conversation.length - 1]
+      if (lastMessage?.role === 'user') {
+        this.conversation.pop()
+        this.socket?.send(CallServerCommands.CancelLastUserMessage)
+      }
+      return
     }
 
-    if (content.length) {
-      // Send answer to client
-      this.log('Assistant message:', message)
-      this.addMessage({ role: 'assistant', content, metadata })
+    // Skip answer
+    if (metadata?.commands?.skipAnswer) {
+      this.log('Skipping answer')
+      this.socket?.send(CallServerCommands.SkipAnswer)
+      return
+    }
 
-      // TTS: Generate answer audio
-      if (!this.config.disableTTS) {
-        try {
-          // Remove last assistant message if aborted
-          const onAbort = () => {
-            this.log('Answer aborted, removing last assistant message')
-            const lastMessage = this.conversation[this.conversation.length - 1]
-            if (lastMessage?.role === 'assistant') {
-              this.conversation.pop()
-              this.socket?.send(CallServerCommands.CancelLastAssistantMessage)
-            }
+    // Send answer to client
+    this.log('Assistant message:', message)
+    this.addMessage({ role: 'assistant', content, metadata })
+
+    // TTS: Generate answer audio
+    if (!this.config.disableTTS) {
+      try {
+        // Remove last assistant message if aborted
+        const onAbort = () => {
+          this.log('Answer aborted, removing last assistant message')
+          const lastMessage = this.conversation[this.conversation.length - 1]
+          if (lastMessage?.role === 'assistant') {
+            this.conversation.pop()
+            this.socket?.send(CallServerCommands.CancelLastAssistantMessage)
           }
-
-          if (processing.aborted) {
-            onAbort()
-            return
-          }
-
-          const audio = await this.config.text2Speech(content)
-
-          // Send audio to client
-          await this.sendAudio(audio, processing, onAbort)
-        } catch (error) {
-          console.error('[CallSocket]', error)
-          // TODO: Implement retry
         }
+
+        if (processing.aborted) {
+          onAbort()
+          return
+        }
+
+        const audio = await this.config.text2Speech(content)
+
+        // Send audio to client
+        await this.sendAudio(audio, processing, onAbort)
+      } catch (error) {
+        console.error('[CallSocket]', error)
+        this.socket?.send(CallServerCommands.SkipAnswer)
+        // TODO: Implement retry
       }
     }
 
     // End of call
-    if (isEnd) {
-      this.log('Interview ended')
-      this.socket.send(CallServerCommands.EndInterview)
+    if (metadata?.commands?.endCall) {
+      this.log('Call ended')
+      this.socket.send(CallServerCommands.EndCall)
     }
   }
 

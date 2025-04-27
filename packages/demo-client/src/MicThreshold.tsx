@@ -14,9 +14,9 @@ export default function MicThreshold() {
     const onVolumeChange = (volume: number) => {
       setVolume(Math.max(0, volume + 100))
     }
-    Mic.analyser?.on('volume', onVolumeChange)
+    Mic.analyser.on('volume', onVolumeChange)
     return () => {
-      Mic.analyser?.off('volume', onVolumeChange)
+      Mic.analyser.off('volume', onVolumeChange)
     }
   }, [])
 

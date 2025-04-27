@@ -1,14 +1,16 @@
 export enum CallClientCommands {
-  StartSpeaking = 'startSpeaking',
-  StopSpeaking = 'stopSpeaking',
-  Mute = 'mute',
+  StartSpeaking = 'StartSpeaking',
+  StopSpeaking = 'StopSpeaking',
+  Mute = 'Mute',
 }
 
 export enum CallServerCommands {
-  Message = 'message',
-  CancelLastAssistantMessage = 'cancelLastAssistantMessage',
-  EnableSpeakerStreaming = 'enableSpeakerStreaming',
-  EndInterview = 'endInterview',
+  Message = 'Message',
+  CancelLastAssistantMessage = 'CancelLastAssistantMessage',
+  CancelLastUserMessage = 'CancelLastUserMessage',
+  SkipAnswer = 'SkipAnswer',
+  EnableSpeakerStreaming = 'EnableSpeakerStreaming',
+  EndCall = 'EndCall',
 }
 
 export interface CallConfig {
@@ -33,7 +35,16 @@ export interface CallSummary {
 
 export type Conversation = ConversationMessage[]
 
-export interface ConversationMessage<Data = any> {
+export type CallMetadata = {
+  commands?: {
+    endCall?: boolean
+    cancelLastUserMessage?: boolean
+    skipAnswer?: boolean
+  }
+  [key: string]: any
+}
+
+export interface ConversationMessage<Data extends CallMetadata = CallMetadata> {
   role: 'system' | 'user' | 'assistant'
   content: string
   metadata?: Data
