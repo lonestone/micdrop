@@ -1,25 +1,45 @@
 import { audioContext } from '../utils/audioContext'
+import { LocalStorageKeys } from '../utils/localStorage'
 import { VAD } from './VAD'
+
+export type VolumeVADOptions = {
+  history: number
+  threshold: number
+}
+
+const defaultOptions: VolumeVADOptions = {
+  history: 5,
+  threshold: -55,
+}
 
 /**
  * Volume-based Voice Activity Detection
  * Based on the hark library implementation
  */
 export class VolumeVAD extends VAD {
+  public options = defaultOptions
   private analyser: AnalyserNode | undefined
   private sourceNode: MediaStreamAudioSourceNode | undefined
   private fftBins: Float32Array | undefined
   private running: boolean = false
   private speaking: boolean = false
   private attemptSpeaking: boolean = false
-  private history: number = 10
   private speakingHistory: number[] = []
 
-  constructor() {
+  constructor(options?: Partial<VolumeVADOptions>) {
     super()
-    // Initialize speaking history
-    for (let i = 0; i < this.history; i++) {
-      this.speakingHistory.push(0)
+
+    if (options) {
+      this.setOptions(options)
+    } else {
+      const savedOptions = localStorage.getItem(
+        LocalStorageKeys.VolumeVADOptions
+      )
+      try {
+        this.setOptions(savedOptions ? JSON.parse(savedOptions) : {})
+      } catch (error) {
+        this.setOptions({})
+      }
     }
   }
 
@@ -42,12 +62,8 @@ export class VolumeVAD extends VAD {
     return this.running
   }
 
-  async start(stream: MediaStream, threshold?: number): Promise<void> {
+  async start(stream: MediaStream): Promise<void> {
     if (this.running) return
-
-    if (threshold !== undefined) {
-      this.threshold = threshold
-    }
 
     // Create audio context and nodes
     this.analyser = audioContext.createAnalyser()
@@ -71,7 +87,7 @@ export class VolumeVAD extends VAD {
     const currentVolume = this.getMaxVolume()
 
     // Check if started speaking
-    if (currentVolume > this.threshold) {
+    if (currentVolume > this.options.threshold) {
       if (!this.speaking) {
         // Check recent history (last 3 samples)
         let recentHistory = 0
@@ -120,7 +136,7 @@ export class VolumeVAD extends VAD {
 
     // Update history
     this.speakingHistory.shift()
-    this.speakingHistory.push(Number(currentVolume > this.threshold))
+    this.speakingHistory.push(Number(currentVolume > this.options.threshold))
 
     // Schedule next check
     setTimeout(() => this.startLoop(), this.delay)
@@ -145,8 +161,29 @@ export class VolumeVAD extends VAD {
     this.fftBins = undefined
   }
 
-  async setThreshold(threshold: number): Promise<void> {
-    if (threshold === this.threshold) return
-    this.threshold = threshold
+  setOptions(options: Partial<VolumeVADOptions>) {
+    if (typeof options.history === 'number' && options.history < 3) {
+      throw new Error('History must be at least 3')
+    }
+
+    this.options = { ...this.options, ...options }
+
+    // Adjust history
+    while (this.speakingHistory.length > this.options.history) {
+      this.speakingHistory.shift()
+    }
+    while (this.speakingHistory.length < this.options.history) {
+      this.speakingHistory.push(0)
+    }
+
+    // Save to local storage
+    localStorage.setItem(
+      LocalStorageKeys.VolumeVADOptions,
+      JSON.stringify(this.options)
+    )
+  }
+
+  resetOptions() {
+    this.setOptions(defaultOptions)
   }
 }

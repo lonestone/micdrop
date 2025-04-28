@@ -1,9 +1,4 @@
-import {
-  CallHandler,
-  CallHandlerError,
-  Conversation,
-  Mic,
-} from '@micdrop/client'
+import { CallHandler, CallHandlerError, Conversation } from '@micdrop/client'
 import type { CallParams } from '@micdrop/demo-server/src/callParams'
 import React, { createContext, useCallback, useEffect, useState } from 'react'
 
@@ -11,7 +6,6 @@ export interface CallContextValue {
   start: () => Promise<void>
   stop: () => void
   startMic: (deviceId?: string) => Promise<void>
-  changeMicThreshold: (threshold: number) => void
   pause: () => void
   resume: () => void
   isStarting: boolean
@@ -20,7 +14,6 @@ export interface CallContextValue {
   isSpeaking: boolean
   isMicStarted: boolean
   isProcessing: boolean
-  micThreshold: number
   conversation: Conversation
   error: CallHandlerError | undefined
 }
@@ -33,10 +26,19 @@ interface CallContextProviderProps {
   children: React.ReactNode
 }
 
+// const vad = [
+//   new SileroVAD({
+//     minSpeechFrames: 9,
+//     positiveSpeechThreshold: 0.5,
+//     negativeSpeechThreshold: 0.35,
+//   }),
+//   new VolumeVAD({ history: 5, threshold: -50 }),
+// ]
+
 export function CallContextProvider({ children }: CallContextProviderProps) {
   // Setup call handler
   const call = CallHandler.getInstance<CallParams>({
-    vad: 'silero',
+    vad: ['silero', 'volume'],
   })
 
   // Start call
@@ -71,7 +73,6 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
         isPaused: call.isMicMuted,
         isSpeaking: call.isMicSpeaking,
         isProcessing: call.isProcessing,
-        micThreshold: call.micThreshold,
       }))
     })
 
@@ -101,8 +102,6 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     start: handleStart,
     stop: handleStop,
     startMic: call.startMic.bind(call),
-    changeMicThreshold: (threshold: number) =>
-      call.micRecorder?.setThreshold(threshold),
     pause: call.pause.bind(call),
     resume: call.resume.bind(call),
     isStarting: false,
@@ -111,7 +110,6 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     isSpeaking: false,
     isMicStarted: false,
     isProcessing: false,
-    micThreshold: Mic.defaultThreshold,
     conversation: [],
     error: undefined,
   }))

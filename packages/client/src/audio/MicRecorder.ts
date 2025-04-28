@@ -1,22 +1,16 @@
 import EventEmitter from 'eventemitter3'
-import { defaultMicThreshold } from './mic'
 import { createDelayedStream } from './utils/delayedStream'
-import { LocalStorageKeys } from './utils/localStorage'
 import { stopStream } from './utils/stopStream'
-import { SileroVAD } from './vad/SileroVAD'
 import { VAD } from './vad/VAD'
-import { VolumeVAD } from './vad/VolumeVAD'
+import { getVAD, VADConfig } from './vad/getVAD'
 
 const timeSlice = 100
-
-export type MicRecorderVAD = VAD | 'volume' | 'silero'
 
 export interface MicRecorderState {
   isStarting: boolean
   isStarted: boolean
   isMuted: boolean
   isSpeaking: boolean
-  threshold: number
 }
 
 const defaultMicRecorderState: MicRecorderState = {
@@ -24,7 +18,6 @@ const defaultMicRecorderState: MicRecorderState = {
   isStarted: false,
   isMuted: false,
   isSpeaking: false,
-  threshold: defaultMicThreshold,
 }
 
 export interface MicRecorderEvents {
@@ -43,22 +36,20 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   public state: MicRecorderState
 
   private audioInfo = this.getAudioInfo()
-  private vad?: VAD
+  private vad: VAD
   private recorder: MediaRecorder | undefined
   private delayedStream: MediaStream | undefined
   private speakingConfirmed = false
   private queuedChunks: Blob[] = []
 
-  constructor(private vadConfig?: MicRecorderVAD) {
+  constructor(vadConfig?: VADConfig) {
     super()
 
-    // Threshold for speech detection
-    const threshold =
-      parseFloat(localStorage.getItem(LocalStorageKeys.MicThreshold) || '0') ||
-      defaultMicThreshold
-
     // Set initial state
-    this.state = { ...defaultMicRecorderState, threshold }
+    this.state = defaultMicRecorderState
+
+    // Init VAD
+    this.vad = getVAD(vadConfig)
   }
 
   async start(stream: MediaStream) {
@@ -72,10 +63,6 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
         isMuted: false,
         isSpeaking: false,
       })
-
-      if (!this.vad) {
-        this.vad = this.initVAD(this.vadConfig)
-      }
 
       // Create a delayed stream to avoid cutting after speech detection
       const delayedStream = createDelayedStream(
@@ -139,19 +126,6 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     }
   }
 
-  setThreshold(threshold: number) {
-    this.changeState({ threshold })
-    localStorage.setItem(LocalStorageKeys.MicThreshold, threshold.toString())
-    this.vad?.setThreshold(threshold)
-  }
-
-  private initVAD(vad?: VAD | 'volume' | 'silero'): VAD {
-    if (!vad) return new VolumeVAD()
-    if (vad === 'volume') return new VolumeVAD()
-    if (vad === 'silero') return new SileroVAD()
-    return vad
-  }
-
   private async startSpeakingDetection(stream: MediaStream) {
     if (!this.vad) {
       throw new Error('VAD not initialized')
@@ -163,7 +137,7 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     this.vad.on('ConfirmSpeaking', this.onConfirmSpeaking)
     this.vad.on('CancelSpeaking', this.onCancelSpeaking)
     this.vad.on('StopSpeaking', this.onStopSpeaking)
-    await this.vad.start(stream, this.state.threshold)
+    await this.vad.start(stream)
   }
 
   private async stopSpeakingDetection() {

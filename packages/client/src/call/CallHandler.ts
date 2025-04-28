@@ -4,10 +4,12 @@ import {
   CallServerCommands,
   Conversation,
   ConversationMessage,
+  VAD,
 } from '../..'
-import { MicRecorder, MicRecorderVAD } from '../audio/MicRecorder'
+import { MicRecorder } from '../audio/MicRecorder'
 import { mic } from '../audio/mic'
 import { speaker } from '../audio/speaker'
+import { getVAD, VADConfig } from '../audio/vad/getVAD'
 import { CallHandlerError, CallHandlerErrorCode } from './CallHandlerError'
 
 export interface CallHandlerEvents {
@@ -17,12 +19,12 @@ export interface CallHandlerEvents {
 }
 
 export interface CallHandlerOptions {
-  vad?: MicRecorderVAD
+  vad?: VADConfig
 }
 
 declare global {
   interface Window {
-    micdropCallHandler: CallHandler<any, CallHandlerOptions>
+    micdropCallHandler: any
   }
 }
 
@@ -31,18 +33,19 @@ export class CallHandler<
   Options extends CallHandlerOptions = CallHandlerOptions,
 > extends EventEmitter<CallHandlerEvents> {
   public static getInstance<
-    T extends {},
-    Options extends CallHandlerOptions = CallHandlerOptions,
-  >(options?: Options): CallHandler<T, Options> {
+    P extends {},
+    O extends CallHandlerOptions = CallHandlerOptions,
+  >(options?: O): CallHandler<P, O> {
     if (!window.micdropCallHandler) {
-      window.micdropCallHandler = new CallHandler(options)
+      window.micdropCallHandler = new CallHandler<P, O>(options)
     }
-    return window.micdropCallHandler as CallHandler<T, Options>
+    return window.micdropCallHandler
   }
 
   public url?: string
   public params?: Params
   public micRecorder?: MicRecorder
+  public vad: VAD
   public conversation: Conversation = []
   public debug = false
 
@@ -54,6 +57,9 @@ export class CallHandler<
 
   private constructor(private options?: Options) {
     super()
+
+    // Init VAD
+    this.vad = getVAD(this.options?.vad)
   }
 
   get isStarted(): boolean {
@@ -82,10 +88,6 @@ export class CallHandler<
 
   get isMicSpeaking(): boolean {
     return this.micRecorder?.state.isSpeaking ?? false
-  }
-
-  get micThreshold(): number {
-    return this.micRecorder?.state.threshold ?? mic.defaultThreshold
   }
 
   get isProcessing(): boolean {
@@ -142,7 +144,7 @@ export class CallHandler<
   async startMic(deviceId?: string, record = true) {
     try {
       if (!this.micRecorder) {
-        this.micRecorder = new MicRecorder(this.options?.vad)
+        this.micRecorder = new MicRecorder(this.vad)
 
         // Notify mic recorder state change
         this.micRecorder.on('StateChange', () => {

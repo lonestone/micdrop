@@ -4,10 +4,8 @@ import { LocalStorageKeys } from './utils/localStorage'
 import { stopStream } from './utils/stopStream'
 
 export let mic: Mic
-export const defaultMicThreshold = -50 // in dB
 
 class Mic {
-  public defaultThreshold = defaultMicThreshold
   private currentDeviceId: string | undefined
   private audioStream: MediaStream | undefined
   private sourceNode: MediaStreamAudioSourceNode | undefined

@@ -1,6 +1,7 @@
-export { SileroVAD } from './SileroVAD'
-export { VAD } from './VAD'
-export { VolumeVAD } from './VolumeVAD'
+export * from './MultipleVAD'
+export * from './SileroVAD'
+export * from './VAD'
+export * from './VolumeVAD'
 
 // Do not export HarkVAD as we already have VolumeVAD
 // which is inspired by hark.

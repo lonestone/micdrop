@@ -1,27 +1,38 @@
 import hark, { Harker } from 'hark'
 import { VAD } from './VAD'
 
+export type HarkVADOptions = {
+  threshold: number
+}
+
+const defaultOptions: HarkVADOptions = {
+  threshold: 0.5,
+}
+
 /**
  * Hark VAD
  * @see https://github.com/otalk/hark
  */
 export class HarkVAD extends VAD {
+  public options = defaultOptions
   private hark: Harker | undefined
+
+  constructor(options: Partial<HarkVADOptions> = {}) {
+    super()
+    this.setOptions(options)
+  }
 
   get isStarted(): boolean {
     return !!this.hark
   }
 
-  async start(stream: MediaStream, threshold?: number): Promise<void> {
+  async start(stream: MediaStream): Promise<void> {
     if (this.hark) return
 
-    if (threshold !== undefined) {
-      this.threshold = threshold
-    }
     this.hark = hark(stream, {
       interval: this.delay,
       play: false,
-      threshold: this.threshold,
+      threshold: this.options.threshold,
     })
 
     this.hark.on('speaking', () => {
@@ -42,9 +53,8 @@ export class HarkVAD extends VAD {
     this.hark = undefined
   }
 
-  async setThreshold(threshold: number): Promise<void> {
-    if (threshold === this.threshold) return
-    this.threshold = threshold
-    this.hark?.setThreshold(threshold)
+  async setOptions(options: Partial<HarkVADOptions>): Promise<void> {
+    this.options = { ...this.options, ...options }
+    this.hark?.setThreshold(this.options.threshold)
   }
 }

@@ -5,6 +5,7 @@ import { CallContext } from './CallContext'
 import MicThreshold from './MicThreshold'
 import SpeakerTestButton from './SpeakerTestButton'
 import SpeakerVolume from './SpeakerVolume'
+import VADSettings from './VADSettings'
 
 export default function DevicesSettings() {
   const [loading, setLoading] = useState(true)
@@ -111,6 +112,8 @@ export default function DevicesSettings() {
           </div>
         </div>
       </div>
+
+      <VADSettings />
     </div>
   )
 }
