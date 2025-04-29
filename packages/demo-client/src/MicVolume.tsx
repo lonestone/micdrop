@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 
 const volumeColor = '#00bb00'
 
-export default function MicThreshold() {
+export default function MicVolume() {
   const [volume, setVolume] = useState(0) // 0-100
 
   // Update volume

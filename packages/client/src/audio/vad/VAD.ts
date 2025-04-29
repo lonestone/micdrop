@@ -9,6 +9,14 @@ export interface VADEvents {
   CancelSpeaking: void
   // Speech stops, only if it's confirmed
   StopSpeaking: void
+  // Status changed
+  ChangeStatus: [VADStatus]
+}
+
+export enum VADStatus {
+  Silence,
+  MaybeSpeaking,
+  Speaking,
 }
 
 /**
@@ -16,6 +24,8 @@ export interface VADEvents {
  * VAD = Voice Activity Detection
  */
 export abstract class VAD extends EventEmitter<VADEvents> {
+  public status: VADStatus = VADStatus.Silence
+
   // Max delay to detect speech, can be used to record delayed stream
   public delay = 100 // ms
 
@@ -35,4 +45,43 @@ export abstract class VAD extends EventEmitter<VADEvents> {
    * Stops the VAD
    */
   abstract stop(): Promise<void>
+
+  /**
+   * Emits an event (overrides the default implementation)
+   * @param event - The event to emit
+   * @param args - The arguments to emit
+   * @returns True if the event was emitted, false otherwise
+   */
+  emit<T extends keyof VADEvents>(
+    event: T,
+    ...args: EventEmitter.EventArgs<VADEvents, T>
+  ) {
+    switch (event) {
+      case 'StartSpeaking':
+        this.setStatus(VADStatus.MaybeSpeaking)
+        break
+      case 'ConfirmSpeaking':
+        this.setStatus(VADStatus.Speaking)
+        break
+      case 'CancelSpeaking':
+        this.setStatus(VADStatus.Silence)
+        break
+      case 'StopSpeaking':
+        this.setStatus(VADStatus.Silence)
+        break
+      default:
+        break
+    }
+    return super.emit(event, ...args)
+  }
+
+  /**
+   * Sets the status of the VAD
+   * @param status - The status to set
+   */
+  setStatus(status: VADStatus) {
+    if (this.status === status) return
+    this.status = status
+    super.emit('ChangeStatus', status)
+  }
 }

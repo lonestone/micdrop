@@ -8,31 +8,50 @@ import {
   VolumeVADOptions,
 } from '@micdrop/client'
 import { useState } from 'react'
+import VADStatusCircle from './VADStatusCircle'
 
-export default function VADSettings() {
+export default function VADSettings({ className }: { className?: string }) {
   const call = CallHandler.getInstance()
-  return <AnyVADSettings vad={call.vad} />
+  return <AnyVADSettings vad={call.vad} className={className} />
 }
 
-function AnyVADSettings({ vad }: { vad: VAD }) {
+interface VADProps<T extends VAD> {
+  vad: T
+  className?: string
+}
+
+function AnyVADSettings<T extends VAD>({ vad, className }: VADProps<T>) {
   if (vad instanceof SileroVAD) {
-    return <SileroVADSettings vad={vad} />
+    return <SileroVADSettings vad={vad} className={className} />
   }
   if (vad instanceof VolumeVAD) {
-    return <VolumeVADSettings vad={vad} />
+    return <VolumeVADSettings vad={vad} className={className} />
   }
   if (vad instanceof MultipleVAD) {
-    return <MultipleVADSettings vad={vad} />
+    return <MultipleVADSettings vad={vad} className={className} />
   }
   console.warn('Unknown VAD', vad)
   return <div>Unknown VAD</div>
 }
 
-function MultipleVADSettings({ vad }: { vad: MultipleVAD }) {
-  return vad.vads.map((vad) => <AnyVADSettings vad={vad} />)
+const blockClassName =
+  'flex flex-col gap-4 border border-gray-300 rounded-md p-4'
+
+function MultipleVADSettings({ vad, className }: VADProps<MultipleVAD>) {
+  return (
+    <div className={`${blockClassName} ${className}`}>
+      <div className="flex items-center gap-2">
+        <VADStatusCircle vad={vad} />
+        <strong>MultipleVAD</strong>
+      </div>
+      {vad.vads.map((vad, i) => (
+        <AnyVADSettings key={i} vad={vad} />
+      ))}
+    </div>
+  )
 }
 
-function SileroVADSettings({ vad }: { vad: SileroVAD }) {
+function SileroVADSettings({ vad, className }: VADProps<SileroVAD>) {
   const [options, setOptions] = useState(vad.options)
 
   const setOption = (key: keyof SileroVADOptions, value: number) => {
@@ -41,8 +60,11 @@ function SileroVADSettings({ vad }: { vad: SileroVAD }) {
   }
 
   return (
-    <div className="mt-4">
-      <strong>SileroVAD</strong>
+    <div className={`${blockClassName} ${className}`}>
+      <div className="flex items-center gap-2">
+        <VADStatusCircle vad={vad} />
+        <strong>SileroVAD</strong>
+      </div>
       <div className="flex items-center gap-2">
         <label>Positive Speech Threshold</label>
         <input
@@ -103,7 +125,7 @@ function SileroVADSettings({ vad }: { vad: SileroVAD }) {
   )
 }
 
-function VolumeVADSettings({ vad }: { vad: VolumeVAD }) {
+function VolumeVADSettings({ vad, className }: VADProps<VolumeVAD>) {
   const [options, setOptions] = useState(vad.options)
 
   const setOption = (key: keyof VolumeVADOptions, value: number) => {
@@ -112,8 +134,11 @@ function VolumeVADSettings({ vad }: { vad: VolumeVAD }) {
   }
 
   return (
-    <div className="mt-4">
-      <strong>VolumeVAD</strong>
+    <div className={`${blockClassName} ${className}`}>
+      <div className="flex items-center gap-2">
+        <VADStatusCircle vad={vad} />
+        <strong>VolumeVAD</strong>
+      </div>
       <div className="flex items-center gap-2">
         <label>History</label>
         <input

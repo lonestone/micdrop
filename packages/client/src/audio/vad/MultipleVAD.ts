@@ -1,23 +1,16 @@
 import { getVAD, VADConfigName } from './getVAD'
-import { VAD, VADEvents } from './VAD'
+import { VAD, VADStatus } from './VAD'
 
 /**
  * Combine an array of VADs
  */
 export class MultipleVAD extends VAD {
   public vads: VAD[]
-  private startSpeakingCount = 0
-  private confirmSpeakingCount = 0
-  private lastEventName: keyof VADEvents = 'StopSpeaking'
 
   constructor(vads: Array<VAD | VADConfigName>) {
     super()
     this.vads = vads.map((vad) => getVAD(vad))
-  }
-
-  emit(eventName: keyof VADEvents, ..._: any[]) {
-    this.lastEventName = eventName
-    return super.emit(eventName)
+    this.onStatusChange = this.onStatusChange.bind(this)
   }
 
   get isStarted(): boolean {
@@ -29,47 +22,49 @@ export class MultipleVAD extends VAD {
       if (vad.isStarted) {
         continue
       }
-      vad.on('StartSpeaking', () => {
-        this.startSpeakingCount++
-        if (
-          (this.lastEventName === 'StopSpeaking' ||
-            this.lastEventName === 'CancelSpeaking') &&
-          this.startSpeakingCount === this.vads.length
-        ) {
-          this.emit('StartSpeaking')
-        }
-      })
-      vad.on('ConfirmSpeaking', () => {
-        this.confirmSpeakingCount++
-        if (
-          this.lastEventName === 'StartSpeaking' &&
-          this.confirmSpeakingCount === this.vads.length
-        ) {
+      vad.on('ChangeStatus', this.onStatusChange)
+      await vad.start(stream)
+    }
+  }
+
+  private onStatusChange() {
+    const isAllSilence = this.vads.every(
+      (vad) => vad.status === VADStatus.Silence
+    )
+    const isAllSpeaking = this.vads.every(
+      (vad) => vad.status === VADStatus.Speaking
+    )
+
+    // Ensure events are called in order
+    switch (this.status) {
+      case VADStatus.Silence:
+        if (isAllSilence) break
+        this.emit('StartSpeaking')
+        if (isAllSpeaking) {
           this.emit('ConfirmSpeaking')
         }
-      })
-      vad.on('CancelSpeaking', () => {
-        this.startSpeakingCount--
-        if (this.lastEventName === 'StartSpeaking') {
+        break
+      case VADStatus.MaybeSpeaking:
+        if (isAllSilence) {
           this.emit('CancelSpeaking')
+          break
         }
-      })
-      vad.on('StopSpeaking', () => {
-        this.startSpeakingCount--
-        this.confirmSpeakingCount--
-        if (this.lastEventName === 'ConfirmSpeaking') {
+        if (isAllSpeaking) {
+          this.emit('ConfirmSpeaking')
+        }
+        break
+      case VADStatus.Speaking:
+        if (isAllSilence) {
           this.emit('StopSpeaking')
         }
-      })
-
-      await vad.start(stream)
+        break
     }
   }
 
   async stop(): Promise<void> {
     for (const vad of this.vads) {
+      vad.off('ChangeStatus', this.onStatusChange)
       await vad.stop()
-      vad.removeAllListeners()
     }
   }
 }

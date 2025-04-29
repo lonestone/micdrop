@@ -2,7 +2,7 @@ import { LocalStorageKeys, Speaker } from '@micdrop/client'
 import { ChangeEventHandler, useContext, useEffect, useState } from 'react'
 import { FaMicrophone, FaVolumeUp } from 'react-icons/fa'
 import { CallContext } from './CallContext'
-import MicThreshold from './MicThreshold'
+import MicVolume from './MicVolume'
 import SpeakerTestButton from './SpeakerTestButton'
 import SpeakerVolume from './SpeakerVolume'
 import VADSettings from './VADSettings'
@@ -87,7 +87,7 @@ export default function DevicesSettings() {
           ))}
         </select>
         <div className="w-[150px] max-w-[30%]">
-          <MicThreshold />
+          <MicVolume />
         </div>
       </div>
 
@@ -113,7 +113,7 @@ export default function DevicesSettings() {
         </div>
       </div>
 
-      <VADSettings />
+      <VADSettings className="mt-4" />
     </div>
   )
 }

@@ -127,9 +127,6 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }
 
   private async startSpeakingDetection(stream: MediaStream) {
-    if (!this.vad) {
-      throw new Error('VAD not initialized')
-    }
     if (this.vad.isStarted) {
       this.vad.stop()
     }
@@ -141,9 +138,6 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }
 
   private async stopSpeakingDetection() {
-    if (!this.vad) {
-      throw new Error('VAD not initialized')
-    }
     this.vad.off('StartSpeaking', this.onStartSpeaking)
     this.vad.off('ConfirmSpeaking', this.onConfirmSpeaking)
     this.vad.off('CancelSpeaking', this.onCancelSpeaking)
