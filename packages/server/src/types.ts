@@ -35,17 +35,21 @@ export interface CallSummary {
 
 export type Conversation = ConversationMessage[]
 
-export type CallMetadata = {
-  commands?: {
-    endCall?: boolean
-    cancelLastUserMessage?: boolean
-    skipAnswer?: boolean
-  }
+export type AnswerCommands = {
+  endCall?: boolean
+  cancelLastUserMessage?: boolean
+  skipAnswer?: boolean
+}
+
+export type AnswerMetadata = {
   [key: string]: any
 }
 
-export interface ConversationMessage<Data extends CallMetadata = CallMetadata> {
+export interface ConversationMessage<
+  Data extends AnswerMetadata = AnswerMetadata,
+> {
   role: 'system' | 'user' | 'assistant'
   content: string
+  commands?: AnswerCommands
   metadata?: Data
 }

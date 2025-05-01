@@ -8,7 +8,7 @@ export default function CallPanel() {
   if (!call) return null
 
   return (
-    <div className="flex flex-col space-y-5">
+    <div className="space-y-8">
       <div className="flex items-center gap-2">
         {call.isStarted ? (
           <>
@@ -79,13 +79,22 @@ export default function CallPanel() {
       {call.isMicStarted && <DevicesSettings />}
 
       {call.conversation.length !== 0 && (
-        <ul className="list-disc pl-5">
+        <div className="space-y-4">
           {call.conversation.map(({ role, content }, index) => (
-            <li key={index} className="mb-2">
-              <span className="font-bold">{role}:</span> {content}
-            </li>
+            <div
+              key={index}
+              className={`max-w-[80%] p-3 rounded-xl ${
+                role === 'assistant'
+                  ? 'bg-green-100 ml-0 mr-auto rounded-bl-none'
+                  : role === 'user'
+                    ? 'bg-gray-100 ml-auto mr-0 rounded-br-none'
+                    : 'bg-gray-50 mx-auto'
+              }`}
+            >
+              {content}
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   )

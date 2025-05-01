@@ -2,9 +2,7 @@
 
 Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and send chunks of audio to server only when speech is detected.
 
-## Available VAD Implementations
-
-### Volume VAD
+## Volume VAD: Speech detection based on volume
 
 By default, the `CallHandler` uses the `VolumeVAD` for speech detection, you can use it explicitly:
 
@@ -14,7 +12,17 @@ const call = CallHandler.getInstance<YourParamsType>({ vad: 'volume' })
 
 It is inspired by the [hark](https://github.com/otalk/hark) library and triggers speech detection events based on volume changes.
 
-### Silero VAD
+You can also pass an instance of the `VolumeVAD` to the `CallHandler`:
+
+```typescript
+const vad = new VolumeVAD({
+  history: 5, // Number of frames to consider for volume calculation
+  threshold: -50, // Threshold in decibels for speech detection
+})
+const call = CallHandler.getInstance<YourParamsType>({ vad })
+```
+
+## Silero VAD: Human speech detection with AI
 
 Alternatively, you can use the `SileroVAD` for speech detection:
 
@@ -26,7 +34,43 @@ It is based on the [@ricky0123/vad-web](https://github.com/ricky0123/vad) librar
 
 It is more accurate than the `VolumeVAD` and works better with low voice.
 
-### Custom VAD
+You can also pass an instance of the `SileroVAD` to the `CallHandler`:
+
+```typescript
+const vad = new SileroVAD({
+  positiveSpeechThreshold: 0.18, // Threshold for positive speech detection
+  negativeSpeechThreshold: 0.11, // Threshold for negative speech detection
+  minSpeechFrames: 8, // Minimum number of frames to consider for speech detection
+  redemptionFrames: 20, // Number of frames to consider for silence detection
+})
+const call = CallHandler.getInstance<YourParamsType>({ vad })
+```
+
+## Multiple VAD: Combine multiple VADs
+
+Combining multiple VADs is useful to get a more accurate speech detection:
+
+- Volume to ignore low voice
+- Silero to detect human speech
+
+You can combine multiple VADs by passing an array of VAD names:
+
+```typescript
+const call = CallHandler.getInstance<YourParamsType>({
+  vad: ['volume', 'silero'],
+})
+```
+
+You can also pass an array of VAD instances:
+
+```typescript
+const vad = [new VolumeVAD(), new SileroVAD()]
+const call = CallHandler.getInstance<YourParamsType>({ vad })
+```
+
+Or mix names and instances.
+
+## Custom VAD
 
 You can also pass your own VAD implementation:
 
@@ -34,22 +78,7 @@ You can also pass your own VAD implementation:
 const call = CallHandler.getInstance<YourParamsType>({ vad: new MyVAD() })
 ```
 
-Your VAD implementation should extend the `VAD` class and implement the following methods:
-
-- `start(stream: MediaStream, threshold?: number)`: Start the VAD on the given stream
-- `stop()`: Stop the VAD
-- `setThreshold(threshold: number)`: Set the threshold for the VAD
-
-It can trigger the following events:
-
-- `StartSpeaking`: Speech starts, even it it's not confirmed
-- `ConfirmSpeaking`: Speech start is confirmed
-- `CancelSpeaking`: Speech is cancelled, it's just noise and can be ignored
-- `StopSpeaking`: Speech stops, only if it's confirmed
-
-See [Hark implementation](../src/audio/vad/HarkVAD.ts) as an example.
-
-Example:
+Your VAD implementation should extend the `VAD` class:
 
 ```typescript
 import { VAD } from '@micdrop/client'

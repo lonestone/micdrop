@@ -1,4 +1,4 @@
-import { CallMetadata, ConversationMessage } from '@micdrop/server'
+import { AnswerCommands, ConversationMessage } from '@micdrop/server'
 import { openai } from './openai'
 
 export const END_CALL = 'END_CALL'
@@ -18,17 +18,17 @@ export async function generateAnswer(
   let text = response.choices[0].message.content
   if (!text) throw new Error('Empty response')
 
-  const metadata: CallMetadata = {}
+  const commands: AnswerCommands = {}
 
   // Detect commands for metadata
   if (text.includes(END_CALL)) {
     text = text.replace(END_CALL, '').trim()
-    metadata.commands = { endCall: true }
+    commands.endCall = true
   } else if (text.includes(CANCEL_LAST_USER_MESSAGE)) {
-    metadata.commands = { cancelLastUserMessage: true }
+    commands.cancelLastUserMessage = true
   } else if (text.includes(SKIP_ANSWER)) {
-    metadata.commands = { skipAnswer: true }
+    commands.skipAnswer = true
   }
 
-  return { role: 'assistant', content: text, metadata }
+  return { role: 'assistant', content: text, commands }
 }

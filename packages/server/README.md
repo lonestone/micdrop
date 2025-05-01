@@ -194,12 +194,28 @@ The server can send the following commands to the client:
 
 See detailed protocol in [README.md](../README.md).
 
+## Message metadata
+
+You can add metadata to the generated answers, that will be accessible in the conversation on the client and server side.
+
+```typescript
+const metadata: AnswerMetadata = {
+  // ...
+}
+
+const message: ConversationMessage = {
+  role: 'assistant',
+  content: 'Hello!',
+  metadata,
+}
+```
+
 ## Ending the call
 
 The call has two ways to end:
 
 - When the client closes the websocket connection.
-- When the generated answer contains the metadata command `endCall: true`.
+- When the generated answer contains the commands `endCall: true`.
 
 Example:
 
@@ -224,13 +240,13 @@ async function generateAnswer(
   if (!text) throw new Error('Empty response')
 
   // Add metadata
-  const metadata: CallMetadata = {}
+  const commands: AnswerCommands = {}
   if (text.includes(END_CALL)) {
     text = text.replace(END_CALL, '').trim()
-    metadata.commands = { endCall: true }
+    commands.endCall = true
   }
 
-  return { role: 'assistant', content: text, metadata }
+  return { role: 'assistant', content: text, commands }
 }
 ```
 

@@ -2,15 +2,72 @@
 
 The `CallHandler` class manages real-time audio communication between a client and server, handling microphone input, WebSocket connections, and audio playback. It's designed to facilitate interactive voice conversations with support for bi-directional audio streaming.
 
-## Features
+## Usage Example
 
-- Real-time audio streaming via WebSocket
-- Microphone input handling and recording
-- Audio playback management
-- Speech detection (start/stop speaking events)
-- Conversation state management
-- Error handling and state notifications
-- Singleton pattern implementation for consistent state management
+```typescript
+import { CallHandler } from '@micdrop/client'
+
+// Get the singleton instance with your params type
+const call = CallHandler.getInstance<YourParamsType>()
+
+// Configure the call
+call.url = 'wss://your-server.com/ws'
+call.params = {
+  /* your parameters (to check auth, etc) */
+}
+
+// Listen for state changes
+call.on('StateChange', () => {
+  console.log('Call state:', call)
+  /*
+    {
+      "conversation": [
+        { "role": "assistant", "content": "Hello!" },
+        { "role": "user", "content": "User Message 1" },
+        { "role": "assistant", "content": "Assistant Message 1" }
+      ],
+      "isMicStarted": false,
+      "isStarted": false,
+      "isStarting": false,
+      "isWSStarted": false,
+      "isWSStarting": false,
+      "isProcessing": false
+    }
+  */
+
+  console.log('MicRecorder state:', call.micRecorder.state)
+  /*
+    {
+      "isStarting": false,
+      "isStarted": false,
+      "isMuted": false,
+      "isSpeaking": false,
+      "threshold": -50
+    }
+  */
+})
+
+// Listen for end of call
+// Can be triggered via prompting (see server docs)
+call.on('EndCall', () => {
+  console.log('Call ended by assistant')
+})
+
+// Listen for errors
+call.on('Error', (error) => {
+  console.error('Error occurred:', error)
+})
+
+// Start the call
+await call.start()
+
+// Pause/resume
+call.pause()
+call.resume()
+
+// Stop the call
+await call.stop()
+```
 
 ## Events
 
@@ -83,11 +140,13 @@ async startMic(deviceId?: string, record = true): Promise<void>
 
 Starts the microphone with optional device selection and recording control.
 
+## VAD
+
+Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and send chunks of audio to server only when speech is detected. For detailed information about the VAD implementations and configuration options, please refer to the [VAD documentation](./VAD.md).
+
 ## Error Handling
 
 The handler uses `CallHandlerError` for error management. Each error instance contains a specific error code that helps identify the type of error that occurred.
-
-### Error Codes
 
 The `CallHandlerError` can have the following codes:
 
@@ -131,84 +190,3 @@ handler.on('Error', (error: CallHandlerError) => {
   }
 })
 ```
-
-## Usage Example
-
-```typescript
-import { CallHandler } from '@micdrop/client'
-
-// Get the singleton instance with your params type
-const call = CallHandler.getInstance<YourParamsType>()
-
-// Configure the call
-call.url = 'wss://your-server.com/ws'
-call.params = {
-  /* your parameters (to check auth, etc) */
-}
-
-// Listen for state changes
-call.on('StateChange', () => {
-  console.log('Call state:', call)
-  /*
-    {
-      "conversation": [
-        { "role": "assistant", "content": "Hello!" },
-        { "role": "user", "content": "User Message 1" },
-        { "role": "assistant", "content": "Assistant Message 1" }
-      ],
-      "isMicStarted": false,
-      "isStarted": false,
-      "isStarting": false,
-      "isWSStarted": false,
-      "isWSStarting": false,
-      "isProcessing": false
-    }
-  */
-
-  console.log('MicRecorder state:', call.micRecorder.state)
-  /*
-    {
-      "isStarting": false,
-      "isStarted": false,
-      "isMuted": false,
-      "isSpeaking": false,
-      "threshold": -50
-    }
-  */
-})
-
-// Listen for end of call
-// Can be triggered via prompting (see server docs)
-call.on('EndCall', () => {
-  console.log('Call ended by assistant')
-})
-
-// Listen for errors
-call.on('Error', (error) => {
-  console.error('Error occurred:', error)
-})
-
-// Start the call
-await call.start()
-
-// Pause/resume
-call.pause()
-call.resume()
-
-// Stop the call
-await call.stop()
-```
-
-## VAD
-
-Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and send chunks of audio to server only when speech is detected. For detailed information about the VAD implementations and configuration options, please refer to the [VAD documentation](./VAD.md).
-
-## Notes
-
-- The handler automatically manages the conversation state and audio streaming
-- It includes automatic speech detection and silence detection
-- Audio playback is automatically interrupted when the user starts speaking
-- Debug mode can be enabled for detailed logging
-- The handler supports TypeScript generics for custom parameter types
-- The class implements the singleton pattern, ensuring only one instance exists throughout the application
-- The constructor is private to enforce the singleton pattern - always use `getInstance()` to get the handler instance

@@ -236,11 +236,12 @@ export class CallSocket {
       processing = this.processing = { aborted: false }
     }
 
-    let content = typeof message === 'string' ? message : message.content
-    const metadata = typeof message === 'string' ? undefined : message.metadata
+    if (typeof message === 'string') {
+      message = { role: 'assistant', content: message }
+    }
 
     // Cancel last user message
-    if (!content.length || metadata?.commands?.cancelLastUserMessage) {
+    if (message.commands?.cancelLastUserMessage) {
       this.log('Cancelling last user message')
       const lastMessage = this.conversation[this.conversation.length - 1]
       if (lastMessage?.role === 'user') {
@@ -251,7 +252,7 @@ export class CallSocket {
     }
 
     // Skip answer
-    if (metadata?.commands?.skipAnswer) {
+    if (!message.content.length || message.commands?.skipAnswer) {
       this.log('Skipping answer')
       this.socket?.send(CallServerCommands.SkipAnswer)
       return
@@ -259,7 +260,7 @@ export class CallSocket {
 
     // Send answer to client
     this.log('Assistant message:', message)
-    this.addMessage({ role: 'assistant', content, metadata })
+    this.addMessage(message)
 
     // TTS: Generate answer audio
     if (!this.config.disableTTS) {
@@ -279,7 +280,7 @@ export class CallSocket {
           return
         }
 
-        const audio = await this.config.text2Speech(content)
+        const audio = await this.config.text2Speech(message.content)
 
         // Send audio to client
         await this.sendAudio(audio, processing, onAbort)
@@ -291,7 +292,7 @@ export class CallSocket {
     }
 
     // End of call
-    if (metadata?.commands?.endCall) {
+    if (message.commands?.endCall) {
       this.log('Call ended')
       this.socket.send(CallServerCommands.EndCall)
     }

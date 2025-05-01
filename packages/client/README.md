@@ -35,7 +35,10 @@ pnpm add @micdrop/client
 import { CallHandler } from '@micdrop/client'
 
 // Create a new call handler instance
-const call = CallHandler.getInstance<YourParamsType>()
+const call = CallHandler.getInstance<YourParamsType>({
+  // VAD (see docs)
+  vad: ['volume', 'silero'],
+})
 
 // Configure the call
 call.url = 'wss://your-server.com/ws'
