@@ -1,10 +1,10 @@
 import {
-  CallConfig,
   CallError,
   CallErrorCode,
   CallServer,
+  GladiaSTT,
   handleError,
-  waitForParams,
+  waitForParams
 } from '@micdrop/server'
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
@@ -15,7 +15,6 @@ import {
   generateAnswer,
   SKIP_ANSWER,
 } from './ai/openai/generateAnswer'
-import { speech2Text } from './ai/openai/speech2Text'
 
 // Required authorization param to start a call
 const AUTHORIZATION_KEY = '1234'
@@ -26,43 +25,20 @@ export const callParamsSchema = z.object({
 })
 export type CallParams = z.infer<typeof callParamsSchema>
 
-const config: CallConfig = {
-  // System prompt passed to the LLM
-  systemPrompt: `You are a voice assistant, your name is micdrop (pronounced like "mic drop").
-    It's a conversation, keep your answers short and helpful.
-    Write to be easily read by text-to-speech.
-    Current date: ${new Date().toDateString()}.
-    Current time: ${new Date().toLocaleTimeString()}.
-    If the user asks to end the call, say goodbye and say ${END_CALL}.
-    If the last user message is just an interjection or a sound that expresses emotion, hesitation, or reaction (ex: "Uh", "Ahem", "Hmm", "Ah") but doesn't carry any clear meaning like agreeing, refusing, or commanding, just say ${CANCEL_LAST_USER_MESSAGE}.
-    If the last user message is an incomplete sentence, just say ${SKIP_ANSWER}.
-  `,
+// System prompt passed to the LLM
+const systemPrompt = `You are a voice assistant, your name is micdrop (pronounced like "mic drop").
+It's a conversation, keep your answers short and helpful.
+Write to be easily read by text-to-speech.
+Current date: ${new Date().toDateString()}.
+Current time: ${new Date().toLocaleTimeString()}.
+If the user asks to end the call, say goodbye and say ${END_CALL}.
+If the last user message is just an interjection or a sound that expresses emotion, hesitation, or reaction (ex: "Uh", "Ahem", "Hmm", "Ah") but doesn't carry any clear meaning like agreeing, refusing, or commanding, just say ${CANCEL_LAST_USER_MESSAGE}.
+If the last user message is an incomplete sentence, just say ${SKIP_ANSWER}.
+`
 
-  // First message from the assistant
-  // Optional, omit to generate the first message
-  firstMessage: 'Hello, what can I do for you today?',
-
-  // LLM: Generate answer
-  generateAnswer,
-  // TTS: Text to speech
-  text2Speech,
-  // STT: Speech to text
-  speech2Text,
-
-  // Enable debug logging
-  debugLog: true,
-  // disableTTS: true,
-  // debugSaveSpeech: true,
-
-  // Optional: called when a message is received from the user
-  onMessage(message) {
-    console.log('Message:', message)
-  },
-  // Optional: called when the call ends
-  onEnd() {
-    console.log('End')
-  },
-}
+// First message from the assistant
+// Optional: leave undefined to generate the first message
+const firstMessage = 'Hello, what can I do for you today?'
 
 export default async (app: FastifyInstance) => {
   app.get('/call', { websocket: true }, async (socket, req) => {
@@ -75,7 +51,36 @@ export default async (app: FastifyInstance) => {
       }
 
       // Start call
-      new CallServer(socket, config)
+      new CallServer(socket, {
+        systemPrompt,
+        firstMessage,
+
+        // LLM: Generate answer
+        generateAnswer,
+        // TTS: Text to speech
+        text2Speech,
+        // STT: Speech to text
+        speech2Text: new GladiaSTT({
+          apiKey: process.env.GLADIA_API_KEY || '',
+        }),
+        // speech2Text: new OpenaiSTT({
+        //   apiKey: process.env.OPENAI_API_KEY || '',
+        // }),
+
+        // Enable debug logging
+        debugLog: true,
+        disableTTS: true,
+        //debugSaveSpeech: true,
+
+        // Optional: called when a message is received from the user
+        onMessage(message) {
+          console.log('Message:', message)
+        },
+        // Optional: called when the call ends
+        onEnd() {
+          console.log('End')
+        },
+      })
     } catch (error) {
       handleError(socket, error)
     }

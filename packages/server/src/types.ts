@@ -1,3 +1,5 @@
+import { STT } from './stt'
+
 export enum CallClientCommands {
   StartSpeaking = 'StartSpeaking',
   StopSpeaking = 'StopSpeaking',
@@ -22,7 +24,7 @@ export interface CallConfig {
   generateAnswer(
     conversation: Conversation
   ): Promise<string | ConversationMessage>
-  speech2Text(audioBlob: Blob, prevMessage?: string): Promise<string>
+  speech2Text: STT
   text2Speech(text: string): Promise<ArrayBuffer | NodeJS.ReadableStream>
   onMessage?(message: ConversationMessage): void
   onEnd?(call: CallSummary): void

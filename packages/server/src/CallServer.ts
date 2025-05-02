@@ -1,4 +1,3 @@
-import * as fs from 'fs'
 import { WebSocket } from 'ws'
 import {
   CallClientCommands,
@@ -24,9 +23,6 @@ export class CallServer {
 
   // When user is speaking, we're waiting to chunks or to stop
   private isSpeaking = false
-
-  // Chunks of user speech since user started speaking
-  private chunks: Buffer[] = []
 
   // Conversation history
   private conversation: Conversation
@@ -120,6 +116,9 @@ export class CallServer {
     this.abortProcessing()
     const duration = Math.round((Date.now() - this.startTime) / 1000)
 
+    // Destroy STT
+    this.config.speech2Text.destroy()
+
     // End call callback
     this.config.onEnd?.({
       conversation: this.conversation.slice(1), // Remove system message
@@ -150,7 +149,7 @@ export class CallServer {
       } else if (cmd === CallClientCommands.Mute) {
         // User muted the call
         this.isSpeaking = false
-        this.chunks.length = 0
+        this.config?.speech2Text.resetChunks()
         // Abort answer if there is generation in progress
         this.abortProcessing()
       } else if (cmd === CallClientCommands.StopSpeaking) {
@@ -163,36 +162,23 @@ export class CallServer {
     // Audio chunk
     else if (Buffer.isBuffer(message) && this.isSpeaking) {
       this.log(`Received chunk (${message.byteLength} bytes)`)
-      this.chunks.push(message)
+      this.config?.speech2Text.addChunk(message)
     }
   }
 
   private async onStopSpeaking() {
     if (!this.config) return
-
-    // Do nothing if there is no chunk
-    if (this.chunks.length === 0) return
-
     this.abortProcessing()
     const processing = (this.processing = { aborted: false })
-
-    // Combine audio blob
-    const blob = new Blob(this.chunks, { type: 'audio/ogg' })
-
-    // Reset chunks for next user speech
-    this.chunks.length = 0
 
     try {
       // Save file to disk
       if (this.config.debugSaveSpeech) {
-        const filename = `speech-${Date.now()}.ogg`
-        fs.writeFileSync(filename, Buffer.from(await blob.arrayBuffer()))
-        this.log(`Saved speech: ${filename}`)
+        await this.config.speech2Text.saveAudio(`speech-${Date.now()}`)
       }
 
       // STT: Get transcript and send to client
-      const transcript = await this.config.speech2Text(
-        blob,
+      const transcript = await this.config.speech2Text.transcribe(
         this.conversation[this.conversation.length - 1]?.content
       )
       if (!transcript) {
