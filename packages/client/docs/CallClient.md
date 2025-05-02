@@ -1,14 +1,14 @@
-# CallHandler Documentation
+# CallClient Documentation
 
-The `CallHandler` class manages real-time audio communication between a client and server, handling microphone input, WebSocket connections, and audio playback. It's designed to facilitate interactive voice conversations with support for bi-directional audio streaming.
+The `CallClient` class manages real-time audio communication between a client and server, handling microphone input, WebSocket connections, and audio playback. It's designed to facilitate interactive voice conversations with support for bi-directional audio streaming.
 
 ## Usage Example
 
 ```typescript
-import { CallHandler } from '@micdrop/client'
+import { CallClient } from '@micdrop/client'
 
 // Get the singleton instance with your params type
-const call = CallHandler.getInstance<YourParamsType>()
+const call = CallClient.getInstance<YourParamsType>()
 
 // Configure the call
 call.url = 'wss://your-server.com/ws'
@@ -71,10 +71,10 @@ await call.stop()
 
 ## Events
 
-The `CallHandler` emits the following events:
+The `CallClient` emits the following events:
 
 - `EndCall`: Emitted when the call ends
-- `Error`: Emitted when an error occurs, provides a `CallHandlerError` object
+- `Error`: Emitted when an error occurs, provides a `CallClientError` object
 - `StateChange`: Emitted when any state change occurs in the handler
 
 ## Properties
@@ -90,10 +90,10 @@ The `CallHandler` emits the following events:
 ### Static Methods
 
 ```typescript
-static getInstance<T extends {}>(): CallHandler<T>
+static getInstance<T extends {}>(): CallClient<T>
 ```
 
-Gets the singleton instance of the CallHandler. Creates a new instance if one doesn't exist.
+Gets the singleton instance of the CallClient. Creates a new instance if one doesn't exist.
 
 ### State Properties (Getters)
 
@@ -146,25 +146,25 @@ Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and s
 
 ## Error Handling
 
-The handler uses `CallHandlerError` for error management. Each error instance contains a specific error code that helps identify the type of error that occurred.
+The handler uses `CallClientError` for error management. Each error instance contains a specific error code that helps identify the type of error that occurred.
 
-The `CallHandlerError` can have the following codes:
+The `CallClientError` can have the following codes:
 
-- `CallHandlerErrorCode.Mic`: Indicates an error with microphone access or recording. This can occur when:
+- `CallClientErrorCode.Mic`: Indicates an error with microphone access or recording. This can occur when:
 
   - Microphone permissions are denied
   - No microphone is available
   - Hardware issues prevent microphone access
   - Recording fails to start
 
-- `CallHandlerErrorCode.Unauthorized`: Indicates authentication or authorization failure with the WebSocket connection. This occurs when:
+- `CallClientErrorCode.Unauthorized`: Indicates authentication or authorization failure with the WebSocket connection. This occurs when:
 
   - Invalid credentials are provided
   - Session has expired
   - Access token is invalid
   - User doesn't have required permissions
 
-- `CallHandlerErrorCode.Error`: General error code for other types of failures (default). This includes:
+- `CallClientErrorCode.Error`: General error code for other types of failures (default). This includes:
   - WebSocket connection failures
   - Network issues
   - Server-side errors
@@ -173,17 +173,17 @@ The `CallHandlerError` can have the following codes:
 Example handling different error types:
 
 ```typescript
-handler.on('Error', (error: CallHandlerError) => {
+handler.on('Error', (error: CallClientError) => {
   switch (error.code) {
-    case CallHandlerErrorCode.Mic:
+    case CallClientErrorCode.Mic:
       console.error('Microphone error - check permissions or hardware')
       // Handle microphone-specific error recovery
       break
-    case CallHandlerErrorCode.Unauthorized:
+    case CallClientErrorCode.Unauthorized:
       console.error('Authentication failed - check credentials')
       // Handle authentication retry or user logout
       break
-    case CallHandlerErrorCode.Error:
+    case CallClientErrorCode.Error:
       console.error('General error occurred')
       // Handle general error recovery
       break

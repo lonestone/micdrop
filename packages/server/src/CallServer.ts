@@ -12,7 +12,7 @@ interface Processing {
   aborted: boolean
 }
 
-export class CallSocket {
+export class CallServer {
   public socket: WebSocket | null = null
   public config: CallConfig | null = null
 
@@ -48,7 +48,7 @@ export class CallSocket {
         .generateAnswer(this.conversation)
         .then((answer) => this.answer(answer))
         .catch((error) => {
-          console.error('[CallSocket]', error)
+          console.error('[CallServer]', error)
           socket?.close()
           // TODO: Implement retry
         })
@@ -133,7 +133,7 @@ export class CallSocket {
 
   private async onMessage(message: Buffer) {
     if (!Buffer.isBuffer(message)) {
-      console.warn(`[CallSocket] Message is not a buffer`)
+      console.warn(`[CallServer] Message is not a buffer`)
       return
     }
 
@@ -218,7 +218,7 @@ export class CallSocket {
 
       await this.answer(answer, processing)
     } catch (error) {
-      console.error('[CallSocket]', error)
+      console.error('[CallServer]', error)
       this.socket?.send(CallServerCommands.SkipAnswer)
       // TODO: Implement retry
     }
@@ -285,7 +285,7 @@ export class CallSocket {
         // Send audio to client
         await this.sendAudio(audio, processing, onAbort)
       } catch (error) {
-        console.error('[CallSocket]', error)
+        console.error('[CallServer]', error)
         this.socket?.send(CallServerCommands.SkipAnswer)
         // TODO: Implement retry
       }

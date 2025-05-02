@@ -1,5 +1,5 @@
 import {
-  CallHandler,
+  CallClient,
   MultipleVAD,
   SileroVAD,
   SileroVADOptions,
@@ -11,7 +11,7 @@ import { useState } from 'react'
 import VADStatusCircle from './VADStatusCircle'
 
 export default function VADSettings({ className }: { className?: string }) {
-  const call = CallHandler.getInstance()
+  const call = CallClient.getInstance()
   return <AnyVADSettings vad={call.vad} className={className} />
 }
 

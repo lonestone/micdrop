@@ -30,7 +30,7 @@ pnpm add @micdrop/server
 
 ```typescript
 import { WebSocketServer } from 'ws'
-import { CallSocket, CallConfig } from '@micdrop/server'
+import { CallServer, CallConfig } from '@micdrop/server'
 
 // Create WebSocket server
 const wss = new WebSocketServer({ port: 8080 })
@@ -79,7 +79,7 @@ const config: CallConfig = {
 // Handle new connections
 wss.on('connection', (ws) => {
   // Create call handler with configuration
-  new CallSocket(ws, config)
+  new CallServer(ws, config)
 })
 ```
 
@@ -88,7 +88,7 @@ wss.on('connection', (ws) => {
 Check out the demo implementation in the [@micdrop/demo-server](../demo-server/README.md) package. It shows:
 
 - Setting up a Fastify server with WebSocket support
-- Configuring the CallSocket with custom handlers
+- Configuring the CallServer with custom handlers
 - Basic authentication flow
 - Example speech-to-text and text-to-speech implementations
 - Error handling patterns
@@ -99,19 +99,19 @@ Here's a simplified version from the demo:
 
 The server package provides several core components:
 
-- **CallSocket** - Main class that handles WebSocket connections, audio streaming, and conversation flow
+- **CallServer** - Main class that handles WebSocket connections, audio streaming, and conversation flow
 - **CallConfig** - Configuration interface for customizing speech processing and conversation behavior
 - **Types** - Common TypeScript types and interfaces for messages and commands
 - **Error Handling** - Standardized error handling with specific error codes
 
 ## API Reference
 
-### CallSocket
+### CallServer
 
 The main class for managing WebSocket connections and audio streaming.
 
 ```typescript
-class CallSocket {
+class CallServer {
   constructor(socket: WebSocket, config: CallConfig)
 
   // Add assistant message and send to client with audio (TTS)
@@ -259,7 +259,7 @@ Here's an example using Fastify:
 ```typescript
 import fastify from 'fastify'
 import fastifyWebsocket from '@fastify/websocket'
-import { CallSocket, CallConfig } from '@micdrop/server'
+import { CallServer, CallConfig } from '@micdrop/server'
 
 const server = fastify()
 server.register(fastifyWebsocket)
@@ -269,7 +269,7 @@ server.get('/call', { websocket: true }, (socket) => {
     systemPrompt: 'You are a helpful assistant',
     // ... other config options
   }
-  new CallSocket(socket, config)
+  new CallServer(socket, config)
 })
 
 server.listen({ port: 8080 })

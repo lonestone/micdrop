@@ -2,7 +2,7 @@ import {
   CallConfig,
   CallError,
   CallErrorCode,
-  CallSocket,
+  CallServer,
   handleError,
   waitForParams,
 } from '@micdrop/server'
@@ -64,7 +64,7 @@ export default async (app: FastifyInstance) => {
       }
 
       // Start call
-      new CallSocket(socket, config)
+      new CallServer(socket, config)
     } catch (error) {
       handleError(socket, error)
     }

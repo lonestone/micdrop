@@ -1,45 +1,45 @@
-import EventEmitter from 'eventemitter3'
 import {
   CallClientCommands,
   CallServerCommands,
   Conversation,
   ConversationMessage,
   VAD,
-} from '../..'
+} from '@micdrop/client'
+import EventEmitter from 'eventemitter3'
 import { MicRecorder } from '../audio/MicRecorder'
 import { mic } from '../audio/mic'
 import { speaker } from '../audio/speaker'
 import { getVAD, VADConfig } from '../audio/vad/getVAD'
-import { CallHandlerError, CallHandlerErrorCode } from './CallHandlerError'
+import { CallClientError, CallClientErrorCode } from './CallClientError'
 
-export interface CallHandlerEvents {
+export interface CallClientEvents {
   EndCall: []
-  Error: [CallHandlerError]
+  Error: [CallClientError]
   StateChange: void
 }
 
-export interface CallHandlerOptions {
+export interface CallClientOptions {
   vad?: VADConfig
 }
 
 declare global {
   interface Window {
-    micdropCallHandler: any
+    micdropCallClient: any
   }
 }
 
-export class CallHandler<
+export class CallClient<
   Params extends {},
-  Options extends CallHandlerOptions = CallHandlerOptions,
-> extends EventEmitter<CallHandlerEvents> {
+  Options extends CallClientOptions = CallClientOptions,
+> extends EventEmitter<CallClientEvents> {
   public static getInstance<
     P extends {},
-    O extends CallHandlerOptions = CallHandlerOptions,
-  >(options?: O): CallHandler<P, O> {
-    if (!window.micdropCallHandler) {
-      window.micdropCallHandler = new CallHandler<P, O>(options)
+    O extends CallClientOptions = CallClientOptions,
+  >(options?: O): CallClient<P, O> {
+    if (!window.micdropCallClient) {
+      window.micdropCallClient = new CallClient<P, O>(options)
     }
-    return window.micdropCallHandler
+    return window.micdropCallClient
   }
 
   public url?: string
@@ -112,7 +112,7 @@ export class CallHandler<
       // Stop websocket
       this.stopWS()
     } catch (error) {
-      console.error('[CallHandler] stop WS', error)
+      console.error('[CallClient] stop WS', error)
     }
 
     try {
@@ -120,7 +120,7 @@ export class CallHandler<
       this.micRecorder?.stop()
       this.stopMic()
     } catch (error) {
-      console.error('[CallHandler] stop mic', error)
+      console.error('[CallClient] stop mic', error)
     }
   }
 
@@ -191,8 +191,8 @@ export class CallHandler<
         await this.micRecorder.start(this.micStream)
       }
     } catch (error) {
-      console.error('[CallHandler] startMic', error)
-      this.emit('Error', new CallHandlerError(CallHandlerErrorCode.Mic))
+      console.error('[CallClient] startMic', error)
+      this.emit('Error', new CallClientError(CallClientErrorCode.Mic))
       this.stop()
     }
   }
@@ -207,13 +207,13 @@ export class CallHandler<
 
   private async startWS() {
     if (this.ws) {
-      throw new Error('[CallHandler] startWS: WebSocket is already started')
+      throw new Error('[CallClient] startWS: WebSocket is already started')
     }
     if (!this.isMicStarted) {
-      throw new Error('[CallHandler] startWS: Microphone is not started')
+      throw new Error('[CallClient] startWS: Microphone is not started')
     }
     if (!this.url) {
-      throw new Error('[CallHandler] startWS: URL is not set')
+      throw new Error('[CallClient] startWS: URL is not set')
     }
 
     // Start websocket
@@ -282,20 +282,20 @@ export class CallHandler<
 
       if (event.code >= 1001 && event.code <= 1011 && event.code !== 1005) {
         // Internal server error
-        this.emit('Error', new CallHandlerError())
+        this.emit('Error', new CallClientError())
       } else if (event.code === 4401) {
         // Unauthorized
         this.emit(
           'Error',
-          new CallHandlerError(CallHandlerErrorCode.Unauthorized)
+          new CallClientError(CallClientErrorCode.Unauthorized)
         )
       } else if (event.code >= 4000) {
         // Custom error
-        this.emit('Error', new CallHandlerError())
+        this.emit('Error', new CallClientError())
       }
     }
     this.ws.onerror = (event) => {
-      console.error('[CallHandler] [WS] Error:', event)
+      console.error('[CallClient] [WS] Error:', event)
       this.stop()
     }
   }
