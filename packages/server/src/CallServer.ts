@@ -1,4 +1,3 @@
-import * as fs from 'fs'
 import { WebSocket } from 'ws'
 import {
   CallClientCommands,
@@ -12,7 +11,7 @@ interface Processing {
   aborted: boolean
 }
 
-export class CallSocket {
+export class CallServer {
   public socket: WebSocket | null = null
   public config: CallConfig | null = null
 
@@ -24,9 +23,6 @@ export class CallSocket {
 
   // When user is speaking, we're waiting to chunks or to stop
   private isSpeaking = false
-
-  // Chunks of user speech since user started speaking
-  private chunks: Buffer[] = []
 
   // Conversation history
   private conversation: Conversation
@@ -48,7 +44,7 @@ export class CallSocket {
         .generateAnswer(this.conversation)
         .then((answer) => this.answer(answer))
         .catch((error) => {
-          console.error('[CallSocket]', error)
+          console.error('[CallServer]', error)
           socket?.close()
           // TODO: Implement retry
         })
@@ -120,6 +116,9 @@ export class CallSocket {
     this.abortProcessing()
     const duration = Math.round((Date.now() - this.startTime) / 1000)
 
+    // Destroy STT
+    this.config.speech2Text.destroy()
+
     // End call callback
     this.config.onEnd?.({
       conversation: this.conversation.slice(1), // Remove system message
@@ -133,7 +132,7 @@ export class CallSocket {
 
   private async onMessage(message: Buffer) {
     if (!Buffer.isBuffer(message)) {
-      console.warn(`[CallSocket] Message is not a buffer`)
+      console.warn(`[CallServer] Message is not a buffer`)
       return
     }
 
@@ -160,37 +159,24 @@ export class CallSocket {
 
     // Audio chunk
     else if (Buffer.isBuffer(message) && this.isSpeaking) {
-      this.log(`Received chunk (${message.byteLength} bytes)`)
-      this.chunks.push(message)
+      this.log(`Received audio chunk (${message.byteLength} bytes)`)
+      this.config?.speech2Text.addAudio(message)
     }
   }
 
   private async onStopSpeaking() {
     if (!this.config) return
-
-    // Do nothing if there is no chunk
-    if (this.chunks.length === 0) return
-
     this.abortProcessing()
     const processing = (this.processing = { aborted: false })
-
-    // Combine audio blob
-    const blob = new Blob(this.chunks, { type: 'audio/ogg' })
-
-    // Reset chunks for next user speech
-    this.chunks.length = 0
 
     try {
       // Save file to disk
       if (this.config.debugSaveSpeech) {
-        const filename = `speech-${Date.now()}.ogg`
-        fs.writeFileSync(filename, Buffer.from(await blob.arrayBuffer()))
-        this.log(`Saved speech: ${filename}`)
+        await this.config.speech2Text.saveAudio(`speech-${Date.now()}.ogg`)
       }
 
       // STT: Get transcript and send to client
-      const transcript = await this.config.speech2Text(
-        blob,
+      const transcript = await this.config.speech2Text.transcribe(
         this.conversation[this.conversation.length - 1]?.content
       )
       if (!transcript) {
@@ -218,7 +204,7 @@ export class CallSocket {
 
       await this.answer(answer, processing)
     } catch (error) {
-      console.error('[CallSocket]', error)
+      console.error('[CallServer]', error)
       this.socket?.send(CallServerCommands.SkipAnswer)
       // TODO: Implement retry
     }
@@ -285,7 +271,7 @@ export class CallSocket {
         // Send audio to client
         await this.sendAudio(audio, processing, onAbort)
       } catch (error) {
-        console.error('[CallSocket]', error)
+        console.error('[CallServer]', error)
         this.socket?.send(CallServerCommands.SkipAnswer)
         // TODO: Implement retry
       }

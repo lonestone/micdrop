@@ -1,4 +1,5 @@
-export * from './CallSocket'
+export * from './CallServer'
 export * from './errors'
+export * from './STT'
 export * from './types'
 export * from './waitForParams'

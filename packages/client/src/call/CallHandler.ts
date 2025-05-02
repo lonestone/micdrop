@@ -153,7 +153,7 @@ export class CallHandler<
 
         // Send chunk of user speech to server
         this.micRecorder.on('Chunk', (blob) => {
-          this.log(`[Mic] Received chunk`, blob)
+          this.log(`[Mic] Audio chunk`, blob)
           this.ws?.send(blob)
         })
 

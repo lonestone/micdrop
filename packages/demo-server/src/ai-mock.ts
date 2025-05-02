@@ -7,7 +7,6 @@ import * as path from 'path'
 // It can be useful to test some parts of micdrop without needing to call AI systems.
 
 let i = 1
-let j = 1
 const ttsCache = fs.readFileSync(
   path.join(__dirname, '../../demo-client/public/test.mp3')
 )
@@ -18,8 +17,5 @@ export default {
   },
   async text2Speech() {
     return ttsCache
-  },
-  async speech2Text() {
-    return `User Message ${j++}`
   },
 } satisfies Partial<CallConfig>

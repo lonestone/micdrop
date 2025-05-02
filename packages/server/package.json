@@ -33,7 +33,8 @@
     "conversation"
   ],
   "dependencies": {
-    "ws": "^8.18.1"
+    "ws": "^8.18.1",
+    "music-metadata": "^11.2.1"
   },
   "devDependencies": {
     "@types/node": "^22.13.4",
