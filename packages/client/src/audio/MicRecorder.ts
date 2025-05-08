@@ -163,9 +163,9 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }).bind(this)
 
   private onCancelSpeaking = (async () => {
-    if (!this.recorder) return
+    if (this.state.isMuted) return
     try {
-      this.recorder.stop()
+      this.recorder?.stop()
     } catch (error) {
       console.error(error)
     }
@@ -173,9 +173,9 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }).bind(this)
 
   private onStopSpeaking = (async () => {
-    if (!this.recorder) return
+    if (this.state.isMuted) return
     try {
-      this.recorder.stop()
+      this.recorder?.stop()
     } catch (error) {
       console.error(error)
     }
@@ -185,6 +185,8 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }).bind(this)
 
   private async onDataAvailable(blobEvent: BlobEvent) {
+    if (this.state.isMuted) return
+
     if (!this.speakingConfirmed) {
       // Queue the chunk until speech is confirmed
       this.queuedChunks.push(blobEvent.data)

@@ -149,6 +149,8 @@ export class CallServer {
         this.abortProcessing()
       } else if (cmd === CallClientCommands.Mute) {
         // User muted the call
+        this.isSpeaking = false
+        this.chunks.length = 0
         // Abort answer if there is generation in progress
         this.abortProcessing()
       } else if (cmd === CallClientCommands.StopSpeaking) {
