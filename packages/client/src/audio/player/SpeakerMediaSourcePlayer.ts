@@ -1,6 +1,8 @@
 import { stopStream } from '../utils/stopStream'
 import { SpeakerPlayer } from './SpeakerPlayer'
 
+// FIXME: Use changeIsPlaying when starts/stops playing
+
 export class SpeakerMediaSourcePlayer extends SpeakerPlayer {
   public static isCompatible =
     typeof MediaSource !== 'undefined' &&
@@ -118,6 +120,8 @@ export class SpeakerMediaSourcePlayer extends SpeakerPlayer {
   }
 
   destroy() {
+    super.destroy()
+
     // Disconnect the audio nodes
     if (this.sourceNode) {
       this.sourceNode.disconnect()

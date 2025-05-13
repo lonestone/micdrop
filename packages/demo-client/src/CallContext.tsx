@@ -11,9 +11,12 @@ export interface CallContextValue {
   isStarting: boolean
   isStarted: boolean
   isPaused: boolean
-  isSpeaking: boolean
-  isMicStarted: boolean
+  isListening: boolean
   isProcessing: boolean
+  isUserSpeaking: boolean
+  isAssistantSpeaking: boolean
+  isMicStarted: boolean
+  isMicMuted: boolean
   conversation: Conversation
   error: CallClientError | undefined
 }
@@ -25,15 +28,6 @@ export const CallContext = createContext<CallContextValue | undefined>(
 interface CallContextProviderProps {
   children: React.ReactNode
 }
-
-// const vad = [
-//   new SileroVAD({
-//     minSpeechFrames: 9,
-//     positiveSpeechThreshold: 0.5,
-//     negativeSpeechThreshold: 0.35,
-//   }),
-//   new VolumeVAD({ history: 5, threshold: -50 }),
-// ]
 
 export function CallContextProvider({ children }: CallContextProviderProps) {
   // Setup call handler
@@ -66,13 +60,16 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     call.on('StateChange', () => {
       setValue((v) => ({
         ...v,
-        isStarted: call.isStarted,
-        isStarting: call.isStarting,
-        isMicStarted: call.isMicStarted,
         conversation: call.conversation,
-        isPaused: call.isMicMuted,
-        isSpeaking: call.isMicSpeaking,
+        isStarting: call.isStarting,
+        isStarted: call.isStarted,
+        isPaused: call.isPaused,
+        isListening: call.isListening,
         isProcessing: call.isProcessing,
+        isUserSpeaking: call.isUserSpeaking,
+        isAssistantSpeaking: call.isAssistantSpeaking,
+        isMicStarted: call.isMicStarted,
+        isMicMuted: call.isMicMuted,
       }))
     })
 
@@ -107,9 +104,12 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     isStarting: false,
     isStarted: false,
     isPaused: false,
-    isSpeaking: false,
-    isMicStarted: false,
+    isListening: false,
     isProcessing: false,
+    isUserSpeaking: false,
+    isAssistantSpeaking: false,
+    isMicStarted: false,
+    isMicMuted: false,
     conversation: [],
     error: undefined,
   }))

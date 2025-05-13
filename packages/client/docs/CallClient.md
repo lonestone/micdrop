@@ -7,8 +7,11 @@ The `CallClient` class manages real-time audio communication between a client an
 ```typescript
 import { CallClient } from '@micdrop/client'
 
-// Get the singleton instance with your params type
-const call = CallClient.getInstance<YourParamsType>()
+// Get the singleton instance with your params type and options
+const call = CallClient.getInstance<YourParamsType>({
+  vad: ['silero', 'volume'], // or 'volume', or an instance, or array (see VAD section)
+  disableInterruption: true, // disables mic interruption when assistant is speaking
+})
 
 // Configure the call
 call.url = 'wss://your-server.com/ws'
@@ -26,23 +29,17 @@ call.on('StateChange', () => {
         { "role": "user", "content": "User Message 1" },
         { "role": "assistant", "content": "Assistant Message 1" }
       ],
-      "isMicStarted": false,
       "isStarted": false,
       "isStarting": false,
       "isWSStarted": false,
       "isWSStarting": false,
-      "isProcessing": false
-    }
-  */
-
-  console.log('MicRecorder state:', call.micRecorder.state)
-  /*
-    {
-      "isStarting": false,
-      "isStarted": false,
-      "isMuted": false,
-      "isSpeaking": false,
-      "threshold": -50
+      "isProcessing": false,
+      "isListening": false,
+      "isPaused": false,
+      "isMicStarted": false,
+      "isMicMuted": false,
+      "isUserSpeaking": false,
+      "isAssistantSpeaking": false,
     }
   */
 })
@@ -69,6 +66,13 @@ call.resume()
 await call.stop()
 ```
 
+## Options
+
+You can pass an options object to `CallClient.getInstance`:
+
+- `vad`: VAD configuration (see [VAD](./VAD.md) section)
+- `disableInterruption`: If true, disables automatic mic muting when the assistant is speaking (default: false)
+
 ## Events
 
 The `CallClient` emits the following events:
@@ -81,19 +85,17 @@ The `CallClient` emits the following events:
 
 ### Public Properties
 
+Params that can be changed before starting the call:
+
 - `url`: WebSocket URL for the connection
 - `params`: Generic type parameters for the handler
-- `micRecorder`: Instance of `MicRecorder` for handling microphone input
-- `conversation`: Array storing the conversation history
 - `debug`: Boolean flag to enable/disable debug logging
 
-### Static Methods
+Accessible properties that must not be changed:
 
-```typescript
-static getInstance<T extends {}>(): CallClient<T>
-```
-
-Gets the singleton instance of the CallClient. Creates a new instance if one doesn't exist.
+- `micRecorder`: Instance of `MicRecorder` for handling microphone input (do not change)
+- `vad`: The VAD instance in use (do not change)
+- `conversation`: Array storing the conversation history (do not change)
 
 ### State Properties (Getters)
 
@@ -102,7 +104,12 @@ Gets the singleton instance of the CallClient. Creates a new instance if one doe
 - `isWSStarted`: Returns true if WebSocket connection is open
 - `isWSStarting`: Returns true if WebSocket is connecting
 - `isMicStarted`: Returns true if microphone stream is active
+- `isMicMuted`: Returns true if the microphone is muted
+- `isListening`: Returns true if the client is actively listening for user speech (not paused, not processing, not muted, not speaking)
 - `isProcessing`: Returns true if the call is processing (i.e. waiting for answer and audio generation)
+- `isPaused`: Returns true if the microphone is paused (muted by user)
+- `isUserSpeaking`: Returns true if the user is currently speaking
+- `isAssistantSpeaking`: Returns true if the assistant is currently speaking
 
 ## Methods
 
@@ -131,6 +138,12 @@ resume(): void
 ```
 
 Unmutes the microphone and resumes audio playback if available.
+
+```typescript
+async destroy(): Promise<void>
+```
+
+Cleans up all listeners and resources. Call this if you want to fully dispose the singleton and reset state.
 
 ### Microphone Control
 

@@ -25,7 +25,11 @@ export class SpeakerConcatPlayer extends SpeakerPlayer {
       this.sourceStartTime = undefined
       this.currentSource = undefined
       source.disconnect()
-      this.replaceSource()
+      if (this.nextSource) {
+        this.replaceSource()
+      } else {
+        this.changeIsPlaying(false)
+      }
     }
 
     // Calculate the offset for the source start time
@@ -93,11 +97,13 @@ export class SpeakerConcatPlayer extends SpeakerPlayer {
   }
 
   addBlob(blob: Blob) {
+    this.changeIsPlaying(true)
     this.pendingBlobs.push(blob)
     this.convertNextBlob()
   }
 
   stop() {
+    this.changeIsPlaying(false)
     this.pendingBlobs.length = 0
     this.sourceStartTime = undefined
     this.prevSourceDuration = 0
@@ -110,6 +116,7 @@ export class SpeakerConcatPlayer extends SpeakerPlayer {
   }
 
   destroy() {
+    super.destroy()
     this.stop()
   }
 }

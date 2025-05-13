@@ -15,22 +15,18 @@ This flexibility allows you to either use the full voice conversation capabiliti
 ## Features
 
 - Voice activity detection (VAD)
-- Configurable speech detection threshold
 - Multiple audio format support (ogg, webm, mp4, wav)
 - Event-based architecture
 - Mute/unmute functionality
 - State management
 
-## Usage
+## Usage Example
 
 ```typescript
-import { MicRecorder, VolumeVAD } from '@micdrop/client'
+import { MicRecorder } from '@micdrop/client'
 
-// Create a VAD instance
-const vad = new VolumeVAD() // or SileroVAD or a custom VAD implementation
-
-// Create a new recorder instance with VAD
-const recorder = new MicRecorder(vad)
+// Create a new recorder instance with VAD config (string, VAD instance, or array)
+const recorder = new MicRecorder('volume')
 
 // Get microphone stream
 const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -63,7 +59,6 @@ interface MicRecorderState {
   isStarted: boolean // Whether the recorder is currently active
   isMuted: boolean // Whether the recorder is muted
   isSpeaking: boolean // Whether speech is currently detected
-  threshold: number // Speech detection threshold
 }
 ```
 
@@ -78,9 +73,13 @@ The recorder emits the following events:
 
 ## Methods
 
-### `constructor(vad: VAD)`
+### `constructor(vadConfig?: VADConfig)`
 
-Creates a new MicRecorder instance with the provided VAD (Voice Activity Detection) instance.
+Creates a new MicRecorder instance with the provided VAD config. The config can be:
+
+- A string (`'volume'` or `'silero'`)
+- A VAD instance
+- An array of VAD configs for multiple VADs
 
 ### `start(stream: MediaStream): Promise<void>`
 
@@ -98,15 +97,11 @@ Mutes the recorder (stops recording while keeping the stream active).
 
 Unmutes the recorder (resumes recording).
 
-### `setThreshold(threshold: number): void`
-
-Sets the speech detection threshold. Lower values make speech detection more sensitive.
-
 ## VAD
 
-The `MicRecorder` class uses a VAD (Voice Activity Detection) system to detect speech.
+The `MicRecorder` class uses a VAD (Voice Activity Detection) system to detect speech. You can access the internal VAD instance via `recorder.vad` to update options or listen to VAD-specific events.
 
-See [VAD documentation](./VAD.md) for more information.
+See [VAD documentation](./VAD.md) for more information and available options.
 
 ## Technical Details
 
@@ -114,10 +109,3 @@ See [VAD documentation](./VAD.md) for more information.
 - Audio is recorded in chunks of 100ms when speech is detected
 - Default audio settings: 128kbps bitrate
 - Supports multiple audio formats with fallback options
-- Persists threshold settings in localStorage
-
-## Notes
-
-- Ensure proper cleanup by calling `stop()` when the recorder is no longer needed
-- Handle errors appropriately as audio recording may fail due to permissions or hardware issues
-- The speech detection threshold can be adjusted based on environmental conditions

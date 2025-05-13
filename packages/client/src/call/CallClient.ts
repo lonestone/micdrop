@@ -20,6 +20,7 @@ export interface CallClientEvents {
 
 export interface CallClientOptions {
   vad?: VADConfig
+  disableInterruption?: boolean
 }
 
 declare global {
@@ -52,14 +53,20 @@ export class CallClient<
   private ws?: WebSocket
   private micStream?: MediaStream
   private startTime = 0
-  private lastAudioBlob?: Blob
   private _isProcessing = false
+  private _isPaused = false
 
   private constructor(private options?: Options) {
     super()
 
     // Init VAD
     this.vad = getVAD(this.options?.vad)
+
+    // Add speaker listener
+    this.onSpeakerStartPlaying = this.onSpeakerStartPlaying.bind(this)
+    this.onSpeakerStopPlaying = this.onSpeakerStopPlaying.bind(this)
+    speaker.on('StartPlaying', this.onSpeakerStartPlaying)
+    speaker.on('StopPlaying', this.onSpeakerStopPlaying)
   }
 
   get isStarted(): boolean {
@@ -68,6 +75,25 @@ export class CallClient<
 
   get isStarting(): boolean {
     return this.isWSStarting || this.micRecorder?.state.isStarting || false
+  }
+
+  get isPaused(): boolean {
+    return this._isPaused
+  }
+
+  get isProcessing(): boolean {
+    return this._isProcessing && !this.isPaused
+  }
+
+  get isListening(): boolean {
+    return (
+      this.isMicStarted &&
+      !this.isPaused &&
+      !this.isProcessing &&
+      !this.isMicMuted &&
+      !this.isUserSpeaking &&
+      !this.isAssistantSpeaking
+    )
   }
 
   get isWSStarted(): boolean {
@@ -86,12 +112,12 @@ export class CallClient<
     return this.micRecorder?.state.isMuted ?? false
   }
 
-  get isMicSpeaking(): boolean {
+  get isUserSpeaking(): boolean {
     return this.micRecorder?.state.isSpeaking ?? false
   }
 
-  get isProcessing(): boolean {
-    return this._isProcessing
+  get isAssistantSpeaking(): boolean {
+    return speaker.isPlaying
   }
 
   async start() {
@@ -125,7 +151,9 @@ export class CallClient<
   }
 
   pause() {
+    if (this.isPaused) return
     this.micRecorder?.mute()
+    this._isPaused = true
     this._isProcessing = false
     this.notifyStateChange()
     speaker.pauseAudio()
@@ -133,12 +161,16 @@ export class CallClient<
   }
 
   resume() {
-    if (this.lastAudioBlob) {
-      speaker.playAudio(this.lastAudioBlob)
-    }
-    speaker.resumeAudio()
+    if (!this.isPaused) return
     this.micRecorder?.unmute()
+    this._isPaused = false
     this.notifyStateChange()
+  }
+
+  async destroy() {
+    this.stop()
+    speaker.off('StartPlaying', this.onSpeakerStartPlaying)
+    speaker.off('StopPlaying', this.onSpeakerStopPlaying)
   }
 
   async startMic(deviceId?: string, record = true) {
@@ -153,7 +185,7 @@ export class CallClient<
 
         // Send chunk of user speech to server
         this.micRecorder.on('Chunk', (blob) => {
-          this.log(`[Mic] Received chunk`, blob)
+          this.log(`[Mic] Chunk`, blob)
           this.ws?.send(blob)
         })
 
@@ -171,7 +203,9 @@ export class CallClient<
         this.micRecorder.on('StopSpeaking', () => {
           this.log('[Mic] Stop speaking')
           this.ws?.send(CallClientCommands.StopSpeaking)
-          this._isProcessing = true
+          if (this.isWSStarted) {
+            this._isProcessing = true
+          }
           this.notifyStateChange()
         })
       }
@@ -236,7 +270,6 @@ export class CallClient<
       if (event.data instanceof Blob) {
         // Received assistant speech
         speaker.playAudio(event.data)
-        this.lastAudioBlob = event.data
         this._isProcessing = false
         this.notifyStateChange()
       } else if (typeof event.data !== 'string') {
@@ -304,6 +337,22 @@ export class CallClient<
     if (!this.ws) return
     this.ws.close()
     this.ws = undefined
+    this.notifyStateChange()
+  }
+
+  private onSpeakerStartPlaying() {
+    this.log('[Speaker] Start speaking')
+    if (this.options?.disableInterruption && !this.isPaused) {
+      this.micRecorder?.mute()
+    }
+    this.notifyStateChange()
+  }
+
+  private onSpeakerStopPlaying() {
+    this.log('[Speaker] Stop speaking')
+    if (this.options?.disableInterruption && !this.isPaused) {
+      this.micRecorder?.unmute()
+    }
     this.notifyStateChange()
   }
 

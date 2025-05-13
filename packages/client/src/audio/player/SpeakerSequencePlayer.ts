@@ -19,7 +19,11 @@ export class SpeakerSequencePlayer extends SpeakerPlayer {
     source.onended = () => {
       source.disconnect()
       this.currentSource = undefined
-      this.processQueue()
+      if (this.pendingSources.length === 0) {
+        this.changeIsPlaying(false)
+      } else {
+        this.processQueue()
+      }
     }
 
     source.start(0)
@@ -54,6 +58,7 @@ export class SpeakerSequencePlayer extends SpeakerPlayer {
   }
 
   addBlob(blob: Blob) {
+    this.changeIsPlaying(true)
     this.pendingBlobs.push(blob)
     this.convertNextBlob()
   }
@@ -67,6 +72,7 @@ export class SpeakerSequencePlayer extends SpeakerPlayer {
   }
 
   destroy() {
+    super.destroy()
     this.stop()
   }
 }

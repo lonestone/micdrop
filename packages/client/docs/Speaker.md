@@ -9,10 +9,89 @@ The Speaker module provides functionality for managing audio output devices and 
 - 📊 Real-time audio analysis
 - 💾 Persistent device selection
 - 🔄 Dynamic device switching
-- ⏯️ Pause and resume capabilities
-- 🔄 Automatic stream recovery
+- ⏯️ Playing state events
+- 🚦 Streaming mode toggle
+
+## Usage Example
+
+```typescript
+import { Speaker } from '@micdrop/client'
+
+// Check if device selection is supported
+if (Speaker.canChangeDevice()) {
+  // Change to a specific output device
+  await Speaker.changeDevice('device-id')
+}
+
+// Play an audio blob
+const audioBlob = new Blob(
+  [
+    /* audio data */
+  ],
+  { type: 'audio/mpeg' }
+)
+await Speaker.playAudio(audioBlob)
+
+// Pause playback
+Speaker.pauseAudio()
+
+// Monitor volume changes using the audio analyser
+// Volume is in dB range -100 to 0
+Speaker.analyser.on('volume', (volume: number) => {
+  // Convert to 0-100 range for visualization if needed
+  const normalizedVolume = Math.max(0, volume + 100)
+  console.log('Current volume:', normalizedVolume)
+})
+
+// Listen for playing events
+Speaker.on('StartPlaying', () => {
+  console.log('Speaker started playing')
+})
+Speaker.on('StopPlaying', () => {
+  console.log('Speaker stopped playing')
+})
+
+// Resume playback
+Speaker.resumeAudio()
+
+// Stop playback and cleanup
+Speaker.stopAudio()
+```
 
 ## API Reference
+
+### Properties
+
+#### `isPlaying: boolean`
+
+Indicates whether audio is currently being played through the speaker.
+
+```typescript
+if (Speaker.isPlaying) {
+  console.log('Speaker is currently playing audio')
+}
+```
+
+#### `isStreamingEnabled: boolean`
+
+Indicates whether streaming playback mode is enabled.
+
+```typescript
+console.log('Streaming enabled:', Speaker.isStreamingEnabled)
+```
+
+#### `analyser: AudioAnalyser`
+
+An instance of `AudioAnalyser` that can be used to analyze the audio output.
+
+```typescript
+Speaker.analyser.on('volume', (volume: number) => {
+  console.log('Current volume:', volume)
+})
+
+// Access the underlying AnalyserNode
+console.log(Speaker.analyser.node)
+```
 
 ### Functions
 
@@ -86,58 +165,41 @@ Speaker.stopAudio()
 - Disconnects from audio analyser
 - Stops and cleans up any active media streams
 
-### Variables
+#### `enableStreaming(): Promise<void>`
 
-#### `analyser`
-
-An instance of `AudioAnalyser` that can be used to analyze the audio output.
+Enables streaming playback mode. In streaming mode, audio is played using MediaSource Extensions for efficient streaming and buffering.
 
 ```typescript
-Speaker.analyser.on('volume', (volume: number) => {
-  console.log('Current volume:', volume)
-})
-
-// AnalyserNode
-// See https://developer.mozilla.org/docs/Web/API/AnalyserNode
-console.log(Speaker.analyser.node)
+await Speaker.enableStreaming()
 ```
 
-## Example Usage
+#### `disableStreaming(): Promise<void>`
+
+Disables streaming playback mode. Switches to non-streaming playback.
 
 ```typescript
-import { Speaker } from '@micdrop/client'
+await Speaker.disableStreaming()
+```
 
-// Check if device selection is supported
-if (Speaker.canChangeDevice()) {
-  // Change to a specific output device
-  await Speaker.changeDevice('device-id')
-}
+### Events
 
-// Play an audio blob
-const audioBlob = new Blob(
-  [
-    /* audio data */
-  ],
-  { type: 'audio/mpeg' }
-)
-await Speaker.playAudio(audioBlob)
+The Speaker emits events for playing state changes. You can listen to these events using `.on()`:
 
-// Pause playback
-Speaker.pauseAudio()
+#### `StartPlaying`
 
-// Monitor volume changes using the audio analyser
-// Volume is in dB range -100 to 0
-Speaker.analyser.on('volume', (volume: number) => {
-  // Convert to 0-100 range for visualization if needed
-  const normalizedVolume = Math.max(0, volume + 100)
-  console.log('Current volume:', normalizedVolume)
+Emitted when audio playback starts.
+
+#### `StopPlaying`
+
+Emitted when audio playback stops.
+
+```typescript
+Speaker.on('StartPlaying', () => {
+  console.log('Speaker started playing audio')
 })
-
-// Resume playback
-Speaker.resumeAudio()
-
-// Stop playback and cleanup
-Speaker.stopAudio()
+Speaker.on('StopPlaying', () => {
+  console.log('Speaker stopped playing audio')
+})
 ```
 
 ## Browser Support

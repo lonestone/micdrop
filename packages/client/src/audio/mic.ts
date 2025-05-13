@@ -6,10 +6,11 @@ import { stopStream } from './utils/stopStream'
 export let mic: Mic
 
 class Mic {
+  public analyser: AudioAnalyser
+
   private currentDeviceId: string | undefined
   private audioStream: MediaStream | undefined
   private sourceNode: MediaStreamAudioSourceNode | undefined
-  public analyser: AudioAnalyser
 
   constructor() {
     this.analyser = new AudioAnalyser(audioContext)

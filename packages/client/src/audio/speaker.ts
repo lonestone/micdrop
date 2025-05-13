@@ -1,3 +1,4 @@
+import EventEmitter from 'eventemitter3'
 import { SpeakerConcatPlayer } from './player/SpeakerConcatPlayer'
 import { SpeakerMediaSourcePlayer } from './player/SpeakerMediaSourcePlayer'
 import { SpeakerPlayer } from './player/SpeakerPlayer'
@@ -8,13 +9,21 @@ import { LocalStorageKeys } from './utils/localStorage'
 
 export let speaker: Speaker
 
-class Speaker {
+export interface SpeakerEvents {
+  StartPlaying: void
+  StopPlaying: void
+}
+
+class Speaker extends EventEmitter<SpeakerEvents> {
+  public isPlaying = false
+  public analyser: AudioAnalyser
+
   private audioElement?: HTMLAudioElement
   private player?: SpeakerPlayer
   private streamingEnabled = false
-  public analyser: AudioAnalyser
 
   constructor() {
+    super()
     this.analyser = new AudioAnalyser(audioContext)
 
     // Create audio element if it doesn't exist
@@ -49,6 +58,8 @@ class Speaker {
           : new SpeakerConcatPlayer(this.analyser.node)
         : new SpeakerSequencePlayer(this.analyser.node)
       await this.player?.setup()
+      this.player.on('StartPlaying', () => this.changeIsPlaying(true))
+      this.player.on('StopPlaying', () => this.changeIsPlaying(false))
     } catch (error) {
       console.error('Error setting up speaker player', error)
     }
@@ -56,6 +67,12 @@ class Speaker {
 
   get isStreamingEnabled() {
     return this.streamingEnabled
+  }
+
+  protected changeIsPlaying(isPlaying: boolean) {
+    if (this.isPlaying == isPlaying) return
+    this.isPlaying = isPlaying
+    this.emit(isPlaying ? 'StartPlaying' : 'StopPlaying')
   }
 
   async enableStreaming() {

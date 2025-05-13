@@ -10,13 +10,30 @@ The Mic module provides functionality for managing microphone input and audio re
 - 💾 Persistent device selection
 - ⏱️ Delayed audio stream creation
 
-## API Reference
-
-To import Mic instance:
+## Usage Example
 
 ```typescript
 import { Mic } from '@micdrop/client'
+
+// Start microphone with default device
+const stream = await Mic.start()
+
+// Start microphone with specific device
+const deviceStream = await Mic.start()
+
+// Monitor volume changes using the audio analyser
+// Volume is in dB range -100 to 0
+Mic.analyser.on('volume', (volume: number) => {
+  // Convert to 0-100 range for visualization if needed
+  const normalizedVolume = Math.max(0, volume + 100)
+  console.log('Current volume:', normalizedVolume)
+})
+
+// Stop microphone and cleanup when done
+Mic.stop()
 ```
+
+## API Reference
 
 ### Functions
 
@@ -37,6 +54,7 @@ const stream = await Mic.start(deviceId)
 - `deviceId`: Optional ID of the microphone device to use
 - Stores selected device ID in localStorage
 - Returns a promise that resolves with the microphone's MediaStream
+- **Throws** if the AudioContext is not initialized or if microphone permissions are denied
 
 #### `stop(): void`
 
@@ -66,37 +84,6 @@ Mic.analyser.on('volume', (volume: number) => {
 console.log(Mic.analyser.node)
 ```
 
-#### `defaultThreshold`
-
-Default threshold for microphone sensitivity in decibels (dB).
-
-```typescript
-console.log(Mic.defaultThreshold)
-```
-
-## Example Usage
-
-```typescript
-import { Mic } from '@micdrop/client'
-
-// Start microphone with default device
-const stream = await Mic.start()
-
-// Start microphone with specific device
-const deviceStream = await Mic.start()
-
-// Monitor volume changes using the audio analyser
-// Volume is in dB range -100 to 0
-Mic.analyser.on('volume', (volume: number) => {
-  // Convert to 0-100 range for visualization if needed
-  const normalizedVolume = Math.max(0, volume + 100)
-  console.log('Current volume:', normalizedVolume)
-})
-
-// Stop microphone and cleanup when done
-Mic.stop()
-```
-
 ## Browser Support
 
 Requires browsers with support for:
@@ -113,3 +100,4 @@ Requires browsers with support for:
 - The module automatically handles AudioContext initialization and unlocking
 - Default configuration includes echo cancellation and noise suppression
 - Sample rate is set to 16kHz for optimal voice recording
+- Advanced features like voice activity detection (VAD) or audio recording are handled by other modules (e.g., `MicRecorder`), not by `Mic` itself
