@@ -2,9 +2,9 @@ import { VAD, VADStatus } from '@micdrop/client'
 import { useEffect, useState } from 'react'
 
 const statusColors = {
-  [VADStatus.Silence]: 'gray-500',
-  [VADStatus.MaybeSpeaking]: 'yellow-500',
-  [VADStatus.Speaking]: 'green-500',
+  [VADStatus.Silence]: 'bg-gray-500',
+  [VADStatus.MaybeSpeaking]: 'bg-yellow-500',
+  [VADStatus.Speaking]: 'bg-green-500',
 }
 
 export default function VADStatusCircle({ vad }: { vad: VAD }) {
@@ -18,5 +18,5 @@ export default function VADStatusCircle({ vad }: { vad: VAD }) {
     }
   }, [vad])
 
-  return <div className={`w-4 h-4 rounded-full bg-${statusColors[status]}`} />
+  return <div className={`w-4 h-4 rounded-full ${statusColors[status]}`} />
 }
