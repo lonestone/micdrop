@@ -7,17 +7,24 @@ import {
   waitForParams,
 } from '@micdrop/server'
 import { FastifyInstance } from 'fastify'
-import ai from './ai'
-import aiMock from './ai-mock'
+import { z } from 'zod'
+import { text2Speech } from './ai/elevenlabs/text2Speech'
 import {
   CANCEL_LAST_USER_MESSAGE,
   END_CALL,
+  generateAnswer,
   SKIP_ANSWER,
-} from './ai/generateAnswer'
-import { callParamsSchema } from './callParams'
+} from './ai/openai/generateAnswer'
+import { speech2Text } from './ai/openai/speech2Text'
 
-// Use AI models if env is set
-const isMock = !process.env.OPENAI_API_KEY || !process.env.ELEVENLABS_API_KEY
+// Required authorization param to start a call
+const AUTHORIZATION_KEY = '1234'
+
+// Params schema for the call
+export const callParamsSchema = z.object({
+  authorization: z.string(),
+})
+export type CallParams = z.infer<typeof callParamsSchema>
 
 const config: CallConfig = {
   // System prompt passed to the LLM
@@ -35,8 +42,12 @@ const config: CallConfig = {
   // Optional, omit to generate the first message
   firstMessage: 'Hello, what can I do for you today?',
 
-  // AI methods: generateAnswer, text2Speech, speech2Text
-  ...(isMock ? aiMock : ai),
+  // LLM: Generate answer
+  generateAnswer,
+  // TTS: Text to speech
+  text2Speech,
+  // STT: Speech to text
+  speech2Text,
 
   // Enable debug logging
   debugLog: true,
@@ -59,7 +70,7 @@ export default async (app: FastifyInstance) => {
       // Get params from first message
       // Optional, only if we want to check authorization and/or get other params
       const params = await waitForParams(socket, callParamsSchema.parse)
-      if (params.authorization !== '1234') {
+      if (params.authorization !== AUTHORIZATION_KEY) {
         throw new CallError(CallErrorCode.Unauthorized, 'Invalid authorization')
       }
 

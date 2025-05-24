@@ -1,7 +1,7 @@
 import { CallConfig } from '@micdrop/server'
-import { generateAnswer } from './generateAnswer'
-import { speech2Text } from './speech2Text'
-import { text2Speech } from './text2Speech'
+import { text2Speech } from './elevenlabs/text2Speech'
+import { generateAnswer } from './openai/generateAnswer'
+import { speech2Text } from './openai/speech2Text'
 
 export default {
   // LLM: Generate answer
