@@ -2,6 +2,20 @@
 
 Micdrop is a set of packages that simplify voice conversations with AI systems. It handles all the complexities of microphone input, speaker output, and network communication, allowing developers to focus on their AI implementation.
 
+## 📦 Packages
+
+This monorepo contains the following packages:
+
+### Core Packages
+
+- [`@micdrop/client`](./packages/client/README.md) - Browser library handling microphone input, audio playback, and real-time communication
+- [`@micdrop/server`](./packages/server/README.md) - Server implementation for audio streaming and AI integration orchestration
+
+### Demo Applications
+
+- [`@micdrop/demo-client`](./packages/demo-client/README.md) - Example web application with React.
+- [`@micdrop/demo-server`](./packages/demo-server/README.md) - Example server with fastify.
+
 ## 🤔 Why Micdrop?
 
 While real-time multimodal models (voice-to-voice) offer impressive capabilities, they often come with limitations in terms of customization and cost. Micdrop takes a different approach by:
@@ -35,20 +49,6 @@ This modular approach gives you the flexibility to build voice applications that
   - Large Language Models (LLM)
   - Text-to-Speech (TTS) with streaming support
   - Speech-to-Text (STT)
-
-## 📦 Packages
-
-This monorepo contains the following packages:
-
-### Core Packages
-
-- [`@micdrop/client`](./packages/client/README.md) - Browser library handling microphone input, audio playback, and real-time communication
-- [`@micdrop/server`](./packages/server/README.md) - Server implementation for audio streaming and AI integration orchestration
-
-### Demo Applications
-
-- [`@micdrop/demo-client`](./packages/demo-client/README.md) - Example web application with React.
-- [`@micdrop/demo-server`](./packages/demo-server/README.md) - Example server with fastify.
 
 ## 🔌 Protocol
 
