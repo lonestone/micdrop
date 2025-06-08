@@ -1,10 +1,9 @@
-import { STT } from '../STT'
+import { FileSTT } from '../FileSTT'
 
-export class MockSTT extends STT {
+export class MockSTT extends FileSTT {
   private i = 0
 
-  async transcribe(prevMessage?: string) {
-    this.resetChunks()
+  async transcribe(file: File) {
     return `User Message ${this.i++}`
   }
 }

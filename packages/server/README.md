@@ -137,9 +137,6 @@ interface CallConfig {
   // Enable debug logging with timestamps
   debugLog?: boolean
 
-  // Save last speech audio file for debugging (speech.ogg)
-  debugSaveSpeech?: boolean
-
   // Disable text-to-speech conversion
   disableTTS?: boolean
 
@@ -286,7 +283,7 @@ The server includes a debug mode that can:
 - Track conversation state
 - Monitor WebSocket events
 
-See `debugLog`, `debugSaveSpeech` and `disableTTS` options in [CallConfig](#callconfig).
+See `debugLog` and `disableTTS` options in [CallConfig](#callconfig).
 
 ## Browser Support
 

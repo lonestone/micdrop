@@ -1,5 +1,5 @@
 import { Speaker } from '@micdrop/client'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { FaPlay, FaStop } from 'react-icons/fa'
 
 interface SpeakerTestButtonProps
@@ -9,6 +9,17 @@ export default function SpeakerTestButton(props: SpeakerTestButtonProps) {
   const [loading, setLoading] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [blob, setBlob] = useState<Blob | undefined>()
+
+  useEffect(() => {
+    const onStartPlaying = () => setPlaying(true)
+    const onStopPlaying = () => setPlaying(false)
+    Speaker.on('StartPlaying', onStartPlaying)
+    Speaker.on('StopPlaying', onStopPlaying)
+    return () => {
+      Speaker.off('StartPlaying', onStartPlaying)
+      Speaker.off('StopPlaying', onStopPlaying)
+    }
+  }, [])
 
   const handleClick = async () => {
     if (playing) {

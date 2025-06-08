@@ -1,4 +1,4 @@
-import { STT } from '../STT'
+import { FileSTT } from '../FileSTT'
 
 /**
  * OpenAI Whisper STT
@@ -14,21 +14,24 @@ export interface OpenaiSTTOptions {
 
 const DEFAULT_MODEL = 'whisper-1'
 
-export class OpenaiSTT extends STT {
+export class OpenaiSTT extends FileSTT {
   constructor(private options: OpenaiSTTOptions) {
     super()
   }
 
-  async transcribe(prevMessage?: string) {
+  async transcribe(file: File) {
     // Prepare form data
     const formData = new FormData()
-    formData.append('file', this.getFile())
+    formData.append('file', file)
     formData.append('model', this.options.model || DEFAULT_MODEL)
     formData.append('response_format', 'text')
 
     if (this.options.language) {
       formData.append('language', this.options.language)
     }
+
+    const prevMessage =
+      this.call?.conversation[this.call.conversation.length - 1]?.content
     if (prevMessage) {
       formData.append('prompt', `Previous message: ${prevMessage}`)
     }
@@ -44,12 +47,8 @@ export class OpenaiSTT extends STT {
       }
     )
 
-    // Reset chunks
-    this.resetChunks()
-
     if (!response.ok) {
-      console.error(response)
-      console.error(await response.json())
+      this.log('Failed to transcribe audio', await response.json())
       throw new Error(`Failed to transcribe audio: ${response.statusText}`)
     }
 

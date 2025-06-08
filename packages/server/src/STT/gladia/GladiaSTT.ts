@@ -1,5 +1,6 @@
+import { Readable } from 'stream'
 import WebSocket from 'ws'
-import { WavPcmSTT } from './WavPcmSTT'
+import { PcmSTT } from '../PcmSTT'
 import { DeepPartial, GladiaLiveSessionPayload } from './types'
 
 /**
@@ -13,10 +14,9 @@ export interface GladiaSTTOptions {
   config?: DeepPartial<GladiaLiveSessionPayload>
 }
 
-export class GladiaSTT extends WavPcmSTT {
+export class GladiaSTT extends PcmSTT {
   private socket?: WebSocket
   private initPromise: Promise<void>
-  private lastTranscript?: string
 
   constructor(private options: GladiaSTTOptions) {
     super()
@@ -25,21 +25,23 @@ export class GladiaSTT extends WavPcmSTT {
     this.initPromise = this.getURL().then((url) => this.initWS(url))
   }
 
-  async onWavPcmChunk(chunk: ArrayBuffer) {
-    await this.initPromise
-    this.socket?.send(chunk)
-    console.log(`[GladiaSTT] Sent audio chunk (${chunk.byteLength} bytes)`)
-  }
+  setStream(stream: Readable) {
+    super.setStream(stream)
 
-  async transcribe() {
-    const transcript = this.lastTranscript
-    this.lastTranscript = undefined
-    return transcript || null
+    // Read transformed stream and send to Gladia
+    this.stream?.on('data', async (chunk) => {
+      await this.initPromise
+      this.socket?.send(chunk)
+      this.log(`Sent audio chunk (${chunk.byteLength} bytes)`)
+    })
+
+    // Send silence when the stream ends to force Gladia to transcribe
+    this.stream?.on('end', () => this.sendSilence(1))
   }
 
   destroy() {
-    console.log('[GladiaSTT] Destroying...')
     super.destroy()
+    this.socket?.removeAllListeners()
     this.socket?.close(1000)
     this.socket = undefined
   }
@@ -78,32 +80,50 @@ export class GladiaSTT extends WavPcmSTT {
 
       socket.addEventListener('open', () => {
         // Connection is opened. You can start sending audio chunks.
-        console.log('[GladiaSTT] Connection opened')
+        this.log('Connection opened')
         resolve()
       })
 
       socket.addEventListener('error', (error) => {
         // An error occurred during the connection.
         // Check the error to understand why
-        console.error('[GladiaSTT] Connection error', error)
+        this.log('Connection error', error)
         reject(error)
       })
 
       socket.addEventListener('close', ({ code, reason }) => {
         // The connection has been closed
         // If the "code" is equal to 1000, it means we closed intentionally the connection (after the end of the session for example).
-        // Otherwise, you can reconnect to the same url.
-        console.log('[GladiaSTT] Connection closed', { code, reason })
+        // Otherwise, we can reconnect to the same url.
+        this.log('Connection closed', { code, reason })
+        this.socket?.removeAllListeners()
+        if (code !== 1000) {
+          this.log('Reconnecting...')
+          setTimeout(() => {
+            this.initPromise = this.getURL().then((url) => this.initWS(url))
+          }, 1000)
+        }
       })
 
       socket.addEventListener('message', (event) => {
         // All the messages we are sending are in JSON format
         const message = JSON.parse(event.data.toString())
-        console.log('[GladiaSTT] Message', message)
+        this.log('Message', message)
         if (message.type === 'transcript' && message.data.is_final) {
-          this.lastTranscript = message.data.utterance.text
+          this.onTranscript?.(message.data.utterance.text)
         }
       })
     })
+  }
+
+  private sendSilence(durationSeconds: number) {
+    if (!this.socket) return
+    const numSamples = Math.round(this.sampleRate * durationSeconds)
+    const bytesPerSample = this.bitDepth / 8
+    const silenceBuffer = Buffer.alloc(numSamples * bytesPerSample, 0)
+    this.socket.send(silenceBuffer)
+    this.log(
+      `Sent ${durationSeconds * 1000}ms of silence (${silenceBuffer.byteLength} bytes) after stream end`
+    )
   }
 }

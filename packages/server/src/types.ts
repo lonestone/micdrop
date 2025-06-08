@@ -19,7 +19,6 @@ export interface CallConfig {
   systemPrompt: string
   firstMessage?: string
   debugLog?: boolean
-  debugSaveSpeech?: boolean
   disableTTS?: boolean
   generateAnswer(
     conversation: Conversation

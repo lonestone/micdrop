@@ -1,5 +1,5 @@
-import * as fs from 'fs'
-
+import { Readable } from 'stream'
+import { CallServer } from '../CallServer'
 
 // Audio mime type to extension map
 const MIME_TYPE_TO_EXTENSION = {
@@ -12,54 +12,44 @@ const MIME_TYPE_TO_EXTENSION = {
 } as const
 
 export abstract class STT {
-  protected chunks: ArrayBuffer[] = []
-  private detectedMimeType?: keyof typeof MIME_TYPE_TO_EXTENSION
+  // Callback to notify transcript when ready
+  public onTranscript?: (transcript: string) => void
 
-  abstract transcribe(prevMessage?: string): Promise<string | null>
+  // May be used for context
+  public call?: CallServer
 
-  addChunk(chunk: ArrayBuffer) {
-    this.chunks.push(chunk)
-  }
+  // Enable debug logging
+  public debugLog?: boolean
+  private lastDebug = Date.now()
 
-  resetChunks() {
-    this.chunks.length = 0
-  }
+  protected stream?: Readable
+  protected mimeType?: keyof typeof MIME_TYPE_TO_EXTENSION
 
-  async saveAudio(filepath: string) {
-    if (this.chunks.length === 0) {
-      console.warn('No chunks to save, skipping...')
-      return
-    }
-    const blob = this.getBlob()
-    fs.writeFileSync(`${filepath}.${this.extension}`, Buffer.from(await blob.arrayBuffer()))
+  setStream(stream: Readable) {
+    this.log('Setting stream...')
+    this.stream = stream
+
+    // Detect mime type at first chunk
+    stream.once('data', (chunk) => {
+      this.mimeType = this.detectMimeType(chunk)
+    })
   }
 
   destroy() {
-    this.chunks.length = 0
-    this.detectedMimeType = undefined
-  }
-
-  protected get mimeType(): keyof typeof MIME_TYPE_TO_EXTENSION {
-    if (!this.detectedMimeType) {
-      this.detectedMimeType = this.detectMimeType(this.chunks[0])
-    }
-    return this.detectedMimeType
+    this.log('Destroying...')
+    this.stream?.destroy()
+    this.stream = undefined
+    this.onTranscript = undefined
+    this.call = undefined
   }
 
   protected get extension(): string {
-    return MIME_TYPE_TO_EXTENSION[this.mimeType] || 'bin'
+    return (this.mimeType && MIME_TYPE_TO_EXTENSION[this.mimeType]) || 'bin'
   }
 
-  protected getBlob() {
-    return new Blob(this.chunks, { type: this.mimeType })
-  }
-
-  protected getFile() {
-    const blob = this.getBlob()
-    return new File([blob], `audio.${this.extension}`, { type: blob.type })
-  }
-
-  private detectMimeType(chunk: ArrayBuffer | undefined): keyof typeof MIME_TYPE_TO_EXTENSION {
+  private detectMimeType(
+    chunk: ArrayBuffer
+  ): keyof typeof MIME_TYPE_TO_EXTENSION {
     if (!chunk || chunk.byteLength === 0) {
       throw new Error('Unable to detect mime type (empty chunk)')
     }
@@ -119,7 +109,15 @@ export abstract class STT {
     ) {
       return 'audio/flac'
     }
-    console.warn('Unable to detect mime type, using default')
+    this.log('Unable to detect mime type, using default', chunk)
     return 'audio/wav'
+  }
+
+  protected log(...message: any[]) {
+    if (!this.debugLog) return
+    const now = Date.now()
+    const delta = now - this.lastDebug
+    this.lastDebug = now
+    console.log(`[${this.constructor.name} +${delta}ms]`, ...message)
   }
 }

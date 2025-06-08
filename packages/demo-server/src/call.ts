@@ -4,11 +4,11 @@ import {
   CallServer,
   GladiaSTT,
   handleError,
-  waitForParams
+  waitForParams,
 } from '@micdrop/server'
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { text2Speech } from './ai/elevenlabs/text2Speech'
+import { text2Speech } from './ai/cartesia/text2Speech'
 import {
   CANCEL_LAST_USER_MESSAGE,
   END_CALL,
@@ -70,7 +70,6 @@ export default async (app: FastifyInstance) => {
         // Enable debug logging
         debugLog: true,
         disableTTS: true,
-        //debugSaveSpeech: true,
 
         // Optional: called when a message is received from the user
         onMessage(message) {

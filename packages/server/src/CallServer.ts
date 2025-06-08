@@ -1,3 +1,4 @@
+import { Duplex, PassThrough } from 'stream'
 import { WebSocket } from 'ws'
 import {
   CallClientCommands,
@@ -15,17 +16,17 @@ export class CallServer {
   public socket: WebSocket | null = null
   public config: CallConfig | null = null
 
+  // Conversation history
+  public conversation: Conversation
+
   private startTime = Date.now()
   private lastDebug = Date.now()
 
   // An answer can be aborted if user is speaking
   private processing?: Processing
 
-  // When user is speaking, we're waiting to chunks or to stop
-  private isSpeaking = false
-
-  // Conversation history
-  private conversation: Conversation
+  // When user is speaking, we're streaming chunks for STT
+  private currentUserStream?: Duplex
 
   // Enable speaker streaming
   private speakerStreamingEnabled = false
@@ -35,6 +36,10 @@ export class CallServer {
     this.config = config
     this.conversation = [{ role: 'system', content: config.systemPrompt }]
     this.log(`Call started`)
+
+    // Setup STT
+    this.config.speech2Text.call = this
+    this.config.speech2Text.onTranscript = this.onTranscript.bind(this)
 
     // Assistant speaks first
     if (config.firstMessage) {
@@ -143,52 +148,50 @@ export class CallServer {
 
       if (cmd === CallClientCommands.StartSpeaking) {
         // User started speaking
-        this.isSpeaking = true
-        // Abort answer if there is generation in progress
-        this.abortProcessing()
+        await this.onStartSpeaking()
       } else if (cmd === CallClientCommands.Mute) {
         // User muted the call
-        this.isSpeaking = false
-        this.config?.speech2Text.resetChunks()
-        // Abort answer if there is generation in progress
-        this.abortProcessing()
+        await this.onMute()
       } else if (cmd === CallClientCommands.StopSpeaking) {
         // User stopped speaking
-        this.isSpeaking = false
         await this.onStopSpeaking()
       }
     }
 
     // Audio chunk
-    else if (Buffer.isBuffer(message) && this.isSpeaking) {
+    else if (Buffer.isBuffer(message) && this.currentUserStream) {
       this.log(`Received chunk (${message.byteLength} bytes)`)
-      this.config?.speech2Text.addChunk(message)
+      this.currentUserStream.write(message)
     }
   }
 
+  private async onMute() {
+    this.currentUserStream?.end()
+    this.currentUserStream = undefined
+    this.abortProcessing()
+  }
+
+  private async onStartSpeaking() {
+    if (!this.config) return
+    this.currentUserStream?.end()
+    this.currentUserStream = new PassThrough()
+    this.config.speech2Text.setStream(this.currentUserStream)
+    this.abortProcessing()
+  }
+
   private async onStopSpeaking() {
+    this.currentUserStream?.end()
+    this.currentUserStream = undefined
+    this.abortProcessing()
+  }
+
+  private async onTranscript(transcript: string) {
     if (!this.config) return
     this.abortProcessing()
     const processing = (this.processing = { aborted: false })
+    this.log('User transcript:', transcript)
 
     try {
-      // Save file to disk
-      if (this.config.debugSaveSpeech) {
-        await this.config.speech2Text.saveAudio(`speech-${Date.now()}`)
-      }
-
-      // STT: Get transcript and send to client
-      const transcript = await this.config.speech2Text.transcribe(
-        this.conversation[this.conversation.length - 1]?.content
-      )
-      if (!transcript) {
-        this.log('Ignoring empty transcript')
-        this.socket?.send(CallServerCommands.SkipAnswer)
-        return
-      }
-
-      this.log('User transcript:', transcript)
-
       // Send transcript to client
       this.addMessage({ role: 'user', content: transcript })
 
@@ -291,6 +294,6 @@ export class CallServer {
     const now = Date.now()
     const delta = now - this.lastDebug
     this.lastDebug = now
-    console.log(`[Debug +${delta}ms]`, ...message)
+    console.log(`[CallServer +${delta}ms]`, ...message)
   }
 }
