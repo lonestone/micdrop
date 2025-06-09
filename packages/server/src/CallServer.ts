@@ -1,5 +1,6 @@
 import { Duplex, PassThrough } from 'stream'
 import { WebSocket } from 'ws'
+import { Logger } from './Logger'
 import {
   CallClientCommands,
   CallConfig,
@@ -12,7 +13,7 @@ interface Processing {
   aborted: boolean
 }
 
-export class CallServer {
+export class CallServer extends Logger {
   public socket: WebSocket | null = null
   public config: CallConfig | null = null
 
@@ -20,7 +21,6 @@ export class CallServer {
   public conversation: Conversation
 
   private startTime = Date.now()
-  private lastDebug = Date.now()
 
   // An answer can be aborted if user is speaking
   private processing?: Processing
@@ -28,10 +28,14 @@ export class CallServer {
   // When user is speaking, we're streaming chunks for STT
   private currentUserStream?: Duplex
 
+  // When assistant is speaking, we're streaming chunks from TTS
+  private currentAssistantStream?: Duplex
+
   // Enable speaker streaming
   private speakerStreamingEnabled = false
 
   constructor(socket: WebSocket, config: CallConfig) {
+    super()
     this.socket = socket
     this.config = config
     this.conversation = [{ role: 'system', content: config.systemPrompt }]
@@ -40,6 +44,9 @@ export class CallServer {
     // Setup STT
     this.config.speech2Text.call = this
     this.config.speech2Text.onTranscript = this.onTranscript.bind(this)
+
+    // Setup TTS
+    this.config.text2Speech.call = this
 
     // Assistant speaks first
     if (config.firstMessage) {
@@ -70,6 +77,8 @@ export class CallServer {
     if (!this.processing) return
     this.processing.aborted = true
     this.processing = undefined
+    this.currentAssistantStream?.end()
+    this.currentAssistantStream = undefined
   }
 
   private addMessage(message: ConversationMessage) {
@@ -111,7 +120,7 @@ export class CallServer {
         this.socket.send(chunk)
       }
     } else {
-      this.log(`Unknown audio type: ${audio}`)
+      this.log(`Unknown audio type: ${JSON.stringify(audio)}`)
     }
   }
 
@@ -175,7 +184,7 @@ export class CallServer {
     if (!this.config) return
     this.currentUserStream?.end()
     this.currentUserStream = new PassThrough()
-    this.config.speech2Text.setStream(this.currentUserStream)
+    this.config.speech2Text.transcribe(this.currentUserStream)
     this.abortProcessing()
   }
 
@@ -259,6 +268,7 @@ export class CallServer {
         // Remove last assistant message if aborted
         const onAbort = () => {
           this.log('Answer aborted, removing last assistant message')
+          this.config?.text2Speech.cancel()
           const lastMessage = this.conversation[this.conversation.length - 1]
           if (lastMessage?.role === 'assistant') {
             this.conversation.pop()
@@ -271,7 +281,10 @@ export class CallServer {
           return
         }
 
-        const audio = await this.config.text2Speech(message.content)
+        const textStream = new PassThrough()
+        textStream.write(message.content)
+        textStream.end()
+        const audio = this.config.text2Speech.speech(textStream)
 
         // Send audio to client
         await this.sendAudio(audio, processing, onAbort)
@@ -287,13 +300,5 @@ export class CallServer {
       this.log('Call ended')
       this.socket.send(CallServerCommands.EndCall)
     }
-  }
-
-  private log(...message: any[]) {
-    if (!this.config?.debugLog) return
-    const now = Date.now()
-    const delta = now - this.lastDebug
-    this.lastDebug = now
-    console.log(`[CallServer +${delta}ms]`, ...message)
   }
 }

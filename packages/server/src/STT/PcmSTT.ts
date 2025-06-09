@@ -19,17 +19,24 @@ export abstract class PcmSTT extends STT {
     ffmpeg.setFfmpegPath(ffmpegInstaller.path)
   }
 
-  setStream(stream: Readable) {
+  abstract transcribePCM(stream: Readable): void
+
+  transcribe(audioStream: Readable) {
+    this.log('Converting stream to WAV/PCM...')
+
     // Convert stream to WAV/PCM
-    const outputStream = new PassThrough()
-    this.ffmpegInstance = ffmpeg(stream)
+    const pcmStream = new PassThrough()
+    this.ffmpegInstance = ffmpeg(audioStream)
       // .inputFormat(this.extension)
       .audioChannels(1)
       .audioFrequency(this.sampleRate)
       .audioCodec(`pcm_s${this.bitDepth}le`)
       .format(`s${this.bitDepth}le`)
-    this.ffmpegInstance.pipe(outputStream)
-    super.setStream(outputStream)
+    this.ffmpegInstance.pipe(pcmStream)
+
+    // Pass new stream to implementation
+    this.log('Transcribing WAV/PCM stream...')
+    this.transcribePCM(pcmStream)
   }
 
   destroy() {

@@ -2,13 +2,13 @@ import {
   CallError,
   CallErrorCode,
   CallServer,
+  CartesiaTTS,
   GladiaSTT,
   handleError,
   waitForParams,
 } from '@micdrop/server'
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { text2Speech } from './ai/cartesia/text2Speech'
 import {
   CANCEL_LAST_USER_MESSAGE,
   END_CALL,
@@ -50,6 +50,13 @@ export default async (app: FastifyInstance) => {
         throw new CallError(CallErrorCode.Unauthorized, 'Invalid authorization')
       }
 
+      const text2Speech = new CartesiaTTS({
+        apiKey: process.env.CARTESIA_API_KEY || '',
+        modelId: 'sonic-turbo',
+        voiceId: process.env.CARTESIA_VOICE_ID || '',
+      })
+      text2Speech.debugLog = true
+
       // Start call
       new CallServer(socket, {
         systemPrompt,
@@ -69,7 +76,7 @@ export default async (app: FastifyInstance) => {
 
         // Enable debug logging
         debugLog: true,
-        disableTTS: true,
+        // disableTTS: true,
 
         // Optional: called when a message is received from the user
         onMessage(message) {

@@ -1,5 +1,6 @@
 import { Readable } from 'stream'
 import { CallServer } from '../CallServer'
+import { Logger } from '../Logger'
 
 // Audio mime type to extension map
 const MIME_TYPE_TO_EXTENSION = {
@@ -11,34 +12,25 @@ const MIME_TYPE_TO_EXTENSION = {
   'audio/flac': 'flac',
 } as const
 
-export abstract class STT {
+export abstract class STT extends Logger {
   // Callback to notify transcript when ready
   public onTranscript?: (transcript: string) => void
 
   // May be used for context
   public call?: CallServer
 
-  // Enable debug logging
-  public debugLog?: boolean
-  private lastDebug = Date.now()
-
-  protected stream?: Readable
   protected mimeType?: keyof typeof MIME_TYPE_TO_EXTENSION
 
-  setStream(stream: Readable) {
-    this.log('Setting stream...')
-    this.stream = stream
-
+  // Set stream of audio to transcribe
+  transcribe(audioStream: Readable) {
     // Detect mime type at first chunk
-    stream.once('data', (chunk) => {
+    audioStream.once('data', (chunk) => {
       this.mimeType = this.detectMimeType(chunk)
     })
   }
 
   destroy() {
     this.log('Destroying...')
-    this.stream?.destroy()
-    this.stream = undefined
     this.onTranscript = undefined
     this.call = undefined
   }
@@ -111,13 +103,5 @@ export abstract class STT {
     }
     this.log('Unable to detect mime type, using default', chunk)
     return 'audio/wav'
-  }
-
-  protected log(...message: any[]) {
-    if (!this.debugLog) return
-    const now = Date.now()
-    const delta = now - this.lastDebug
-    this.lastDebug = now
-    console.log(`[${this.constructor.name} +${delta}ms]`, ...message)
   }
 }

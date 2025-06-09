@@ -1,7 +1,8 @@
 import { Readable } from 'stream'
 import WebSocket from 'ws'
+import { DeepPartial } from '../../types'
 import { PcmSTT } from '../PcmSTT'
-import { DeepPartial, GladiaLiveSessionPayload } from './types'
+import { GladiaLiveSessionPayload } from './types'
 
 /**
  * Gladia Real-time V2 STT
@@ -25,18 +26,16 @@ export class GladiaSTT extends PcmSTT {
     this.initPromise = this.getURL().then((url) => this.initWS(url))
   }
 
-  setStream(stream: Readable) {
-    super.setStream(stream)
-
+  transcribePCM(pcmStream: Readable) {
     // Read transformed stream and send to Gladia
-    this.stream?.on('data', async (chunk) => {
+    pcmStream.on('data', async (chunk) => {
       await this.initPromise
       this.socket?.send(chunk)
       this.log(`Sent audio chunk (${chunk.byteLength} bytes)`)
     })
 
     // Send silence when the stream ends to force Gladia to transcribe
-    this.stream?.on('end', () => this.sendSilence(1))
+    pcmStream.on('end', () => this.sendSilence(1))
   }
 
   destroy() {
@@ -59,6 +58,16 @@ export class GladiaSTT extends PcmSTT {
         sample_rate: this.sampleRate,
         bit_depth: this.bitDepth,
         channels: 1,
+        messages_config: {
+          receive_final_transcripts: true,
+          receive_speech_events: false,
+          receive_pre_processing_events: false,
+          receive_realtime_processing_events: false,
+          receive_post_processing_events: false,
+          receive_acknowledgments: false,
+          receive_errors: true,
+          receive_lifecycle_events: false,
+        },
         ...this.options.config,
       }),
     })

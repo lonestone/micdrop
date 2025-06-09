@@ -1,5 +1,6 @@
 export * from './CallServer'
 export * from './errors'
 export * from './stt'
+export * from './tts'
 export * from './types'
 export * from './waitForParams'

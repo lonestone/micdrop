@@ -19,7 +19,7 @@ export class OpenaiSTT extends FileSTT {
     super()
   }
 
-  async transcribe(file: File) {
+  async transcribeFile(file: File) {
     // Prepare form data
     const formData = new FormData()
     formData.append('file', file)

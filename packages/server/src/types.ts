@@ -1,4 +1,5 @@
 import { STT } from './stt'
+import { TTS } from './tts/TTS'
 
 export enum CallClientCommands {
   StartSpeaking = 'StartSpeaking',
@@ -24,7 +25,7 @@ export interface CallConfig {
     conversation: Conversation
   ): Promise<string | ConversationMessage>
   speech2Text: STT
-  text2Speech(text: string): Promise<ArrayBuffer | NodeJS.ReadableStream>
+  text2Speech: TTS
   onMessage?(message: ConversationMessage): void
   onEnd?(call: CallSummary): void
 }
@@ -54,3 +55,9 @@ export interface ConversationMessage<
   commands?: AnswerCommands
   metadata?: Data
 }
+
+export type DeepPartial<T> = T extends object
+  ? {
+      [P in keyof T]?: DeepPartial<T[P]>
+    }
+  : T

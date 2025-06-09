@@ -1,4 +1,104 @@
-export type GladiaLanguages = 'af' | 'sq' | 'am' | 'ar' | 'hy' | 'as' | 'az' | 'ba' | 'eu' | 'be' | 'bn' | 'bs' | 'br' | 'bg' | 'ca' | 'zh' | 'hr' | 'cs' | 'da' | 'nl' | 'en' | 'et' | 'fo' | 'fi' | 'fr' | 'gl' | 'ka' | 'de' | 'el' | 'gu' | 'ht' | 'ha' | 'haw' | 'he' | 'hi' | 'hu' | 'is' | 'id' | 'it' | 'ja' | 'jv' | 'kn' | 'kk' | 'km' | 'ko' | 'lo' | 'la' | 'lv' | 'ln' | 'lt' | 'lb' | 'mk' | 'mg' | 'ms' | 'ml' | 'mt' | 'mi' | 'mr' | 'mn' | 'mymr' | 'ne' | 'no' | 'nn' | 'oc' | 'ps' | 'fa' | 'pl' | 'pt' | 'pa' | 'ro' | 'ru' | 'sa' | 'sr' | 'sn' | 'sd' | 'si' | 'sk' | 'sl' | 'so' | 'es' | 'su' | 'sw' | 'sv' | 'tl' | 'tg' | 'ta' | 'tt' | 'te' | 'th' | 'bo' | 'tr' | 'tk' | 'uk' | 'ur' | 'uz' | 'vi' | 'cy' | 'yi' | 'yo' | 'jp'
+export type GladiaLanguages =
+  | 'af'
+  | 'sq'
+  | 'am'
+  | 'ar'
+  | 'hy'
+  | 'as'
+  | 'az'
+  | 'ba'
+  | 'eu'
+  | 'be'
+  | 'bn'
+  | 'bs'
+  | 'br'
+  | 'bg'
+  | 'ca'
+  | 'zh'
+  | 'hr'
+  | 'cs'
+  | 'da'
+  | 'nl'
+  | 'en'
+  | 'et'
+  | 'fo'
+  | 'fi'
+  | 'fr'
+  | 'gl'
+  | 'ka'
+  | 'de'
+  | 'el'
+  | 'gu'
+  | 'ht'
+  | 'ha'
+  | 'haw'
+  | 'he'
+  | 'hi'
+  | 'hu'
+  | 'is'
+  | 'id'
+  | 'it'
+  | 'ja'
+  | 'jv'
+  | 'kn'
+  | 'kk'
+  | 'km'
+  | 'ko'
+  | 'lo'
+  | 'la'
+  | 'lv'
+  | 'ln'
+  | 'lt'
+  | 'lb'
+  | 'mk'
+  | 'mg'
+  | 'ms'
+  | 'ml'
+  | 'mt'
+  | 'mi'
+  | 'mr'
+  | 'mn'
+  | 'mymr'
+  | 'ne'
+  | 'no'
+  | 'nn'
+  | 'oc'
+  | 'ps'
+  | 'fa'
+  | 'pl'
+  | 'pt'
+  | 'pa'
+  | 'ro'
+  | 'ru'
+  | 'sa'
+  | 'sr'
+  | 'sn'
+  | 'sd'
+  | 'si'
+  | 'sk'
+  | 'sl'
+  | 'so'
+  | 'es'
+  | 'su'
+  | 'sw'
+  | 'sv'
+  | 'tl'
+  | 'tg'
+  | 'ta'
+  | 'tt'
+  | 'te'
+  | 'th'
+  | 'bo'
+  | 'tr'
+  | 'tk'
+  | 'uk'
+  | 'ur'
+  | 'uz'
+  | 'vi'
+  | 'cy'
+  | 'yi'
+  | 'yo'
+  | 'jp'
 
 export interface GladiaLiveSessionPayload {
   encoding: 'wav/pcm' | 'wav/alaw' | 'wav/ulaw'
@@ -21,12 +121,15 @@ export interface GladiaLiveSessionPayload {
     words_accurate_timestamps: boolean
     custom_vocabulary: boolean
     custom_vocabulary_config: {
-      vocabulary: Array<string | {
-        value: string
-        pronunciations?: string[]
-        intensity?: number
-        language?: GladiaLanguages
-      }>
+      vocabulary: Array<
+        | string
+        | {
+            value: string
+            pronunciations?: string[]
+            intensity?: number
+            language?: GladiaLanguages
+          }
+      >
       default_intensity: number
     }
     custom_spelling: boolean
@@ -77,7 +180,3 @@ export interface GladiaLiveSessionPayload {
     receive_lifecycle_events: boolean
   }
 }
-
-export type DeepPartial<T> = T extends object ? {
-  [P in keyof T]?: DeepPartial<T[P]>;
-} : T;

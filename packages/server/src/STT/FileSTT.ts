@@ -6,23 +6,29 @@ import { STT } from './STT'
  */
 
 export abstract class FileSTT extends STT {
-  abstract transcribe(file: File): Promise<string>
+  abstract transcribeFile(file: File): Promise<string>
 
-  setStream(stream: Readable) {
-    super.setStream(stream)
+  transcribe(audioStream: Readable) {
+    super.transcribe(audioStream)
+
+    // Convert stream to file
+    this.log('Converting stream to file...')
 
     const chunks: Buffer[] = []
-    stream.on('data', (chunk) => {
+    audioStream.on('data', (chunk) => {
       chunks.push(chunk)
     })
 
-    stream.on('end', async () => {
+    audioStream.on('end', async () => {
       if (chunks.length === 0) return
       const arrayBuffer = Buffer.concat(chunks)
       const file = new File([arrayBuffer], `audio.${this.extension}`, {
         type: this.mimeType,
       })
-      const transcript = await this.transcribe(file)
+
+      // Transcribe file with implementation
+      this.log('Transcribing file...')
+      const transcript = await this.transcribeFile(file)
       this.onTranscript?.(transcript)
     })
   }
