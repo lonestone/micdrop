@@ -28,9 +28,6 @@ export class CallServer extends Logger {
   // When user is speaking, we're streaming chunks for STT
   private currentUserStream?: Duplex
 
-  // When assistant is speaking, we're streaming chunks from TTS
-  private currentAssistantStream?: Duplex
-
   // Enable speaker streaming
   private speakerStreamingEnabled = false
 
@@ -39,6 +36,7 @@ export class CallServer extends Logger {
     this.socket = socket
     this.config = config
     this.conversation = [{ role: 'system', content: config.systemPrompt }]
+    this.debugLog = config.debugLog
     this.log(`Call started`)
 
     // Setup STT
@@ -77,8 +75,7 @@ export class CallServer extends Logger {
     if (!this.processing) return
     this.processing.aborted = true
     this.processing = undefined
-    this.currentAssistantStream?.end()
-    this.currentAssistantStream = undefined
+    this.config?.text2Speech.cancel()
   }
 
   private addMessage(message: ConversationMessage) {
@@ -103,7 +100,7 @@ export class CallServer extends Logger {
       // Whole audio as a single buffer
       this.log(`Send audio: (${audio.byteLength} bytes)`)
       this.socket.send(audio)
-    } else if ('paused' in audio) {
+    } else if (audio.readable) {
       // Enable speaker streaming if not already enabled
       if (!this.speakerStreamingEnabled) {
         this.socket.send(CallServerCommands.EnableSpeakerStreaming)

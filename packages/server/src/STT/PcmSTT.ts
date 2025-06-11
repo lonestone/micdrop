@@ -26,12 +26,18 @@ export abstract class PcmSTT extends STT {
 
     // Convert stream to WAV/PCM
     const pcmStream = new PassThrough()
+    pcmStream.on('error', (error) => {
+      this.log('Error converting to WAV/PCM', error)
+    })
     this.ffmpegInstance = ffmpeg(audioStream)
       // .inputFormat(this.extension)
       .audioChannels(1)
       .audioFrequency(this.sampleRate)
       .audioCodec(`pcm_s${this.bitDepth}le`)
       .format(`s${this.bitDepth}le`)
+      .on('error', (error) => {
+        this.log('Error converting to WAV/PCM', error)
+      })
     this.ffmpegInstance.pipe(pcmStream)
 
     // Pass new stream to implementation

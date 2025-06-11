@@ -1,3 +1,5 @@
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
+import ffmpeg from 'fluent-ffmpeg'
 import { Duplex, PassThrough, Readable } from 'stream'
 import WebSocket from 'ws'
 import { TTS } from '../TTS'
@@ -13,6 +15,7 @@ export interface CartesiaTTSOptions {
   modelId: string
   voiceId: string
   language?: CartesiaLanguage
+  speed?: 'fast' | 'normal' | 'slow'
 }
 
 export class CartesiaTTS extends TTS {
@@ -20,16 +23,21 @@ export class CartesiaTTS extends TTS {
   private initPromise: Promise<void>
   private counter = 0
   private audioStream?: Duplex
+  private canceled = false
 
   constructor(private readonly options: CartesiaTTSOptions) {
     super()
 
     // Setup WebSocket connection
     this.initPromise = this.initWS()
+
+    // Setup ffmpeg
+    ffmpeg.setFfmpegPath(ffmpegInstaller.path)
   }
 
   speech(textStream: Readable) {
     this.counter++
+    this.canceled = false
     const context_id = this.counter.toString()
     this.audioStream = new PassThrough()
 
@@ -45,6 +53,7 @@ export class CartesiaTTS extends TTS {
         sample_rate: 16000,
       },
       language: this.options.language,
+      speed: this.options.speed,
     } as const
 
     textStream.on('data', async (chunk) => {
@@ -73,13 +82,14 @@ export class CartesiaTTS extends TTS {
       )
     })
 
-    return this.audioStream
+    return this.convertToMp3(this.audioStream)
   }
 
   cancel() {
-    this.audioStream?.end()
+    this.canceled = true
     this.audioStream = undefined
 
+    // Signal Cartesia to stop sending data
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket?.send(
         JSON.stringify({
@@ -95,6 +105,8 @@ export class CartesiaTTS extends TTS {
     this.socket?.removeAllListeners()
     this.socket?.close(1000)
     this.socket = undefined
+    this.audioStream?.destroy()
+    this.audioStream = undefined
   }
 
   private async initWS() {
@@ -137,13 +149,35 @@ export class CartesiaTTS extends TTS {
         this.log('Message', message)
         switch (message.type) {
           case 'chunk':
-            this.audioStream?.write(Buffer.from(message.data, 'base64'))
+            if (this.audioStream?.writable && !this.canceled) {
+              this.audioStream.write(Buffer.from(message.data, 'base64'))
+            }
             break
           case 'done':
-            this.audioStream?.end()
+            if (this.audioStream?.writable) {
+              this.audioStream.end()
+            }
             break
         }
       })
     })
+  }
+
+  private convertToMp3(audioStream: Readable) {
+    const mp3Stream = new PassThrough()
+    mp3Stream.on('error', (error) => {
+      this.log('Error converting to MP3', error)
+    })
+    ffmpeg(audioStream)
+      .inputFormat('s16le')
+      .inputOptions(['-f s16le', '-ar 16000', '-ac 1'])
+      .audioCodec('libmp3lame')
+      .format('mp3')
+      .audioBitrate('32k')
+      .pipe(mp3Stream)
+      .on('error', (error) => {
+        this.log('Error converting to MP3', error)
+      })
+    return mp3Stream
   }
 }

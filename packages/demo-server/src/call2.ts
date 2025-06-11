@@ -2,19 +2,14 @@ import {
   CallError,
   CallErrorCode,
   CallServer,
-  ElevenLabsTTS,
+  CartesiaTTS,
   GladiaSTT,
   handleError,
   waitForParams,
 } from '@micdrop/server'
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import {
-  CANCEL_LAST_USER_MESSAGE,
-  END_CALL,
-  generateAnswer,
-  SKIP_ANSWER,
-} from './ai/openai/generateAnswer'
+import { generateAnswer } from './ai/mistral/generateAnswer'
 
 // Required authorization param to start a call
 const AUTHORIZATION_KEY = '1234'
@@ -26,14 +21,17 @@ export const callParamsSchema = z.object({
 export type CallParams = z.infer<typeof callParamsSchema>
 
 // System prompt passed to the LLM
-const systemPrompt = `You are a voice assistant, your name is micdrop (pronounced like "mic drop").
-It's a conversation, keep your answers short and helpful.
-Write to be easily read by text-to-speech.
-Current date: ${new Date().toDateString()}.
-Current time: ${new Date().toLocaleTimeString()}.
-If the user asks to end the call, say goodbye and say ${END_CALL}.
-If the last user message is just an interjection or a sound that expresses emotion, hesitation, or reaction (ex: "Uh", "Ahem", "Hmm", "Ah") but doesn't carry any clear meaning like agreeing, refusing, or commanding, just say ${CANCEL_LAST_USER_MESSAGE}.
-If the last user message is an incomplete sentence, just say ${SKIP_ANSWER}.
+const date = new Date()
+const systemPrompt = `Tu es un assistant vocal, ton nom est micdrop.
+C'est une conversation, garde tes réponses courtes et utiles.
+Écris de manière à être facilement lu par la synthèse vocale.
+Date actuelle : ${date.toLocaleDateString('fr-FR', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})}.
+Heure actuelle : ${date.getHours()} heures ${date.getMinutes()} minutes.
 `
 
 // First message from the assistant
@@ -61,12 +59,20 @@ export default async (app: FastifyInstance) => {
         // STT: Speech to text
         speech2Text: new GladiaSTT({
           apiKey: process.env.GLADIA_API_KEY || '',
+          config: {
+            language_config: {
+              code_switching: false,
+              languages: ['fr'],
+            },
+          },
         }),
 
         // TTS: Text to speech
-        text2Speech: new ElevenLabsTTS({
-          apiKey: process.env.ELEVENLABS_API_KEY || '',
-          voiceId: process.env.ELEVENLABS_VOICE_ID || '',
+        text2Speech: new CartesiaTTS({
+          apiKey: process.env.CARTESIA_API_KEY || '',
+          modelId: 'sonic-turbo',
+          voiceId: process.env.CARTESIA_VOICE_ID || '',
+          language: 'fr',
         }),
 
         // Enable debug logging
