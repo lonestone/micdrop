@@ -1,0 +1,78 @@
+import { useContext } from 'react'
+import { FaMicrophone, FaPause, FaPlay, FaStop } from 'react-icons/fa'
+import { CallContext } from './CallContext'
+import CallStatusCircle from './CallStatusCircle'
+
+export default function CallControls() {
+  const call = useContext(CallContext)!
+
+  return (
+    <div className="flex items-center gap-2">
+      <CallStatusCircle size={40} />
+      {call.isStarted ? (
+        <>
+          {call.isPaused ? (
+            <button
+              className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              onClick={call.resume}
+            >
+              <FaPlay size={18} className="mr-2" />
+              Resume
+            </button>
+          ) : (
+            <button
+              className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              onClick={call.pause}
+            >
+              <FaPause size={18} className="mr-2" />
+              Mute
+            </button>
+          )}
+        </>
+      ) : call.isMicStarted ? (
+        <button
+          className={`inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 ${
+            call.isStarting ? 'opacity-75 cursor-wait' : ''
+          }`}
+          disabled={call.isStarting}
+          onClick={call.start}
+        >
+          <FaPlay size={18} className="mr-2" />
+          Start call
+        </button>
+      ) : (
+        <>
+          <button
+            className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            onClick={() => call.startMic()}
+          >
+            <FaMicrophone size={18} className="mr-2" />
+            Start mic
+          </button>
+        </>
+      )}
+
+      {call.isMicStarted && (
+        <button
+          className="inline-flex items-center px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          onClick={call.stop}
+        >
+          <FaStop size={18} className="mr-2" />
+          Stop
+        </button>
+      )}
+
+      {call.error && (
+        <div className="text-sm text-red-500">
+          Error: {call.error.code}
+          {call.error.message && (
+            <>
+              <br />
+              {call.error.message}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

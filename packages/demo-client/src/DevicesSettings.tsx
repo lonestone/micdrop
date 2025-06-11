@@ -4,12 +4,11 @@ import { FaMicrophone, FaVolumeUp } from 'react-icons/fa'
 import { CallContext } from './CallContext'
 import MicVolume from './MicVolume'
 import SpeakerTestButton from './SpeakerTestButton'
-import VADSettings from './VADSettings'
 
 export default function DevicesSettings() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | undefined>()
-  const { startMic } = useContext(CallContext)!
+  const call = useContext(CallContext)
 
   // Lists of available devices
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([])
@@ -46,7 +45,7 @@ export default function DevicesSettings() {
   ) => {
     const deviceId = event.target.value
     setAudioInputId(deviceId)
-    startMic(deviceId)
+    call?.startMic(deviceId)
   }
 
   // Change audio output (speaker)
@@ -57,6 +56,8 @@ export default function DevicesSettings() {
     setAudioOutputId(deviceId)
     Speaker.changeDevice(deviceId)
   }
+
+  if (!call?.isMicStarted) return null
 
   return (
     <div className="p-4 rounded-lg border border-gray-200 shadow-sm">
@@ -75,7 +76,7 @@ export default function DevicesSettings() {
         <FaMicrophone className="text-gray-600 text-xl" />
         <select
           value={audioInputId}
-          className="flex-1 form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
+          className="flex-1 form-select min-w-0 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
           onClick={getDevices}
           onChange={handleAudioInputChange}
         >
@@ -94,7 +95,7 @@ export default function DevicesSettings() {
         <FaVolumeUp className="text-gray-600 text-xl" />
         <select
           value={audioOutputId}
-          className="flex-1 form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
+          className="flex-1 form-select min-w-0 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
           onClick={getDevices}
           onChange={handleAudioOutputChange}
         >
@@ -108,8 +109,6 @@ export default function DevicesSettings() {
           <SpeakerTestButton />
         </div>
       </div>
-
-      <VADSettings className="mt-4" />
     </div>
   )
 }

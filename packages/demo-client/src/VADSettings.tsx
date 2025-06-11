@@ -7,11 +7,15 @@ import {
   VolumeVAD,
   VolumeVADOptions,
 } from '@micdrop/client'
-import { useState } from 'react'
+import { useContext, useState } from 'react'
+import { FaChevronDown } from 'react-icons/fa'
+import { CallContext } from './CallContext'
 import VADStatusCircle from './VADStatusCircle'
 
 export default function VADSettings({ className }: { className?: string }) {
   const call = CallClient.getInstance()
+  const { isMicStarted } = useContext(CallContext)!
+  if (!isMicStarted) return null
   return <AnyVADSettings vad={call.vad} className={className} />
 }
 
@@ -34,20 +38,13 @@ function AnyVADSettings<T extends VAD>({ vad, className }: VADProps<T>) {
   return <div>Unknown VAD</div>
 }
 
-const blockClassName =
-  'flex flex-col gap-4 border border-gray-300 rounded-md p-4'
-
 function MultipleVADSettings({ vad, className }: VADProps<MultipleVAD>) {
   return (
-    <div className={`${blockClassName} ${className}`}>
-      <div className="flex items-center gap-2">
-        <VADStatusCircle vad={vad} />
-        <strong>MultipleVAD</strong>
-      </div>
+    <VADCard name="MultipleVAD" vad={vad} className={className}>
       {vad.vads.map((vad, i) => (
         <AnyVADSettings key={i} vad={vad} />
       ))}
-    </div>
+    </VADCard>
   )
 }
 
@@ -60,11 +57,7 @@ function SileroVADSettings({ vad, className }: VADProps<SileroVAD>) {
   }
 
   return (
-    <div className={`${blockClassName} ${className}`}>
-      <div className="flex items-center gap-2">
-        <VADStatusCircle vad={vad} />
-        <strong>SileroVAD</strong>
-      </div>
+    <VADCard name="SileroVAD" vad={vad} className={className}>
       <div className="flex items-center gap-2">
         <label>Positive Speech Threshold</label>
         <input
@@ -121,7 +114,7 @@ function SileroVADSettings({ vad, className }: VADProps<SileroVAD>) {
         />
         <span>{options.redemptionFrames}</span>
       </div>
-    </div>
+    </VADCard>
   )
 }
 
@@ -134,11 +127,7 @@ function VolumeVADSettings({ vad, className }: VADProps<VolumeVAD>) {
   }
 
   return (
-    <div className={`${blockClassName} ${className}`}>
-      <div className="flex items-center gap-2">
-        <VADStatusCircle vad={vad} />
-        <strong>VolumeVAD</strong>
-      </div>
+    <VADCard name="VolumeVAD" vad={vad} className={className}>
       <div className="flex items-center gap-2">
         <label>History</label>
         <input
@@ -163,6 +152,30 @@ function VolumeVADSettings({ vad, className }: VADProps<VolumeVAD>) {
         />
         <span>{options.threshold} dB</span>
       </div>
+    </VADCard>
+  )
+}
+
+interface VADCardProps {
+  name: string
+  vad: VAD
+  className?: string
+  children: React.ReactNode
+}
+
+function VADCard({ name, vad, className, children }: VADCardProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  return (
+    <div className={`border border-gray-200 shadow-sm rounded-lg ${className}`}>
+      <div
+        className="flex items-center gap-2 p-4 cursor-pointer"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <VADStatusCircle vad={vad} />
+        <strong className="flex-1">{name}</strong>
+        <FaChevronDown className={`w-4 h-4 ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+      {isOpen && <div className="flex flex-col gap-4 p-4 pt-2">{children}</div>}
     </div>
   )
 }

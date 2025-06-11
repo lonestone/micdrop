@@ -1,5 +1,5 @@
 import { CallClient, CallClientError, Conversation } from '@micdrop/client'
-import type { CallParams } from '@micdrop/demo-server/src/callParams'
+import type { CallParams } from '@micdrop/demo-server/src/call'
 import React, { createContext, useCallback, useEffect, useState } from 'react'
 
 export interface CallContextValue {
