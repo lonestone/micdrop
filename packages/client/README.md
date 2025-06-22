@@ -32,10 +32,10 @@ pnpm add @micdrop/client
 ## Quick Start
 
 ```typescript
-import { CallClient } from '@micdrop/client'
+import { MicdropClient } from '@micdrop/client'
 
 // Create a new call handler instance
-const call = CallClient.getInstance<YourParamsType>({
+const call = MicdropClient.getInstance<YourParamsType>({
   // VAD (see docs)
   vad: ['volume', 'silero'],
 })
@@ -73,7 +73,7 @@ await call.stop()
 Check out the demo implementation in the [@micdrop/demo-client](../demo-client/README.md) package. It shows:
 
 - Setting up a React application with WebSocket communication
-- Configuring the CallClient with custom parameters
+- Configuring the MicdropClient with custom parameters
 - Managing microphone input and audio playback
 - Handling conversation state and UI updates
 - Error handling patterns
@@ -82,7 +82,7 @@ Here's a simplified version from the demo:
 
 ## Documentation
 
-- **[CallClient](./docs/CallClient.md)** - Manages WebSocket connections, audio streaming, and conversation state
+- **[MicdropClient](./docs/MicdropClient.md)** - Manages WebSocket connections, audio streaming, and conversation state
 
 - **[MicRecorder](./docs/MicRecorder.md)** - Records audio from microphone with voice activity detection and speech events
 

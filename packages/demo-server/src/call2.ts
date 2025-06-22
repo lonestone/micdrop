@@ -1,10 +1,10 @@
 import {
-  CallError,
-  CallErrorCode,
-  CallServer,
   CartesiaTTS,
   GladiaSTT,
   handleError,
+  MicdropError,
+  MicdropErrorCode,
+  MicdropServer,
   waitForParams,
 } from '@micdrop/server'
 import { FastifyInstance } from 'fastify'
@@ -45,11 +45,14 @@ export default async (app: FastifyInstance) => {
       // Optional, only if we want to check authorization and/or get other params
       const params = await waitForParams(socket, callParamsSchema.parse)
       if (params.authorization !== AUTHORIZATION_KEY) {
-        throw new CallError(CallErrorCode.Unauthorized, 'Invalid authorization')
+        throw new MicdropError(
+          MicdropErrorCode.Unauthorized,
+          'Invalid authorization'
+        )
       }
 
       // Start call
-      new CallServer(socket, {
+      new MicdropServer(socket, {
         systemPrompt,
         firstMessage,
 

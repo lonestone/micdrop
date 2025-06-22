@@ -1,5 +1,5 @@
 import { WebSocket } from 'ws'
-import { CallError, CallErrorCode } from './errors'
+import { MicdropError, MicdropErrorCode } from './errors'
 
 export async function waitForParams<CallParams>(
   socket: WebSocket,
@@ -8,7 +8,7 @@ export async function waitForParams<CallParams>(
   return new Promise<CallParams>((resolve, reject) => {
     // Handle timeout
     const timeout = setTimeout(() => {
-      reject(new CallError(CallErrorCode.BadRequest, 'Missing params'))
+      reject(new MicdropError(MicdropErrorCode.BadRequest, 'Missing params'))
     }, 3000)
 
     const onParams = (payload: string) => {
@@ -21,7 +21,7 @@ export async function waitForParams<CallParams>(
         const params = validate(JSON.parse(payload))
         resolve(params)
       } catch (error) {
-        reject(new CallError(CallErrorCode.BadRequest, 'Invalid params'))
+        reject(new MicdropError(MicdropErrorCode.BadRequest, 'Invalid params'))
       }
     }
 

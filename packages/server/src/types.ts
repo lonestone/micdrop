@@ -1,13 +1,13 @@
-import { STT } from './stt'
-import { TTS } from './tts/TTS'
+import type { STT } from './stt'
+import type { TTS } from './tts'
 
-export enum CallClientCommands {
+export enum MicdropClientCommands {
   StartSpeaking = 'StartSpeaking',
   StopSpeaking = 'StopSpeaking',
   Mute = 'Mute',
 }
 
-export enum CallServerCommands {
+export enum MicdropServerCommands {
   Message = 'Message',
   CancelLastAssistantMessage = 'CancelLastAssistantMessage',
   CancelLastUserMessage = 'CancelLastUserMessage',
@@ -16,42 +16,42 @@ export enum CallServerCommands {
   EndCall = 'EndCall',
 }
 
-export interface CallConfig {
+export interface MicdropConfig {
   systemPrompt: string
   firstMessage?: string
   debugLog?: boolean
   generateAnswer(
-    conversation: Conversation
-  ): Promise<string | ConversationMessage>
+    conversation: MicdropConversation
+  ): Promise<string | MicdropConversationMessage>
   speech2Text: STT
   text2Speech: TTS
-  onMessage?(message: ConversationMessage): void
-  onEnd?(call: CallSummary): void
+  onMessage?(message: MicdropConversationMessage): void
+  onEnd?(call: MicdropCallSummary): void
 }
 
-export interface CallSummary {
-  conversation: Conversation
+export interface MicdropCallSummary {
+  conversation: MicdropConversation
   duration: number
 }
 
-export type Conversation = ConversationMessage[]
+export type MicdropConversation = MicdropConversationMessage[]
 
-export type AnswerCommands = {
+export type MicdropAnswerCommands = {
   endCall?: boolean
   cancelLastUserMessage?: boolean
   skipAnswer?: boolean
 }
 
-export type AnswerMetadata = {
+export type MicdropAnswerMetadata = {
   [key: string]: any
 }
 
-export interface ConversationMessage<
-  Data extends AnswerMetadata = AnswerMetadata,
+export interface MicdropConversationMessage<
+  Data extends MicdropAnswerMetadata = MicdropAnswerMetadata,
 > {
   role: 'system' | 'user' | 'assistant'
   content: string
-  commands?: AnswerCommands
+  commands?: MicdropAnswerCommands
   metadata?: Data
 }
 

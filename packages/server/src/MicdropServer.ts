@@ -2,23 +2,23 @@ import { Duplex, PassThrough } from 'stream'
 import { WebSocket } from 'ws'
 import { Logger } from './Logger'
 import {
-  CallClientCommands,
-  CallConfig,
-  CallServerCommands,
-  Conversation,
-  ConversationMessage,
+  MicdropClientCommands,
+  MicdropConfig,
+  MicdropConversation,
+  MicdropConversationMessage,
+  MicdropServerCommands,
 } from './types'
 
 interface Processing {
   aborted: boolean
 }
 
-export class CallServer extends Logger {
+export class MicdropServer extends Logger {
   public socket: WebSocket | null = null
-  public config: CallConfig | null = null
+  public config: MicdropConfig | null = null
 
   // Conversation history
-  public conversation: Conversation
+  public conversation: MicdropConversation
 
   private startTime = Date.now()
 
@@ -31,7 +31,7 @@ export class CallServer extends Logger {
   // Enable speaker streaming
   private speakerStreamingEnabled = false
 
-  constructor(socket: WebSocket, config: CallConfig) {
+  constructor(socket: WebSocket, config: MicdropConfig) {
     super()
     this.socket = socket
     this.config = config
@@ -54,7 +54,7 @@ export class CallServer extends Logger {
         .generateAnswer(this.conversation)
         .then((answer) => this.answer(answer))
         .catch((error) => {
-          console.error('[CallServer]', error)
+          console.error('[MicdropServer]', error)
           socket?.close()
           // TODO: Implement retry
         })
@@ -66,7 +66,7 @@ export class CallServer extends Logger {
   }
 
   // Reset conversation
-  public resetConversation(conversation: Conversation) {
+  public resetConversation(conversation: MicdropConversation) {
     this.log('Reset conversation')
     this.conversation = conversation
   }
@@ -78,10 +78,12 @@ export class CallServer extends Logger {
     this.config?.text2Speech.cancel()
   }
 
-  private addMessage(message: ConversationMessage) {
+  private addMessage(message: MicdropConversationMessage) {
     if (!this.socket || !this.config) return
     this.conversation.push(message)
-    this.socket.send(`${CallServerCommands.Message} ${JSON.stringify(message)}`)
+    this.socket.send(
+      `${MicdropServerCommands.Message} ${JSON.stringify(message)}`
+    )
     this.config.onMessage?.(message)
   }
 
@@ -103,7 +105,7 @@ export class CallServer extends Logger {
     } else if (audio.readable) {
       // Enable speaker streaming if not already enabled
       if (!this.speakerStreamingEnabled) {
-        this.socket.send(CallServerCommands.EnableSpeakerStreaming)
+        this.socket.send(MicdropServerCommands.EnableSpeakerStreaming)
         this.speakerStreamingEnabled = true
       }
 
@@ -143,7 +145,7 @@ export class CallServer extends Logger {
 
   private async onMessage(message: Buffer) {
     if (!Buffer.isBuffer(message)) {
-      console.warn(`[CallServer] Message is not a buffer`)
+      console.warn(`[MicdropServer] Message is not a buffer`)
       return
     }
 
@@ -152,13 +154,13 @@ export class CallServer extends Logger {
       const cmd = message.toString()
       this.log(`Command: ${cmd}`)
 
-      if (cmd === CallClientCommands.StartSpeaking) {
+      if (cmd === MicdropClientCommands.StartSpeaking) {
         // User started speaking
         await this.onStartSpeaking()
-      } else if (cmd === CallClientCommands.Mute) {
+      } else if (cmd === MicdropClientCommands.Mute) {
         // User muted the call
         await this.onMute()
-      } else if (cmd === CallClientCommands.StopSpeaking) {
+      } else if (cmd === MicdropClientCommands.StopSpeaking) {
         // User stopped speaking
         await this.onStopSpeaking()
       }
@@ -215,15 +217,15 @@ export class CallServer extends Logger {
 
       await this.answer(answer, processing)
     } catch (error) {
-      console.error('[CallServer]', error)
-      this.socket?.send(CallServerCommands.SkipAnswer)
+      console.error('[MicdropServer]', error)
+      this.socket?.send(MicdropServerCommands.SkipAnswer)
       // TODO: Implement retry
     }
   }
 
   // Add assistant message and send to client with audio (TTS)
   public async answer(
-    message: string | ConversationMessage,
+    message: string | MicdropConversationMessage,
     processing?: Processing
   ) {
     if (!this.socket || !this.config) return
@@ -243,7 +245,7 @@ export class CallServer extends Logger {
       const lastMessage = this.conversation[this.conversation.length - 1]
       if (lastMessage?.role === 'user') {
         this.conversation.pop()
-        this.socket?.send(CallServerCommands.CancelLastUserMessage)
+        this.socket?.send(MicdropServerCommands.CancelLastUserMessage)
       }
       return
     }
@@ -251,7 +253,7 @@ export class CallServer extends Logger {
     // Skip answer
     if (!message.content.length || message.commands?.skipAnswer) {
       this.log('Skipping answer')
-      this.socket?.send(CallServerCommands.SkipAnswer)
+      this.socket?.send(MicdropServerCommands.SkipAnswer)
       return
     }
 
@@ -268,7 +270,7 @@ export class CallServer extends Logger {
         const lastMessage = this.conversation[this.conversation.length - 1]
         if (lastMessage?.role === 'assistant') {
           this.conversation.pop()
-          this.socket?.send(CallServerCommands.CancelLastAssistantMessage)
+          this.socket?.send(MicdropServerCommands.CancelLastAssistantMessage)
         }
       }
 
@@ -285,15 +287,15 @@ export class CallServer extends Logger {
       // Send audio to client
       await this.sendAudio(audio, processing, onAbort)
     } catch (error) {
-      console.error('[CallServer]', error)
-      this.socket?.send(CallServerCommands.SkipAnswer)
+      console.error('[MicdropServer]', error)
+      this.socket?.send(MicdropServerCommands.SkipAnswer)
       // TODO: Implement retry
     }
 
     // End of call
     if (message.commands?.endCall) {
       this.log('Call ended')
-      this.socket.send(CallServerCommands.EndCall)
+      this.socket.send(MicdropServerCommands.EndCall)
     }
   }
 }

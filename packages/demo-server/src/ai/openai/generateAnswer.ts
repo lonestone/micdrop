@@ -1,4 +1,7 @@
-import { AnswerCommands, ConversationMessage } from '@micdrop/server'
+import {
+  MicdropAnswerCommands,
+  MicdropConversationMessage,
+} from '@micdrop/server'
 import { openai } from './openai'
 
 export const END_CALL = 'END_CALL'
@@ -6,8 +9,8 @@ export const CANCEL_LAST_USER_MESSAGE = 'CANCEL_LAST_USER_MESSAGE'
 export const SKIP_ANSWER = 'SKIP_ANSWER'
 
 export async function generateAnswer(
-  conversation: ConversationMessage[]
-): Promise<ConversationMessage> {
+  conversation: MicdropConversationMessage[]
+): Promise<MicdropConversationMessage> {
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages: conversation,
@@ -18,7 +21,7 @@ export async function generateAnswer(
   let text = response.choices[0].message.content
   if (!text) throw new Error('Empty response')
 
-  const commands: AnswerCommands = {}
+  const commands: MicdropAnswerCommands = {}
 
   // Detect commands for metadata
   if (text.includes(END_CALL)) {

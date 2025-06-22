@@ -6,11 +6,11 @@ The `MicRecorder` class provides functionality for recording audio from a microp
 
 The `MicRecorder` class is a core component that can be used in two ways:
 
-1. **As part of CallClient**: The `MicRecorder` is automatically managed by `CallClient` when using it for voice conversations. `CallClient` creates an instance internally and handles all the microphone setup, speech detection, and audio streaming.
+1. **As part of MicdropClient**: The `MicRecorder` is automatically managed by `MicdropClient` when using it for voice conversations. `MicdropClient` creates an instance internally and handles all the microphone setup, speech detection, and audio streaming.
 
-2. **As a standalone component**: You can use `MicRecorder` directly if you only need microphone recording and speech detection functionality without the WebSocket communication and conversation management provided by `CallClient`.
+2. **As a standalone component**: You can use `MicRecorder` directly if you only need microphone recording and speech detection functionality without the WebSocket communication and conversation management provided by `MicdropClient`.
 
-This flexibility allows you to either use the full voice conversation capabilities through `CallClient`, or implement your own custom audio handling using just the microphone recording features of `MicRecorder`.
+This flexibility allows you to either use the full voice conversation capabilities through `MicdropClient`, or implement your own custom audio handling using just the microphone recording features of `MicRecorder`.
 
 ## Features
 

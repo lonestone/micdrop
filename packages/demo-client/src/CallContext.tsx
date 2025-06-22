@@ -1,4 +1,8 @@
-import { CallClient, CallClientError, Conversation } from '@micdrop/client'
+import {
+  MicdropClient,
+  MicdropClientError,
+  MicdropConversation,
+} from '@micdrop/client'
 import type { CallParams } from '@micdrop/demo-server/src/call'
 import React, { createContext, useCallback, useEffect, useState } from 'react'
 
@@ -17,8 +21,8 @@ export interface CallContextValue {
   isAssistantSpeaking: boolean
   isMicStarted: boolean
   isMicMuted: boolean
-  conversation: Conversation
-  error: CallClientError | undefined
+  conversation: MicdropConversation
+  error: MicdropClientError | undefined
 }
 
 export const CallContext = createContext<CallContextValue | undefined>(
@@ -31,7 +35,7 @@ interface CallContextProviderProps {
 
 export function CallContextProvider({ children }: CallContextProviderProps) {
   // Setup call handler
-  const call = CallClient.getInstance<CallParams>({
+  const call = MicdropClient.getInstance<CallParams>({
     vad: ['silero', 'volume'],
   })
 

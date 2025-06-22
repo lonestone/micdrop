@@ -1,12 +1,12 @@
 import WebSocket from 'ws'
 
-export enum CallErrorCode {
+export enum MicdropErrorCode {
   BadRequest = 4400,
   Unauthorized = 4401,
   NotFound = 4404,
 }
 
-export class CallError extends Error {
+export class MicdropError extends Error {
   code: number
 
   constructor(code: number, message: string) {
@@ -16,7 +16,7 @@ export class CallError extends Error {
 }
 
 export function handleError(socket: WebSocket, error: unknown) {
-  if (error instanceof CallError) {
+  if (error instanceof MicdropError) {
     socket.close(error.code, error.message)
   } else {
     console.error(error)

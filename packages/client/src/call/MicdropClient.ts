@@ -1,8 +1,8 @@
 import {
-  CallClientCommands,
-  CallServerCommands,
-  Conversation,
-  ConversationMessage,
+  MicdropClientCommands,
+  MicdropConversation,
+  MicdropConversationMessage,
+  MicdropServerCommands,
   VAD,
 } from '@micdrop/client'
 import EventEmitter from 'eventemitter3'
@@ -10,44 +10,47 @@ import { MicRecorder } from '../audio/MicRecorder'
 import { mic } from '../audio/mic'
 import { speaker } from '../audio/speaker'
 import { getVAD, VADConfig } from '../audio/vad/getVAD'
-import { CallClientError, CallClientErrorCode } from './CallClientError'
+import {
+  MicdropClientError,
+  MicdropClientErrorCode,
+} from './MicdropClientError'
 
-export interface CallClientEvents {
+export interface MicdropClientEvents {
   EndCall: []
-  Error: [CallClientError]
+  Error: [MicdropClientError]
   StateChange: void
 }
 
-export interface CallClientOptions {
+export interface MicdropClientOptions {
   vad?: VADConfig
   disableInterruption?: boolean
 }
 
 declare global {
   interface Window {
-    micdropCallClient: any
+    micdropMicdropClient: any
   }
 }
 
-export class CallClient<
+export class MicdropClient<
   Params extends {},
-  Options extends CallClientOptions = CallClientOptions,
-> extends EventEmitter<CallClientEvents> {
+  Options extends MicdropClientOptions = MicdropClientOptions,
+> extends EventEmitter<MicdropClientEvents> {
   public static getInstance<
     P extends {},
-    O extends CallClientOptions = CallClientOptions,
-  >(options?: O): CallClient<P, O> {
-    if (!window.micdropCallClient) {
-      window.micdropCallClient = new CallClient<P, O>(options)
+    O extends MicdropClientOptions = MicdropClientOptions,
+  >(options?: O): MicdropClient<P, O> {
+    if (!window.micdropMicdropClient) {
+      window.micdropMicdropClient = new MicdropClient<P, O>(options)
     }
-    return window.micdropCallClient
+    return window.micdropMicdropClient
   }
 
   public url?: string
   public params?: Params
   public micRecorder?: MicRecorder
   public vad: VAD
-  public conversation: Conversation = []
+  public conversation: MicdropConversation = []
   public debug = false
 
   private ws?: WebSocket
@@ -138,7 +141,7 @@ export class CallClient<
       // Stop websocket
       this.stopWS()
     } catch (error) {
-      console.error('[CallClient] stop WS', error)
+      console.error('[MicdropClient] stop WS', error)
     }
 
     try {
@@ -146,7 +149,7 @@ export class CallClient<
       this.micRecorder?.stop()
       this.stopMic()
     } catch (error) {
-      console.error('[CallClient] stop mic', error)
+      console.error('[MicdropClient] stop mic', error)
     }
   }
 
@@ -157,7 +160,7 @@ export class CallClient<
     this._isProcessing = false
     this.notifyStateChange()
     speaker.pauseAudio()
-    this.ws?.send(CallClientCommands.Mute)
+    this.ws?.send(MicdropClientCommands.Mute)
   }
 
   resume() {
@@ -192,7 +195,7 @@ export class CallClient<
         // Notify server that user started speaking
         this.micRecorder.on('StartSpeaking', () => {
           this.log('[Mic] Start speaking')
-          this.ws?.send(CallClientCommands.StartSpeaking)
+          this.ws?.send(MicdropClientCommands.StartSpeaking)
           // Interruption
           this._isProcessing = false
           this.notifyStateChange()
@@ -202,7 +205,7 @@ export class CallClient<
         // Notify server that user speech is complete
         this.micRecorder.on('StopSpeaking', () => {
           this.log('[Mic] Stop speaking')
-          this.ws?.send(CallClientCommands.StopSpeaking)
+          this.ws?.send(MicdropClientCommands.StopSpeaking)
           if (this.isWSStarted) {
             this._isProcessing = true
           }
@@ -225,8 +228,8 @@ export class CallClient<
         await this.micRecorder.start(this.micStream)
       }
     } catch (error) {
-      console.error('[CallClient] startMic', error)
-      this.emit('Error', new CallClientError(CallClientErrorCode.Mic))
+      console.error('[MicdropClient] startMic', error)
+      this.emit('Error', new MicdropClientError(MicdropClientErrorCode.Mic))
       this.stop()
     }
   }
@@ -241,13 +244,13 @@ export class CallClient<
 
   private async startWS() {
     if (this.ws) {
-      throw new Error('[CallClient] startWS: WebSocket is already started')
+      throw new Error('[MicdropClient] startWS: WebSocket is already started')
     }
     if (!this.isMicStarted) {
-      throw new Error('[CallClient] startWS: Microphone is not started')
+      throw new Error('[MicdropClient] startWS: Microphone is not started')
     }
     if (!this.url) {
-      throw new Error('[CallClient] startWS: URL is not set')
+      throw new Error('[MicdropClient] startWS: URL is not set')
     }
 
     // Start websocket
@@ -274,29 +277,31 @@ export class CallClient<
         this.notifyStateChange()
       } else if (typeof event.data !== 'string') {
         console.warn(`[WS] Unknown message type: ${event.data}`)
-      } else if (event.data.startsWith(CallServerCommands.Message)) {
+      } else if (event.data.startsWith(MicdropServerCommands.Message)) {
         // Received user/assistant message
         const message = JSON.parse(
-          event.data.substring(CallServerCommands.Message.length + 1)
+          event.data.substring(MicdropServerCommands.Message.length + 1)
         )
         this.addMessage(message)
-      } else if (event.data === CallServerCommands.EndCall) {
+      } else if (event.data === MicdropServerCommands.EndCall) {
         // Call ended
         setTimeout(() => {
           this.emit('EndCall')
         }, 2000) // Wait to prevent conflict
-      } else if (event.data === CallServerCommands.CancelLastAssistantMessage) {
+      } else if (
+        event.data === MicdropServerCommands.CancelLastAssistantMessage
+      ) {
         // Remove last assistant message if aborted
         const lastMessage = this.conversation[this.conversation.length - 1]
         if (lastMessage?.role === 'assistant') {
           this.conversation = this.conversation.slice(0, -1)
           this.notifyStateChange()
         }
-      } else if (event.data === CallServerCommands.SkipAnswer) {
+      } else if (event.data === MicdropServerCommands.SkipAnswer) {
         // Answer was skipped, listen again
         this._isProcessing = false
         this.notifyStateChange()
-      } else if (event.data === CallServerCommands.CancelLastUserMessage) {
+      } else if (event.data === MicdropServerCommands.CancelLastUserMessage) {
         // Remove last user message if aborted
         const lastMessage = this.conversation[this.conversation.length - 1]
         if (lastMessage?.role === 'user') {
@@ -304,7 +309,7 @@ export class CallClient<
           this._isProcessing = false
           this.notifyStateChange()
         }
-      } else if (event.data === CallServerCommands.EnableSpeakerStreaming) {
+      } else if (event.data === MicdropServerCommands.EnableSpeakerStreaming) {
         // Enable speaker streaming
         speaker.enableStreaming()
       }
@@ -315,20 +320,20 @@ export class CallClient<
 
       if (event.code >= 1001 && event.code <= 1011 && event.code !== 1005) {
         // Internal server error
-        this.emit('Error', new CallClientError())
+        this.emit('Error', new MicdropClientError())
       } else if (event.code === 4401) {
         // Unauthorized
         this.emit(
           'Error',
-          new CallClientError(CallClientErrorCode.Unauthorized)
+          new MicdropClientError(MicdropClientErrorCode.Unauthorized)
         )
       } else if (event.code >= 4000) {
         // Custom error
-        this.emit('Error', new CallClientError())
+        this.emit('Error', new MicdropClientError())
       }
     }
     this.ws.onerror = (event) => {
-      console.error('[CallClient] [WS] Error:', event)
+      console.error('[MicdropClient] [WS] Error:', event)
       this.stop()
     }
   }
@@ -356,7 +361,7 @@ export class CallClient<
     this.notifyStateChange()
   }
 
-  private addMessage(message: ConversationMessage) {
+  private addMessage(message: MicdropConversationMessage) {
     this.conversation.push(message)
     this.notifyStateChange()
   }

@@ -1,5 +1,5 @@
 import {
-  CallClient,
+  MicdropClient,
   MultipleVAD,
   SileroVAD,
   SileroVADOptions,
@@ -13,7 +13,7 @@ import { CallContext } from './CallContext'
 import VADStatusCircle from './VADStatusCircle'
 
 export default function VADSettings({ className }: { className?: string }) {
-  const call = CallClient.getInstance()
+  const call = MicdropClient.getInstance()
   const { isMicStarted } = useContext(CallContext)!
   if (!isMicStarted) return null
   return <AnyVADSettings vad={call.vad} className={className} />

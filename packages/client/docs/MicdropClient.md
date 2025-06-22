@@ -1,27 +1,27 @@
-# CallClient Documentation
+# MicdropClient Documentation
 
-The `CallClient` class manages real-time audio communication between a client and server, handling microphone input, WebSocket connections, and audio playback. It's designed to facilitate interactive voice conversations with support for bi-directional audio streaming.
+The `MicdropClient` class manages real-time audio communication between a client and server, handling microphone input, WebSocket connections, and audio playback. It's designed to facilitate interactive voice conversations with support for bi-directional audio streaming.
 
 ## Usage Example
 
 ```typescript
-import { CallClient } from '@micdrop/client'
+import { MicdropClient } from '@micdrop/client'
 
 // Get the singleton instance with your params type and options
-const call = CallClient.getInstance<YourParamsType>({
+const micdrop = MicdropClient.getInstance<YourParamsType>({
   vad: ['silero', 'volume'], // or 'volume', or an instance, or array (see VAD section)
   disableInterruption: true, // disables mic interruption when assistant is speaking
 })
 
-// Configure the call
-call.url = 'wss://your-server.com/ws'
-call.params = {
+// Configure the micdrop
+micdrop.url = 'wss://your-server.com/ws'
+micdrop.params = {
   /* your parameters (to check auth, etc) */
 }
 
 // Listen for state changes
-call.on('StateChange', () => {
-  console.log('Call state:', call)
+micdrop.on('StateChange', () => {
+  console.log('State:', micdrop)
   /*
     {
       "conversation": [
@@ -46,39 +46,39 @@ call.on('StateChange', () => {
 
 // Listen for end of call
 // Can be triggered via prompting (see server docs)
-call.on('EndCall', () => {
+micdrop.on('EndCall', () => {
   console.log('Call ended by assistant')
 })
 
 // Listen for errors
-call.on('Error', (error) => {
+micdrop.on('Error', (error) => {
   console.error('Error occurred:', error)
 })
 
 // Start the call
-await call.start()
+await micdrop.start()
 
 // Pause/resume
-call.pause()
-call.resume()
+micdrop.pause()
+micdrop.resume()
 
 // Stop the call
-await call.stop()
+await micdrop.stop()
 ```
 
 ## Options
 
-You can pass an options object to `CallClient.getInstance`:
+You can pass an options object to `MicdropClient.getInstance`:
 
 - `vad`: VAD configuration (see [VAD](./VAD.md) section)
 - `disableInterruption`: If true, disables automatic mic muting when the assistant is speaking (default: false)
 
 ## Events
 
-The `CallClient` emits the following events:
+The `MicdropClient` emits the following events:
 
 - `EndCall`: Emitted when the call ends
-- `Error`: Emitted when an error occurs, provides a `CallClientError` object
+- `Error`: Emitted when an error occurs, provides a `MicdropClientError` object
 - `StateChange`: Emitted when any state change occurs in the handler
 
 ## Properties
@@ -159,25 +159,25 @@ Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and s
 
 ## Error Handling
 
-The handler uses `CallClientError` for error management. Each error instance contains a specific error code that helps identify the type of error that occurred.
+The handler uses `MicdropClientError` for error management. Each error instance contains a specific error code that helps identify the type of error that occurred.
 
-The `CallClientError` can have the following codes:
+The `MicdropClientError` can have the following codes:
 
-- `CallClientErrorCode.Mic`: Indicates an error with microphone access or recording. This can occur when:
+- `MicdropClientErrorCode.Mic`: Indicates an error with microphone access or recording. This can occur when:
 
   - Microphone permissions are denied
   - No microphone is available
   - Hardware issues prevent microphone access
   - Recording fails to start
 
-- `CallClientErrorCode.Unauthorized`: Indicates authentication or authorization failure with the WebSocket connection. This occurs when:
+- `MicdropClientErrorCode.Unauthorized`: Indicates authentication or authorization failure with the WebSocket connection. This occurs when:
 
   - Invalid credentials are provided
   - Session has expired
   - Access token is invalid
   - User doesn't have required permissions
 
-- `CallClientErrorCode.Error`: General error code for other types of failures (default). This includes:
+- `MicdropClientErrorCode.Error`: General error code for other types of failures (default). This includes:
   - WebSocket connection failures
   - Network issues
   - Server-side errors
@@ -186,17 +186,17 @@ The `CallClientError` can have the following codes:
 Example handling different error types:
 
 ```typescript
-handler.on('Error', (error: CallClientError) => {
+handler.on('Error', (error: MicdropClientError) => {
   switch (error.code) {
-    case CallClientErrorCode.Mic:
+    case MicdropClientErrorCode.Mic:
       console.error('Microphone error - check permissions or hardware')
       // Handle microphone-specific error recovery
       break
-    case CallClientErrorCode.Unauthorized:
+    case MicdropClientErrorCode.Unauthorized:
       console.error('Authentication failed - check credentials')
       // Handle authentication retry or user logout
       break
-    case CallClientErrorCode.Error:
+    case MicdropClientErrorCode.Error:
       console.error('General error occurred')
       // Handle general error recovery
       break

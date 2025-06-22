@@ -1,6 +1,6 @@
 import { Readable } from 'stream'
-import { CallServer } from '../CallServer'
 import { Logger } from '../Logger'
+import { MicdropServer } from '../MicdropServer'
 
 // Audio mime type to extension map
 const MIME_TYPE_TO_EXTENSION = {
@@ -17,7 +17,7 @@ export abstract class STT extends Logger {
   public onTranscript?: (transcript: string) => void
 
   // May be used for context
-  public call?: CallServer
+  public call?: MicdropServer
 
   protected mimeType?: keyof typeof MIME_TYPE_TO_EXTENSION
 

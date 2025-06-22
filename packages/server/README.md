@@ -30,13 +30,13 @@ pnpm add @micdrop/server
 
 ```typescript
 import { WebSocketServer } from 'ws'
-import { CallServer, CallConfig } from '@micdrop/server'
+import { MicdropServer, MicdropConfig } from '@micdrop/server'
 
 // Create WebSocket server
 const wss = new WebSocketServer({ port: 8080 })
 
 // Define call configuration
-const config: CallConfig = {
+const config: MicdropConfig = {
   // Initial system prompt for the conversation
   systemPrompt: 'You are a helpful assistant',
 
@@ -79,7 +79,7 @@ const config: CallConfig = {
 // Handle new connections
 wss.on('connection', (ws) => {
   // Create call handler with configuration
-  new CallServer(ws, config)
+  new MicdropServer(ws, config)
 })
 ```
 
@@ -88,7 +88,7 @@ wss.on('connection', (ws) => {
 Check out the demo implementation in the [@micdrop/demo-server](../demo-server/README.md) package. It shows:
 
 - Setting up a Fastify server with WebSocket support
-- Configuring the CallServer with custom handlers
+- Configuring the MicdropServer with custom handlers
 - Basic authentication flow
 - Example speech-to-text and text-to-speech implementations
 - Error handling patterns
@@ -99,35 +99,35 @@ Here's a simplified version from the demo:
 
 The server package provides several core components:
 
-- **CallServer** - Main class that handles WebSocket connections, audio streaming, and conversation flow
-- **CallConfig** - Configuration interface for customizing speech processing and conversation behavior
+- **MicdropServer** - Main class that handles WebSocket connections, audio streaming, and conversation flow
+- **MicdropConfig** - Configuration interface for customizing speech processing and conversation behavior
 - **Types** - Common TypeScript types and interfaces for messages and commands
 - **Error Handling** - Standardized error handling with specific error codes
 
 ## API Reference
 
-### CallServer
+### MicdropServer
 
 The main class for managing WebSocket connections and audio streaming.
 
 ```typescript
-class CallServer {
-  constructor(socket: WebSocket, config: CallConfig)
+class MicdropServer {
+  constructor(socket: WebSocket, config: MicdropConfig)
 
   // Add assistant message and send to client with audio (TTS)
   answer(message: string): Promise<void>
 
   // Reset conversation (including system prompt)
-  resetConversation(conversation: Conversation): void
+  resetConversation(conversation: MicdropConversation): void
 }
 ```
 
-### CallConfig
+### MicdropConfig
 
 Configuration interface for customizing the call behavior.
 
 ```typescript
-interface CallConfig {
+interface MicdropConfig {
   // Initial system prompt for the conversation
   systemPrompt: string
 
@@ -139,8 +139,8 @@ interface CallConfig {
 
   // Generate assistant's response
   generateAnswer(
-    conversation: Conversation
-  ): Promise<string | ConversationMessage>
+    conversation: MicdropConversation
+  ): Promise<string | MicdropConversationMessage>
 
   // Convert audio to text
   speech2Text(audioBlob: Blob, prevMessage?: string): Promise<string>
@@ -150,8 +150,8 @@ interface CallConfig {
   text2Speech(text: string): Promise<ArrayBuffer | NodeJS.ReadableStream>
 
   // Optional callbacks
-  onMessage?(message: ConversationMessage): void
-  onEnd?(summary: CallSummary): void
+  onMessage?(message: MicdropConversationMessage): void
+  onEnd?(summary: MicdropCallSummary): void
 }
 ```
 
@@ -163,20 +163,20 @@ The server implements a specific protocol for client-server communication:
 
 The client can send the following commands to the server:
 
-- `CallClientCommands.StartSpeaking` - The user starts speaking
-- `CallClientCommands.StopSpeaking` - The user stops speaking
-- `CallClientCommands.Mute` - The user mutes the microphone
+- `MicdropClientCommands.StartSpeaking` - The user starts speaking
+- `MicdropClientCommands.StopSpeaking` - The user stops speaking
+- `MicdropClientCommands.Mute` - The user mutes the microphone
 
 ### Server Commands
 
 The server can send the following commands to the client:
 
-- `CallServerCommands.Message` - A message from the assistant.
-- `CallServerCommands.CancelLastAssistantMessage` - Cancel the last assistant message.
-- `CallServerCommands.CancelLastUserMessage` - Cancel the last user message.
-- `CallServerCommands.SkipAnswer` - Notify that the last generated answer was ignored, it's listening again.
-- `CallServerCommands.EnableSpeakerStreaming` - Enable speaker streaming.
-- `CallServerCommands.EndCall` - End the call.
+- `MicdropServerCommands.Message` - A message from the assistant.
+- `MicdropServerCommands.CancelLastAssistantMessage` - Cancel the last assistant message.
+- `MicdropServerCommands.CancelLastUserMessage` - Cancel the last user message.
+- `MicdropServerCommands.SkipAnswer` - Notify that the last generated answer was ignored, it's listening again.
+- `MicdropServerCommands.EnableSpeakerStreaming` - Enable speaker streaming.
+- `MicdropServerCommands.EndCall` - End the call.
 
 ### Message Flow
 
@@ -193,11 +193,11 @@ See detailed protocol in [README.md](../README.md).
 You can add metadata to the generated answers, that will be accessible in the conversation on the client and server side.
 
 ```typescript
-const metadata: AnswerMetadata = {
+const metadata: MicdropAnswerMetadata = {
   // ...
 }
 
-const message: ConversationMessage = {
+const message: MicdropConversationMessage = {
   role: 'assistant',
   content: 'Hello!',
   metadata,
@@ -221,8 +221,8 @@ To end the interview, briefly thank the user and say good bye, then say ${END_CA
 `
 
 async function generateAnswer(
-  conversation: ConversationMessage[]
-): Promise<ConversationMessage> {
+  conversation: MicdropConversationMessage[]
+): Promise<MicdropConversationMessage> {
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages: conversation,
@@ -234,7 +234,7 @@ async function generateAnswer(
   if (!text) throw new Error('Empty response')
 
   // Add metadata
-  const commands: AnswerCommands = {}
+  const commands: MicdropAnswerCommands = {}
   if (text.includes(END_CALL)) {
     text = text.replace(END_CALL, '').trim()
     commands.endCall = true
@@ -253,17 +253,17 @@ Here's an example using Fastify:
 ```typescript
 import fastify from 'fastify'
 import fastifyWebsocket from '@fastify/websocket'
-import { CallServer, CallConfig } from '@micdrop/server'
+import { MicdropServer, MicdropConfig } from '@micdrop/server'
 
 const server = fastify()
 server.register(fastifyWebsocket)
 
 server.get('/call', { websocket: true }, (socket) => {
-  const config: CallConfig = {
+  const config: MicdropConfig = {
     systemPrompt: 'You are a helpful assistant',
     // ... other config options
   }
-  new CallServer(socket, config)
+  new MicdropServer(socket, config)
 })
 
 server.listen({ port: 8080 })
@@ -280,7 +280,7 @@ The server includes a debug mode that can:
 - Track conversation state
 - Monitor WebSocket events
 
-See `debugLog` option in [CallConfig](#callconfig).
+See `debugLog` option in [MicdropConfig](#callconfig).
 
 ## Browser Support
 
