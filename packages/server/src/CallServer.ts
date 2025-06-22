@@ -260,36 +260,34 @@ export class CallServer extends Logger {
     this.addMessage(message)
 
     // TTS: Generate answer audio
-    if (!this.config.disableTTS) {
-      try {
-        // Remove last assistant message if aborted
-        const onAbort = () => {
-          this.log('Answer aborted, removing last assistant message')
-          this.config?.text2Speech.cancel()
-          const lastMessage = this.conversation[this.conversation.length - 1]
-          if (lastMessage?.role === 'assistant') {
-            this.conversation.pop()
-            this.socket?.send(CallServerCommands.CancelLastAssistantMessage)
-          }
+    try {
+      // Remove last assistant message if aborted
+      const onAbort = () => {
+        this.log('Answer aborted, removing last assistant message')
+        this.config?.text2Speech.cancel()
+        const lastMessage = this.conversation[this.conversation.length - 1]
+        if (lastMessage?.role === 'assistant') {
+          this.conversation.pop()
+          this.socket?.send(CallServerCommands.CancelLastAssistantMessage)
         }
-
-        if (processing.aborted) {
-          onAbort()
-          return
-        }
-
-        const textStream = new PassThrough()
-        textStream.write(message.content)
-        textStream.end()
-        const audio = this.config.text2Speech.speech(textStream)
-
-        // Send audio to client
-        await this.sendAudio(audio, processing, onAbort)
-      } catch (error) {
-        console.error('[CallServer]', error)
-        this.socket?.send(CallServerCommands.SkipAnswer)
-        // TODO: Implement retry
       }
+
+      if (processing.aborted) {
+        onAbort()
+        return
+      }
+
+      const textStream = new PassThrough()
+      textStream.write(message.content)
+      textStream.end()
+      const audio = this.config.text2Speech.speech(textStream)
+
+      // Send audio to client
+      await this.sendAudio(audio, processing, onAbort)
+    } catch (error) {
+      console.error('[CallServer]', error)
+      this.socket?.send(CallServerCommands.SkipAnswer)
+      // TODO: Implement retry
     }
 
     // End of call

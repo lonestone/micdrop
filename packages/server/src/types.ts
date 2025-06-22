@@ -20,7 +20,6 @@ export interface CallConfig {
   systemPrompt: string
   firstMessage?: string
   debugLog?: boolean
-  disableTTS?: boolean
   generateAnswer(
     conversation: Conversation
   ): Promise<string | ConversationMessage>

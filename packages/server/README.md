@@ -137,9 +137,6 @@ interface CallConfig {
   // Enable debug logging with timestamps
   debugLog?: boolean
 
-  // Disable text-to-speech conversion
-  disableTTS?: boolean
-
   // Generate assistant's response
   generateAnswer(
     conversation: Conversation
@@ -283,7 +280,7 @@ The server includes a debug mode that can:
 - Track conversation state
 - Monitor WebSocket events
 
-See `debugLog` and `disableTTS` options in [CallConfig](#callconfig).
+See `debugLog` option in [CallConfig](#callconfig).
 
 ## Browser Support
 
