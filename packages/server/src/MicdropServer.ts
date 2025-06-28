@@ -282,7 +282,7 @@ export class MicdropServer extends Logger {
       const textStream = new PassThrough()
       textStream.write(message.content)
       textStream.end()
-      const audio = this.config.text2Speech.speech(textStream)
+      const audio = this.config.text2Speech.speak(textStream)
 
       // Send audio to client
       await this.sendAudio(audio, processing, onAbort)

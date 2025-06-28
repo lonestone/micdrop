@@ -15,9 +15,7 @@
   "dependencies": {
     "@fastify/websocket": "^11.0.2",
     "dotenv": "^16.4.7",
-    "elevenlabs": "^1.56.0",
     "fastify": "^5.2.1",
-    "openai": "^4.85.3",
     "zod": "^3.24.2"
   },
   "devDependencies": {

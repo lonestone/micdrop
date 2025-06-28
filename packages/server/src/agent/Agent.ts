@@ -2,11 +2,11 @@ import { Readable } from 'stream'
 import { Logger } from '../Logger'
 import { MicdropServer } from '../MicdropServer'
 
-export abstract class TTS extends Logger {
-  // May be used for context
+export abstract class Agent extends Logger {
+  // Used for context
   public call?: MicdropServer
 
-  abstract speak(textStream: Readable): Readable
+  abstract answer(text: string): Readable
   abstract cancel(): void
 
   destroy() {

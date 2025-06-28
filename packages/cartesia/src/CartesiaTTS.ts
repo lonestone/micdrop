@@ -1,8 +1,8 @@
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
+import { TTS } from '@micdrop/server'
 import ffmpeg from 'fluent-ffmpeg'
-import { Duplex, PassThrough, Readable } from 'stream'
+import { PassThrough, Readable } from 'stream'
 import WebSocket from 'ws'
-import { TTS } from '../TTS'
 import {
   CartesiaCancelPayload,
   CartesiaLanguage,
@@ -22,8 +22,9 @@ export class CartesiaTTS extends TTS {
   private socket?: WebSocket
   private initPromise: Promise<void>
   private counter = 0
-  private audioStream?: Duplex
+  private audioStream?: PassThrough
   private canceled = false
+  private reconnectTimeout?: NodeJS.Timeout
 
   constructor(private readonly options: CartesiaTTSOptions) {
     super()
@@ -35,7 +36,7 @@ export class CartesiaTTS extends TTS {
     ffmpeg.setFfmpegPath(ffmpegInstaller.path)
   }
 
-  speech(textStream: Readable) {
+  speak(textStream: Readable) {
     this.counter++
     this.canceled = false
     const context_id = this.counter.toString()
@@ -57,6 +58,7 @@ export class CartesiaTTS extends TTS {
     } as const
 
     textStream.on('data', async (chunk) => {
+      if (this.canceled) return
       await this.initPromise
       const transcript = chunk.toString('utf-8')
       this.socket?.send(
@@ -87,6 +89,9 @@ export class CartesiaTTS extends TTS {
 
   cancel() {
     this.canceled = true
+    if (this.audioStream?.writable) {
+      this.audioStream.end()
+    }
     this.audioStream = undefined
 
     // Signal Cartesia to stop sending data
@@ -102,6 +107,10 @@ export class CartesiaTTS extends TTS {
 
   destroy() {
     super.destroy()
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+      this.reconnectTimeout = undefined
+    }
     this.socket?.removeAllListeners()
     this.socket?.close(1000)
     this.socket = undefined
@@ -117,14 +126,11 @@ export class CartesiaTTS extends TTS {
       this.socket = socket
 
       socket.addEventListener('open', () => {
-        // Connection is opened. You can start sending audio chunks.
         this.log('Connection opened')
         resolve()
       })
 
       socket.addEventListener('error', (error) => {
-        // An error occurred during the connection.
-        // Check the error to understand why
         this.log('Connection error', error)
         reject(error)
       })
@@ -135,10 +141,17 @@ export class CartesiaTTS extends TTS {
         // Otherwise, we can reconnect to the same url.
         this.log('Connection closed', { code, reason })
         this.socket?.removeAllListeners()
+        this.socket = undefined
+        if (this.audioStream?.writable) {
+          this.audioStream.end()
+        }
+        this.audioStream = undefined
+
         if (code !== 1000) {
           this.log('Reconnecting...')
-          setTimeout(() => {
+          this.reconnectTimeout = setTimeout(() => {
             this.initPromise = this.initWS()
+            this.reconnectTimeout = undefined
           }, 1000)
         }
       })

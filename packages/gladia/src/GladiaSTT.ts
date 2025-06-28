@@ -1,7 +1,6 @@
+import { DeepPartial, PcmSTT } from '@micdrop/server'
 import { Readable } from 'stream'
 import WebSocket from 'ws'
-import { DeepPartial } from '../../types'
-import { PcmSTT } from '../PcmSTT'
 import { GladiaLiveSessionPayload } from './types'
 
 /**
@@ -18,6 +17,7 @@ export interface GladiaSTTOptions {
 export class GladiaSTT extends PcmSTT {
   private socket?: WebSocket
   private initPromise: Promise<void>
+  private reconnectTimeout?: NodeJS.Timeout
 
   constructor(private options: GladiaSTTOptions) {
     super()
@@ -40,6 +40,10 @@ export class GladiaSTT extends PcmSTT {
 
   destroy() {
     super.destroy()
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+      this.reconnectTimeout = undefined
+    }
     this.socket?.removeAllListeners()
     this.socket?.close(1000)
     this.socket = undefined
@@ -108,8 +112,9 @@ export class GladiaSTT extends PcmSTT {
         this.socket?.removeAllListeners()
         if (code !== 1000) {
           this.log('Reconnecting...')
-          setTimeout(() => {
+          this.reconnectTimeout = setTimeout(() => {
             this.initPromise = this.getURL().then((url) => this.initWS(url))
+            this.reconnectTimeout = undefined
           }, 1000)
         }
       })

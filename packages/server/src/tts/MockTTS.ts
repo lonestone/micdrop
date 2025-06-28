@@ -1,6 +1,6 @@
+import { TTS } from '@micdrop/server'
 import * as fs from 'fs'
 import { PassThrough, Readable } from 'stream'
-import { TTS } from '../TTS'
 
 export class MockTTS extends TTS {
   private sampleBuffer: Buffer
@@ -14,7 +14,7 @@ export class MockTTS extends TTS {
     }
   }
 
-  speech(textStream: Readable) {
+  speak(textStream: Readable) {
     const audioStream = new PassThrough()
     textStream.once('data', (chunk) => {
       audioStream.write(this.sampleBuffer)

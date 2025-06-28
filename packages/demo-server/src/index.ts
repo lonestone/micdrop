@@ -4,7 +4,7 @@ dotenv.config()
 
 import fastifyWebsocket from '@fastify/websocket'
 import fastify from 'fastify'
-import call from './call2'
+import call from './call'
 
 // Create fastify server
 const server = fastify({

@@ -1,6 +1,6 @@
+import { CartesiaTTS } from '@micdrop/cartesia'
+import { GladiaSTT } from '@micdrop/gladia'
 import {
-  CartesiaTTS,
-  GladiaSTT,
   handleError,
   MicdropError,
   MicdropErrorCode,

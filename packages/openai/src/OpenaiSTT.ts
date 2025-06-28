@@ -1,4 +1,4 @@
-import { FileSTT } from '../FileSTT'
+import { FileSTT } from '@micdrop/server'
 
 /**
  * OpenAI Whisper STT

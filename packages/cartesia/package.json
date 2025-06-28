@@ -1,7 +1,7 @@
 {
-  "name": "@micdrop/server",
-  "version": "1.7.1",
-  "description": "A lib for Node.js that helps to use the mic and speaker for voice conversation",
+  "name": "@micdrop/cartesia",
+  "version": "1.0.0",
+  "description": "Cartesia implementation for @micdrop/server",
   "author": "Lonestone",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lonestone/micdrop.git",
-    "directory": "packages/server"
+    "directory": "packages/cartesia"
   },
   "publishConfig": {
     "access": "public"
@@ -30,12 +30,17 @@
     "audio",
     "browser",
     "voice",
-    "conversation"
+    "conversation",
+    "cartesia",
+    "tts"
   ],
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "fluent-ffmpeg": "^2.1.3",
     "ws": "^8.18.2"
+  },
+  "peerDependencies": {
+    "@micdrop/server": "*"
   },
   "devDependencies": {
     "@types/fluent-ffmpeg": "^2.1.27",

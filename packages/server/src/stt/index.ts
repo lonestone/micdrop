@@ -1,6 +1,3 @@
 export * from './FileSTT'
-export * from './gladia/GladiaSTT'
-export * from './mock/MockSTT'
-export * from './openai/OpenaiSTT'
 export * from './PcmSTT'
 export * from './STT'

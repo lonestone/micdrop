@@ -1,4 +1,4 @@
-import { FileSTT } from '../FileSTT'
+import { FileSTT } from '@micdrop/server'
 
 export class MockSTT extends FileSTT {
   private i = 0

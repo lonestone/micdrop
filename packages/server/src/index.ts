@@ -1,3 +1,4 @@
+export * from './agent'
 export * from './errors'
 export * from './MicdropServer'
 export * from './stt'

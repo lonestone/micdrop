@@ -54,11 +54,11 @@ export default function CallControls() {
 
       {call.isMicStarted && (
         <button
-          className="inline-flex items-center px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          className="inline-flex items-center px-4 py-[6px] border-2 border-red-500 text-red-500 rounded hover:bg-red-50"
           onClick={call.stop}
         >
           <FaStop size={18} className="mr-2" />
-          Stop
+          {call.isStarted ? 'Stop call' : 'Stop mic'}
         </button>
       )}
 
