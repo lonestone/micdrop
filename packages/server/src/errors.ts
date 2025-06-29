@@ -20,7 +20,7 @@ export function handleError(socket: WebSocket, error: unknown) {
     socket.close(error.code, error.message)
   } else {
     console.error(error)
-    socket.close(1011)
+    socket.close(1011, error instanceof Error ? error.message : undefined)
   }
   socket.terminate()
 }

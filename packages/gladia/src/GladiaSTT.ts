@@ -110,6 +110,8 @@ export class GladiaSTT extends PcmSTT {
         // Otherwise, we can reconnect to the same url.
         this.log('Connection closed', { code, reason })
         this.socket?.removeAllListeners()
+        this.socket = undefined
+
         if (code !== 1000) {
           this.log('Reconnecting...')
           this.reconnectTimeout = setTimeout(() => {

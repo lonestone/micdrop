@@ -1,4 +1,5 @@
 import {
+  getClientErrorFromWSCloseEvent,
   MicdropClientCommands,
   MicdropConversation,
   MicdropConversationMessage,
@@ -128,6 +129,7 @@ export class MicdropClient<
     this.startTime = Date.now()
     this.conversation = []
     this._isProcessing = true
+    this._isPaused = false
 
     // Start mic if not already started
     await this.startMic(undefined, true)
@@ -137,6 +139,8 @@ export class MicdropClient<
   }
 
   async stop() {
+    this._isProcessing = false
+    this._isPaused = false
     try {
       // Stop websocket
       this.stopWS()
@@ -318,18 +322,9 @@ export class MicdropClient<
       this.log('[WS] Closed', event)
       this.stop()
 
-      if (event.code >= 1001 && event.code <= 1011 && event.code !== 1005) {
-        // Internal server error
-        this.emit('Error', new MicdropClientError())
-      } else if (event.code === 4401) {
-        // Unauthorized
-        this.emit(
-          'Error',
-          new MicdropClientError(MicdropClientErrorCode.Unauthorized)
-        )
-      } else if (event.code >= 4000) {
-        // Custom error
-        this.emit('Error', new MicdropClientError())
+      const error = getClientErrorFromWSCloseEvent(event)
+      if (error) {
+        this.emit('Error', error)
       }
     }
     this.ws.onerror = (event) => {

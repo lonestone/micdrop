@@ -132,6 +132,9 @@ export class MicdropServer extends Logger {
     // Destroy STT
     this.config.speech2Text.destroy()
 
+    // Destroy TTS
+    this.config.text2Speech.destroy()
+
     // End call callback
     this.config.onEnd?.({
       conversation: this.conversation.slice(1), // Remove system message

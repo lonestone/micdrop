@@ -1,58 +1,50 @@
-import {
-  TextToSpeechStreamRequestOutputFormat,
-  VoiceSettings,
-} from '@elevenlabs/elevenlabs-js/api'
 import { TTS } from '@micdrop/server'
 import { PassThrough, Readable } from 'stream'
 import WebSocket from 'ws'
-import { ElevenLabsWebSocketMessage } from './types'
+import {
+  DEFAULT_MODEL_ID,
+  DEFAULT_OUTPUT_FORMAT,
+  ElevenLabsTTSOptions,
+  ElevenLabsWebSocketMessage,
+} from './types'
 
 // API Reference: https://elevenlabs.io/docs/api-reference/text-to-speech/v-1-text-to-speech-voice-id-stream-input
 
-export interface ElevenLabsWebsocketTTSOptions {
-  apiKey: string
-  voiceId: string
-  modelId?: 'eleven_multilingual_v2' | 'eleven_turbo_v2_5' | 'eleven_flash_v2_5'
-  language?: string
-  outputFormat?: TextToSpeechStreamRequestOutputFormat
-  voiceSettings?: VoiceSettings
-}
-
-const DEFAULT_MODEL_ID = 'eleven_flash_v2_5'
-const DEFAULT_OUTPUT_FORMAT = 'mp3_44100_32'
+const WS_INACTIVITY_TIMEOUT = 180
 
 export class ElevenLabsWebsocketTTS extends TTS {
   private socket?: WebSocket
   private initPromise: Promise<void>
   private audioStream?: PassThrough
+  private keepAliveInterval?: NodeJS.Timeout
   private reconnectTimeout?: NodeJS.Timeout
   private canceled = false
-  public debugLog = true
 
-  constructor(private readonly options: ElevenLabsWebsocketTTSOptions) {
+  constructor(private readonly options: ElevenLabsTTSOptions) {
     super()
-    // Establish the initial WebSocket connection
+    this.debugLog = true
+    // Setup WebSocket connection
     this.initPromise = this.initWS()
   }
 
-  /**
-   * Initialise the persistent WebSocket connection to ElevenLabs.
-   * Handles automatic reconnection (with 1 s delay) when the server closes
-   * the connection unexpectedly.
-   */
   private initWS(): Promise<void> {
     return new Promise((resolve, reject) => {
       // Build query params
       const params = new URLSearchParams()
       params.append('model_id', this.options.modelId ?? DEFAULT_MODEL_ID)
-      if (this.options.language) {
-        params.append('language_code', this.options.language)
-      }
       params.append(
         'output_format',
         this.options.outputFormat ?? DEFAULT_OUTPUT_FORMAT
       )
       params.append('auto_mode', 'true')
+      params.append('inactivity_timeout', WS_INACTIVITY_TIMEOUT.toString())
+      params.append(
+        'voice_settings',
+        JSON.stringify(this.options.voiceSettings)
+      )
+      if (this.options.language) {
+        params.append('language_code', this.options.language)
+      }
 
       const uri = `wss://api.elevenlabs.io/v1/text-to-speech/${this.options.voiceId}/stream-input?${params.toString()}`
 
@@ -65,6 +57,7 @@ export class ElevenLabsWebsocketTTS extends TTS {
 
       socket.addEventListener('open', () => {
         this.log('Connection opened')
+
         // Send initialization / keep-alive message with voice settings
         this.socket?.send(
           JSON.stringify({
@@ -72,6 +65,15 @@ export class ElevenLabsWebsocketTTS extends TTS {
             voice_settings: this.options.voiceSettings,
           })
         )
+
+        // Start keep-alive interval
+        this.keepAliveInterval = setInterval(
+          () => {
+            this.socket?.send(JSON.stringify({ text: ' ' }))
+          },
+          (WS_INACTIVITY_TIMEOUT - 1) * 1000
+        )
+
         resolve()
       })
 
@@ -81,22 +83,22 @@ export class ElevenLabsWebsocketTTS extends TTS {
       })
 
       socket.addEventListener('message', (event) => {
+        if (this.canceled) return
         try {
           const message: ElevenLabsWebSocketMessage = JSON.parse(
             event.data.toString()
           )
           this.log('Message', message)
 
-          if (this.audioStream?.writable && !this.canceled && message.audio) {
-            this.audioStream.write(Buffer.from(message.audio, 'base64'))
+          if (message.audio) {
+            this.audioStream?.write(Buffer.from(message.audio, 'base64'))
           }
-
-          if (message.isFinal && this.audioStream && !this.canceled) {
-            this.audioStream.end()
+          if (message.isFinal) {
+            this.audioStream?.end()
             this.audioStream = undefined
           }
         } catch {
-          // ignore non-JSON messages
+          console.error('Error parsing message', event.data)
         }
       })
 
@@ -105,12 +107,17 @@ export class ElevenLabsWebsocketTTS extends TTS {
         // If the "code" is equal to 1000, it means we closed intentionally the connection (after the end of the session for example).
         // Otherwise, we can reconnect to the same url.
         this.log('Connection closed', { code, reason })
+
         this.socket?.removeAllListeners()
         this.socket = undefined
-        if (this.audioStream?.writable) {
-          this.audioStream.end()
-        }
+
+        this.audioStream?.end()
         this.audioStream = undefined
+
+        if (this.keepAliveInterval) {
+          clearInterval(this.keepAliveInterval)
+          this.keepAliveInterval = undefined
+        }
 
         if (code !== 1000) {
           this.log('Reconnecting...')
@@ -123,11 +130,6 @@ export class ElevenLabsWebsocketTTS extends TTS {
     })
   }
 
-  /**
-   * Convert a Node Readable of utf-8 strings into an MP3 audio Readable by
-   * streaming the text to ElevenLabs over WebSocket and piping every received
-   * base-64 audio chunk back to the caller.
-   */
   speak(textStream: Readable) {
     this.canceled = false
 
@@ -144,44 +146,34 @@ export class ElevenLabsWebsocketTTS extends TTS {
       this.log(`Sent transcript: ${transcript}`)
     })
 
-    textStream.on('end', () => {
-      if (!this.canceled) {
-        // Flush buffered text and mark end of utterance.
-        this.socket?.send(JSON.stringify({ text: ' ', flush: true }))
-        this.log('Flushed text')
-      }
+    textStream.on('end', async () => {
+      if (this.canceled) return
+      await this.initPromise
+      // Flush buffered text and mark end of utterance.
+      this.socket?.send(JSON.stringify({ text: ' ', flush: true }))
+      this.log('Flushed text')
     })
 
     return audioStream
   }
 
-  /**
-   * Cancel the current synthesis by closing the WebSocket connection.
-   */
   cancel() {
     this.canceled = true
-    if (this.audioStream?.writable) {
-      this.audioStream.end()
-    }
+    this.audioStream?.end()
     this.audioStream = undefined
   }
 
-  /**
-   * Destroy the TTS instance and close the WebSocket permanently.
-   */
   destroy() {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout)
       this.reconnectTimeout = undefined
     }
-    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      try {
-        this.socket.close(1000)
-      } catch {
-        /* ignore */
-      }
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval)
+      this.keepAliveInterval = undefined
     }
     this.socket?.removeAllListeners()
+    this.socket?.close(1000)
     this.socket = undefined
 
     if (this.audioStream) {

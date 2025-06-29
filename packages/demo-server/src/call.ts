@@ -53,12 +53,6 @@ export default async (app: FastifyInstance) => {
         )
       }
 
-      const text2Speech = new ElevenLabsWebsocketTTS({
-        apiKey: process.env.ELEVENLABS_API_KEY || '',
-        voiceId: process.env.ELEVENLABS_VOICE_ID || '',
-      })
-      text2Speech.debugLog = true
-
       // Start call
       new MicdropServer(socket, {
         systemPrompt,
@@ -73,7 +67,10 @@ export default async (app: FastifyInstance) => {
         }),
 
         // TTS: Text to speech
-        text2Speech,
+        text2Speech: new ElevenLabsWebsocketTTS({
+          apiKey: process.env.ELEVENLABS_API_KEY || '',
+          voiceId: process.env.ELEVENLABS_VOICE_ID || '',
+        }),
 
         // Enable debug logging
         debugLog: true,

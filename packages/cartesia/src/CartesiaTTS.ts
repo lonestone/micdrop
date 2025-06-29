@@ -73,6 +73,7 @@ export class CartesiaTTS extends TTS {
     })
 
     textStream.on('end', async () => {
+      if (this.canceled) return
       await this.initPromise
       this.socket?.send(
         JSON.stringify({
@@ -89,9 +90,7 @@ export class CartesiaTTS extends TTS {
 
   cancel() {
     this.canceled = true
-    if (this.audioStream?.writable) {
-      this.audioStream.end()
-    }
+    this.audioStream?.end()
     this.audioStream = undefined
 
     // Signal Cartesia to stop sending data
@@ -142,9 +141,7 @@ export class CartesiaTTS extends TTS {
         this.log('Connection closed', { code, reason })
         this.socket?.removeAllListeners()
         this.socket = undefined
-        if (this.audioStream?.writable) {
-          this.audioStream.end()
-        }
+        this.audioStream?.end()
         this.audioStream = undefined
 
         if (code !== 1000) {
@@ -157,20 +154,21 @@ export class CartesiaTTS extends TTS {
       })
 
       socket.addEventListener('message', (event) => {
-        // All the messages we are sending are in JSON format
-        const message: CartesiaResponse = JSON.parse(event.data.toString())
-        this.log('Message', message)
-        switch (message.type) {
-          case 'chunk':
-            if (this.audioStream?.writable && !this.canceled) {
-              this.audioStream.write(Buffer.from(message.data, 'base64'))
-            }
-            break
-          case 'done':
-            if (this.audioStream?.writable) {
-              this.audioStream.end()
-            }
-            break
+        if (this.canceled) return
+        try {
+          const message: CartesiaResponse = JSON.parse(event.data.toString())
+          this.log('Message', message)
+          switch (message.type) {
+            case 'chunk':
+              this.audioStream?.write(Buffer.from(message.data, 'base64'))
+              break
+            case 'done':
+              this.audioStream?.end()
+              this.audioStream = undefined
+              break
+          }
+        } catch {
+          console.error('Error parsing message', event.data)
         }
       })
     })
