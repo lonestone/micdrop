@@ -69,6 +69,7 @@ export class ElevenLabsWebsocketTTS extends TTS {
         // Start keep-alive interval
         this.keepAliveInterval = setInterval(
           () => {
+            this.log('Sending keep-alive message')
             this.socket?.send(JSON.stringify({ text: ' ' }))
           },
           (WS_INACTIVITY_TIMEOUT - 1) * 1000
@@ -120,19 +121,26 @@ export class ElevenLabsWebsocketTTS extends TTS {
         }
 
         if (code !== 1000) {
-          this.log('Reconnecting...')
-          this.reconnectTimeout = setTimeout(() => {
-            this.initPromise = this.initWS()
-            this.reconnectTimeout = undefined
-          }, 1000)
+          this.reconnect()
         }
       })
+    })
+  }
+
+  private reconnect() {
+    this.initPromise = new Promise((resolve, reject) => {
+      this.log('Reconnecting...')
+      this.reconnectTimeout = setTimeout(() => {
+        this.reconnectTimeout = undefined
+        this.initWS().then(resolve).catch(reject)
+      }, 1000)
     })
   }
 
   speak(textStream: Readable) {
     this.canceled = false
 
+    this.audioStream?.end()
     const audioStream = new PassThrough()
     this.audioStream = audioStream
 
@@ -150,8 +158,8 @@ export class ElevenLabsWebsocketTTS extends TTS {
       if (this.canceled) return
       await this.initPromise
       // Flush buffered text and mark end of utterance.
-      this.socket?.send(JSON.stringify({ text: ' ', flush: true }))
-      this.log('Flushed text')
+      // this.socket?.send(JSON.stringify({ text: ' ', flush: true }))
+      // this.log('Flushed text')
     })
 
     return audioStream

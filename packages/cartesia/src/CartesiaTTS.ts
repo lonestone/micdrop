@@ -40,6 +40,7 @@ export class CartesiaTTS extends TTS {
     this.counter++
     this.canceled = false
     const context_id = this.counter.toString()
+    this.audioStream?.end()
     this.audioStream = new PassThrough()
 
     const config = {
@@ -145,11 +146,7 @@ export class CartesiaTTS extends TTS {
         this.audioStream = undefined
 
         if (code !== 1000) {
-          this.log('Reconnecting...')
-          this.reconnectTimeout = setTimeout(() => {
-            this.initPromise = this.initWS()
-            this.reconnectTimeout = undefined
-          }, 1000)
+          this.reconnect()
         }
       })
 
@@ -171,6 +168,16 @@ export class CartesiaTTS extends TTS {
           console.error('Error parsing message', event.data)
         }
       })
+    })
+  }
+
+  private reconnect() {
+    this.initPromise = new Promise((resolve, reject) => {
+      this.log('Reconnecting...')
+      this.reconnectTimeout = setTimeout(() => {
+        this.reconnectTimeout = undefined
+        this.initWS().then(resolve).catch(reject)
+      }, 1000)
     })
   }
 

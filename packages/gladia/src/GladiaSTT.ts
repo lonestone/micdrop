@@ -113,11 +113,7 @@ export class GladiaSTT extends PcmSTT {
         this.socket = undefined
 
         if (code !== 1000) {
-          this.log('Reconnecting...')
-          this.reconnectTimeout = setTimeout(() => {
-            this.initPromise = this.getURL().then((url) => this.initWS(url))
-            this.reconnectTimeout = undefined
-          }, 1000)
+          this.reconnect()
         }
       })
 
@@ -129,6 +125,19 @@ export class GladiaSTT extends PcmSTT {
           this.onTranscript?.(message.data.utterance.text)
         }
       })
+    })
+  }
+
+  private reconnect() {
+    this.initPromise = new Promise((resolve, reject) => {
+      this.log('Reconnecting...')
+      this.reconnectTimeout = setTimeout(() => {
+        this.reconnectTimeout = undefined
+        this.getURL()
+          .then((url) => this.initWS(url))
+          .then(resolve)
+          .catch(reject)
+      }, 1000)
     })
   }
 
