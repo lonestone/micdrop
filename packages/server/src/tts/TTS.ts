@@ -1,16 +1,17 @@
 import { Readable } from 'stream'
 import { Logger } from '../Logger'
-import { MicdropServer } from '../MicdropServer'
 
-export abstract class TTS extends Logger {
-  // May be used for context
-  public call?: MicdropServer
+export abstract class TTS {
+  public logger?: Logger
 
   abstract speak(textStream: Readable): Readable
   abstract cancel(): void
 
+  protected log(...message: any[]) {
+    this.logger?.log(...message)
+  }
+
   destroy() {
     this.log('Destroying...')
-    this.call = undefined
   }
 }

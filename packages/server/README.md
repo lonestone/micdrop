@@ -116,9 +116,6 @@ class MicdropServer {
 
   // Add assistant message and send to client with audio (TTS)
   answer(message: string): Promise<void>
-
-  // Reset conversation (including system prompt)
-  resetConversation(conversation: MicdropConversation): void
 }
 ```
 

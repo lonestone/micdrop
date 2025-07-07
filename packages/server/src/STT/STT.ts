@@ -1,6 +1,6 @@
+import EventEmitter from 'eventemitter3'
 import { Readable } from 'stream'
 import { Logger } from '../Logger'
-import { MicdropServer } from '../MicdropServer'
 
 // Audio mime type to extension map
 const MIME_TYPE_TO_EXTENSION = {
@@ -12,14 +12,13 @@ const MIME_TYPE_TO_EXTENSION = {
   'audio/flac': 'flac',
 } as const
 
-export abstract class STT extends Logger {
-  // Callback to notify transcript when ready
-  public onTranscript?: (transcript: string) => void
+export interface STTEvents {
+  Transcript: [string]
+}
 
-  // May be used for context
-  public call?: MicdropServer
-
+export abstract class STT extends EventEmitter<STTEvents> {
   protected mimeType?: keyof typeof MIME_TYPE_TO_EXTENSION
+  public logger?: Logger
 
   // Set stream of audio to transcribe
   transcribe(audioStream: Readable) {
@@ -29,10 +28,13 @@ export abstract class STT extends Logger {
     })
   }
 
+  protected log(...message: any[]) {
+    this.logger?.log(...message)
+  }
+
   destroy() {
     this.log('Destroying...')
-    this.onTranscript = undefined
-    this.call = undefined
+    this.removeAllListeners()
   }
 
   protected get extension(): string {

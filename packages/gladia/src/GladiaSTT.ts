@@ -122,7 +122,7 @@ export class GladiaSTT extends PcmSTT {
         const message = JSON.parse(event.data.toString())
         this.log('Message', message)
         if (message.type === 'transcript' && message.data.is_final) {
-          this.onTranscript?.(message.data.utterance.text)
+          this.emit('Transcript', message.data.utterance.text)
         }
       })
     })

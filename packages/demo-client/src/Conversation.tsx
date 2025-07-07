@@ -24,7 +24,7 @@ export default function Conversation({ className }: Props) {
               role === 'assistant'
                 ? 'bg-green-100 ml-0 mr-auto rounded-bl-none'
                 : role === 'user'
-                  ? 'bg-gray-100 ml-auto mr-0 rounded-br-none'
+                  ? 'bg-white ml-auto mr-0 rounded-br-none'
                   : 'bg-gray-50 mx-auto'
             }`}
           >

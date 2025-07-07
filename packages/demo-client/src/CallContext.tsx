@@ -3,7 +3,7 @@ import {
   MicdropClientError,
   MicdropConversation,
 } from '@micdrop/client'
-import type { CallParams } from '@micdrop/demo-server/src/call'
+import type { CallParams } from '@micdrop/demo-server/src/params'
 import React, { createContext, useCallback, useEffect, useState } from 'react'
 
 export interface CallContextValue {
@@ -49,6 +49,7 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     call.url = 'ws://localhost:8081/call'
     call.params = {
       authorization: '1234',
+      lang: navigator.language,
     }
     call.debug = true
     call.start()

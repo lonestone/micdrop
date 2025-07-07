@@ -1,10 +1,9 @@
-import { Duplex, PassThrough } from 'stream'
+import { Duplex, PassThrough, Readable } from 'stream'
 import { WebSocket } from 'ws'
 import { Logger } from './Logger'
 import {
   MicdropClientCommands,
   MicdropConfig,
-  MicdropConversation,
   MicdropConversationMessage,
   MicdropServerCommands,
 } from './types'
@@ -13,12 +12,10 @@ interface Processing {
   aborted: boolean
 }
 
-export class MicdropServer extends Logger {
+export class MicdropServer {
   public socket: WebSocket | null = null
   public config: MicdropConfig | null = null
-
-  // Conversation history
-  public conversation: MicdropConversation
+  public logger?: Logger
 
   private startTime = Date.now()
 
@@ -32,32 +29,39 @@ export class MicdropServer extends Logger {
   private speakerStreamingEnabled = false
 
   constructor(socket: WebSocket, config: MicdropConfig) {
-    super()
     this.socket = socket
     this.config = config
-    this.conversation = [{ role: 'system', content: config.systemPrompt }]
-    this.debugLog = config.debugLog
     this.log(`Call started`)
 
     // Setup STT
-    this.config.speech2Text.call = this
-    this.config.speech2Text.onTranscript = this.onTranscript.bind(this)
+    this.config.stt.on('Transcript', this.onTranscript.bind(this))
 
-    // Setup TTS
-    this.config.text2Speech.call = this
+    // Setup agent
+    this.config.agent.on('Message', (message) =>
+      this.socket?.send(
+        `${MicdropServerCommands.Message} ${JSON.stringify(message)}`
+      )
+    )
+    this.config.agent.on('CancelLastUserMessage', () =>
+      this.socket?.send(MicdropServerCommands.CancelLastUserMessage)
+    )
+    this.config.agent.on('CancelLastAssistantMessage', () =>
+      this.socket?.send(MicdropServerCommands.CancelLastAssistantMessage)
+    )
+    this.config.agent.on('SkipAnswer', () =>
+      this.socket?.send(MicdropServerCommands.SkipAnswer)
+    )
+    this.config.agent.on('EndCall', () =>
+      this.socket?.send(MicdropServerCommands.EndCall)
+    )
 
     // Assistant speaks first
     if (config.firstMessage) {
-      this.answer(config.firstMessage)
-    } else {
-      this.config
-        .generateAnswer(this.conversation)
-        .then((answer) => this.answer(answer))
-        .catch((error) => {
-          console.error('[MicdropServer]', error)
-          socket?.close()
-          // TODO: Implement retry
-        })
+      this.config.agent.addAssistantMessage(config.firstMessage)
+      this.speak(config.firstMessage)
+    } else if (config.generateFirstMessage) {
+      const answerStream = this.config.agent.answer()
+      this.speak(answerStream)
     }
 
     // Listen to events
@@ -65,34 +69,47 @@ export class MicdropServer extends Logger {
     socket.on('message', this.onMessage.bind(this))
   }
 
-  // Reset conversation
-  public resetConversation(conversation: MicdropConversation) {
-    this.log('Reset conversation')
-    this.conversation = conversation
+  private log(...message: any[]) {
+    this.logger?.log(...message)
+  }
+
+  private createProcessing(): Processing {
+    if (this.processing) {
+      this.abortProcessing()
+    }
+    this.processing = { aborted: false }
+    return this.processing
   }
 
   private abortProcessing() {
     if (!this.processing) return
-    this.processing.aborted = true
+    if (!this.processing.aborted) {
+      this.config?.tts.cancel()
+      this.config?.agent.cancel()
+      this.processing.aborted = true
+    }
     this.processing = undefined
-    this.config?.text2Speech.cancel()
   }
 
-  private addMessage(message: MicdropConversationMessage) {
+  private sendMessage(message: MicdropConversationMessage) {
     if (!this.socket || !this.config) return
-    this.conversation.push(message)
     this.socket.send(
       `${MicdropServerCommands.Message} ${JSON.stringify(message)}`
     )
-    this.config.onMessage?.(message)
   }
 
   private async sendAudio(
-    audio: ArrayBuffer | NodeJS.ReadableStream,
-    processing: Processing,
-    onAbort?: () => void
+    audio: ArrayBuffer | Readable,
+    processing: Processing
   ) {
     if (!this.socket) return
+
+    // Remove last assistant message if aborted
+    const onAbort = () => {
+      this.log('Answer aborted, stop TTS')
+      this.config?.tts.cancel()
+    }
+
     if (processing.aborted) {
       onAbort?.()
       return
@@ -129,15 +146,14 @@ export class MicdropServer extends Logger {
     this.abortProcessing()
     const duration = Math.round((Date.now() - this.startTime) / 1000)
 
-    // Destroy STT
-    this.config.speech2Text.destroy()
-
-    // Destroy TTS
-    this.config.text2Speech.destroy()
+    // Destroy instances
+    this.config.agent.destroy()
+    this.config.stt.destroy()
+    this.config.tts.destroy()
 
     // End call callback
     this.config.onEnd?.({
-      conversation: this.conversation.slice(1), // Remove system message
+      conversation: this.config.agent.conversation.slice(1), // Remove system message
       duration,
     })
 
@@ -186,7 +202,7 @@ export class MicdropServer extends Logger {
     if (!this.config) return
     this.currentUserStream?.end()
     this.currentUserStream = new PassThrough()
-    this.config.speech2Text.transcribe(this.currentUserStream)
+    this.config.stt.transcribe(this.currentUserStream)
     this.abortProcessing()
   }
 
@@ -198,107 +214,55 @@ export class MicdropServer extends Logger {
 
   private async onTranscript(transcript: string) {
     if (!this.config) return
-    this.abortProcessing()
-    const processing = (this.processing = { aborted: false })
+    const processing = this.createProcessing()
     this.log('User transcript:', transcript)
 
     try {
-      // Send transcript to client
-      this.addMessage({ role: 'user', content: transcript })
-
-      if (processing.aborted) {
-        this.log('Answer aborted, no answer generated')
-        return
-      }
+      // Add user message to conversation
+      this.config.agent.addUserMessage(transcript)
 
       // LLM: Generate answer
-      const answer = await this.config.generateAnswer(this.conversation)
+      const answerStream = this.config.agent.answer()
       if (processing.aborted) {
         this.log('Answer aborted, ignoring answer')
         return
       }
 
-      await this.answer(answer, processing)
+      await this.speak(answerStream, processing)
     } catch (error) {
       console.error('[MicdropServer]', error)
       this.socket?.send(MicdropServerCommands.SkipAnswer)
-      // TODO: Implement retry
     }
   }
 
-  // Add assistant message and send to client with audio (TTS)
-  public async answer(
-    message: string | MicdropConversationMessage,
-    processing?: Processing
-  ) {
+  // Run text-to-speech and send to client
+  private async speak(message: string | Readable, processing?: Processing) {
     if (!this.socket || !this.config) return
-
     if (!processing) {
-      this.abortProcessing()
-      processing = this.processing = { aborted: false }
+      processing = this.createProcessing()
     }
-
-    if (typeof message === 'string') {
-      message = { role: 'assistant', content: message }
-    }
-
-    // Cancel last user message
-    if (message.commands?.cancelLastUserMessage) {
-      this.log('Cancelling last user message')
-      const lastMessage = this.conversation[this.conversation.length - 1]
-      if (lastMessage?.role === 'user') {
-        this.conversation.pop()
-        this.socket?.send(MicdropServerCommands.CancelLastUserMessage)
-      }
-      return
-    }
-
-    // Skip answer
-    if (!message.content.length || message.commands?.skipAnswer) {
-      this.log('Skipping answer')
-      this.socket?.send(MicdropServerCommands.SkipAnswer)
-      return
-    }
-
-    // Send answer to client
-    this.log('Assistant message:', message)
-    this.addMessage(message)
 
     // TTS: Generate answer audio
     try {
-      // Remove last assistant message if aborted
-      const onAbort = () => {
-        this.log('Answer aborted, removing last assistant message')
-        this.config?.text2Speech.cancel()
-        const lastMessage = this.conversation[this.conversation.length - 1]
-        if (lastMessage?.role === 'assistant') {
-          this.conversation.pop()
-          this.socket?.send(MicdropServerCommands.CancelLastAssistantMessage)
-        }
+      // Convert message to stream if needed
+      let textStream: Readable
+      if (typeof message === 'string') {
+        const stream = new PassThrough()
+        stream.write(message)
+        stream.end()
+        textStream = stream
+      } else {
+        textStream = message
       }
 
-      if (processing.aborted) {
-        onAbort()
-        return
-      }
-
-      const textStream = new PassThrough()
-      textStream.write(message.content)
-      textStream.end()
-      const audio = this.config.text2Speech.speak(textStream)
+      // Run TTS
+      const audio = this.config.tts.speak(textStream)
 
       // Send audio to client
-      await this.sendAudio(audio, processing, onAbort)
+      await this.sendAudio(audio, processing)
     } catch (error) {
       console.error('[MicdropServer]', error)
       this.socket?.send(MicdropServerCommands.SkipAnswer)
-      // TODO: Implement retry
-    }
-
-    // End of call
-    if (message.commands?.endCall) {
-      this.log('Call ended')
-      this.socket.send(MicdropServerCommands.EndCall)
     }
   }
 }

@@ -1,7 +1,7 @@
 {
-  "name": "@micdrop/openai",
+  "name": "@micdrop/mistral",
   "version": "1.0.0",
-  "description": "OpenAI implementation for @micdrop/server",
+  "description": "Mistral implementation for @micdrop/server",
   "author": "Lonestone",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lonestone/micdrop.git",
-    "directory": "packages/openai"
+    "directory": "packages/mistral"
   },
   "publishConfig": {
     "access": "public"
@@ -31,10 +31,11 @@
     "browser",
     "voice",
     "conversation",
-    "openai"
+    "mistral",
+    "tts"
   ],
   "dependencies": {
-    "openai": "^5.8.2"
+    "@mistralai/mistralai": "^1.7.3"
   },
   "peerDependencies": {
     "@micdrop/server": "*"

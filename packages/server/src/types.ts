@@ -1,3 +1,4 @@
+import type { Agent } from './agent'
 import type { STT } from './stt'
 import type { TTS } from './tts'
 
@@ -17,15 +18,11 @@ export enum MicdropServerCommands {
 }
 
 export interface MicdropConfig {
-  systemPrompt: string
   firstMessage?: string
-  debugLog?: boolean
-  generateAnswer(
-    conversation: MicdropConversation
-  ): Promise<string | MicdropConversationMessage>
-  speech2Text: STT
-  text2Speech: TTS
-  onMessage?(message: MicdropConversationMessage): void
+  generateFirstMessage?: boolean
+  agent: Agent
+  stt: STT
+  tts: TTS
   onEnd?(call: MicdropCallSummary): void
 }
 

@@ -29,7 +29,7 @@ export abstract class FileSTT extends STT {
       // Transcribe file with implementation
       this.log('Transcribing file...')
       const transcript = await this.transcribeFile(file)
-      this.onTranscript?.(transcript)
+      this.emit('Transcript', transcript)
     })
   }
 }

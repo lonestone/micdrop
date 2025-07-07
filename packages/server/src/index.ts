@@ -1,5 +1,6 @@
 export * from './agent'
 export * from './errors'
+export * from './Logger'
 export * from './MicdropServer'
 export * from './stt'
 export * from './tts'

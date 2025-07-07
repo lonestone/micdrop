@@ -6,6 +6,8 @@ import fastifyWebsocket from '@fastify/websocket'
 import fastify from 'fastify'
 import call from './call'
 
+const PORT = process.env.PORT || 8081
+
 // Create fastify server
 const server = fastify({
   logger: true,
@@ -24,7 +26,8 @@ server.register(call)
 
 async function start() {
   try {
-    await server.listen({ port: 8081, host: '0.0.0.0' })
+    await server.listen({ port: Number(PORT), host: '0.0.0.0' })
+    console.log(`Server is running on port ${PORT}`)
   } catch (err) {
     server.log.error(err)
     process.exit(1)

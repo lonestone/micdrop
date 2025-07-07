@@ -22,7 +22,6 @@ export class ElevenLabsWebsocketTTS extends TTS {
 
   constructor(private readonly options: ElevenLabsTTSOptions) {
     super()
-    this.debugLog = true
     // Setup WebSocket connection
     this.initPromise = this.initWS()
   }
@@ -36,7 +35,6 @@ export class ElevenLabsWebsocketTTS extends TTS {
         'output_format',
         this.options.outputFormat ?? DEFAULT_OUTPUT_FORMAT
       )
-      params.append('auto_mode', 'true')
       params.append('inactivity_timeout', WS_INACTIVITY_TIMEOUT.toString())
       params.append(
         'voice_settings',
@@ -89,17 +87,21 @@ export class ElevenLabsWebsocketTTS extends TTS {
           const message: ElevenLabsWebSocketMessage = JSON.parse(
             event.data.toString()
           )
-          this.log('Message', message)
 
-          if (message.audio) {
+          if ('audio' in message && message.audio) {
+            this.log('Audio chunk received')
             this.audioStream?.write(Buffer.from(message.audio, 'base64'))
           }
-          if (message.isFinal) {
+          if ('isFinal' in message && message.isFinal) {
+            this.log('Audio finalized')
             this.audioStream?.end()
             this.audioStream = undefined
           }
+          if ('error' in message) {
+            console.error('ElevenLabs error', message.error)
+          }
         } catch {
-          console.error('Error parsing message', event.data)
+          console.error('ElevenLabs error parsing message', event.data)
         }
       })
 
@@ -120,7 +122,11 @@ export class ElevenLabsWebsocketTTS extends TTS {
           this.keepAliveInterval = undefined
         }
 
-        if (code !== 1000) {
+        if (
+          code !== 1000 &&
+          // Error: voice_id_does_not_exist
+          code !== 1008
+        ) {
           this.reconnect()
         }
       })
@@ -143,23 +149,23 @@ export class ElevenLabsWebsocketTTS extends TTS {
     this.audioStream?.end()
     const audioStream = new PassThrough()
     this.audioStream = audioStream
+    let buffer = ''
 
     // Forward text chunks coming from the caller to ElevenLabs
     textStream.on('data', async (chunk) => {
       if (this.canceled) return
       await this.initPromise
-      const transcript = chunk.toString('utf-8')
-      // Documentation says it should always end with a single space string.
-      this.socket?.send(JSON.stringify({ text: `${transcript} ` }))
-      this.log(`Sent transcript: ${transcript}`)
+      const text = chunk.toString('utf-8')
+      this.socket?.send(JSON.stringify({ text, try_trigger_generation: true }))
+      this.log(`Sent transcript: ${text}`)
     })
 
     textStream.on('end', async () => {
       if (this.canceled) return
       await this.initPromise
       // Flush buffered text and mark end of utterance.
-      // this.socket?.send(JSON.stringify({ text: ' ', flush: true }))
-      // this.log('Flushed text')
+      this.socket?.send(JSON.stringify({ text: ' ', flush: true }))
+      this.log('Flushed text')
     })
 
     return audioStream

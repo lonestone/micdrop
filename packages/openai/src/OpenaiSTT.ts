@@ -30,12 +30,6 @@ export class OpenaiSTT extends FileSTT {
       formData.append('language', this.options.language)
     }
 
-    const prevMessage =
-      this.call?.conversation[this.call.conversation.length - 1]?.content
-    if (prevMessage) {
-      formData.append('prompt', `Previous message: ${prevMessage}`)
-    }
-
     const response = await fetch(
       'https://api.openai.com/v1/audio/transcriptions',
       {

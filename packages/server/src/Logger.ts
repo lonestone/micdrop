@@ -1,13 +1,13 @@
-export abstract class Logger {
+export class Logger {
   // Enable debug logging
-  public debugLog?: boolean
   private lastDebug = Date.now()
 
-  protected log(...message: any[]) {
-    if (!this.debugLog) return
+  constructor(private readonly name: string) {}
+
+  log(...message: any[]) {
     const now = Date.now()
     const delta = now - this.lastDebug
     this.lastDebug = now
-    console.log(`[${this.constructor.name} +${delta}ms]`, ...message)
+    console.log(`[${this.name} +${delta}ms]`, ...message)
   }
 }

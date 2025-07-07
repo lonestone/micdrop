@@ -12,10 +12,24 @@ export interface ElevenLabsTTSOptions {
   voiceSettings?: VoiceSettings
 }
 
-export const DEFAULT_MODEL_ID = 'eleven_flash_v2_5'
+export const DEFAULT_MODEL_ID = 'eleven_turbo_v2_5'
 export const DEFAULT_OUTPUT_FORMAT = 'mp3_44100_32'
 
-export interface ElevenLabsWebSocketMessage {
-  audio?: string
-  isFinal?: boolean
+export type ElevenLabsWebSocketMessage =
+  | ElevenLabsWebSocketAudioOutputMessage
+  | ElevenLabsWebSocketFinalOutputMessage
+  | ElevenLabsWebSocketErrorMessage
+
+export interface ElevenLabsWebSocketAudioOutputMessage {
+  audio: string
+}
+
+export interface ElevenLabsWebSocketFinalOutputMessage {
+  isFinal: boolean
+}
+
+export interface ElevenLabsWebSocketErrorMessage {
+  message: string
+  error: string
+  code: number
 }

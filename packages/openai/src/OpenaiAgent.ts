@@ -1,76 +1,101 @@
-import { Agent } from '@micdrop/server'
+import { Agent, AgentOptions } from '@micdrop/server'
 import OpenAI from 'openai'
-import { Readable } from 'stream'
+import { PassThrough, Readable } from 'stream'
 
-export interface OpenaiAgentConfig {
-  openai: OpenAI
+export interface OpenaiAgentOptions extends AgentOptions {
+  apiKey: string
   model?: string
 }
 
-export class OpenaiAgent extends Agent {
+const DEFAULT_MODEL = 'gpt-4o'
+
+export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   private openai: OpenAI
-  private model: string
   private abortController?: AbortController
 
-  constructor({ openai, model }: OpenaiAgentConfig) {
-    super()
-    this.openai = openai
-    this.model = model || 'gpt-4o'
+  constructor(config: OpenaiAgentOptions) {
+    super(config)
+    this.openai = new OpenAI({ apiKey: config.apiKey })
   }
 
-  answer(text: string) {
+  answer(): Readable {
     this.abortController = new AbortController()
     const signal = this.abortController.signal
-    const stream = new Readable({
-      read() {
-        // We push data to the stream from the openai api
-      },
-    })
+    const stream = new PassThrough()
 
-    if (!this.call) {
-      const err = new Error('Agent not attached to a call')
-      this.log(err)
-      stream.emit('error', err)
-      return stream
-    }
-
-    const conversation = this.call.conversation
-
-    this.openai.chat.completions
+    // Generate answer
+    this.openai.responses
       .create(
         {
-          model: this.model,
-          messages: conversation,
+          model: this.options.model || DEFAULT_MODEL,
+          input: this.conversation.map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
           temperature: 0.5,
-          max_tokens: 250,
+          max_output_tokens: 250,
           stream: true,
+          tools: [
+            {
+              type: 'function',
+              name: 'end_call',
+              description:
+                'If the user asks to end the call, say goodbye and call this function.',
+              strict: true,
+              parameters: {
+                type: 'object',
+                properties: {},
+                additionalProperties: false,
+              },
+            },
+          ],
         },
         { signal }
       )
       .then(async (response) => {
-        for await (const chunk of response) {
-          const content = chunk.choices[0]?.delta?.content || ''
-          if (content) {
-            stream.push(content)
+        for await (const event of response) {
+          switch (event.type) {
+            case 'response.output_text.delta':
+              this.log('Delta:', event.delta)
+              stream.write(event.delta)
+              break
+            case 'response.output_text.done':
+              stream.end()
+              this.addAssistantMessage(event.text)
+              break
+            case 'response.output_item.done':
+              if (
+                event.item.type === 'function_call' &&
+                event.item.name === 'end_call'
+              ) {
+                this.endCall()
+              }
+              break
+            default:
+              break
           }
         }
-        stream.push(null) // End the stream
+        this.abortController = undefined
       })
       .catch((error) => {
         if (error.name === 'AbortError') {
-          this.log('OpenAI request aborted')
+          this.log('Answer aborted')
         } else {
-          this.log('Error from OpenAI:', error)
+          this.log('Error:', error)
           stream.emit('error', error)
         }
-        stream.push(null) // End the stream on error too
+        if (stream.writable) {
+          stream.end()
+        }
       })
 
     return stream
   }
 
   cancel() {
-    this.log('Cancelling OpenAI request')
-    this.abortController?.abort()
+    if (this.abortController) {
+      this.log('Cancel request')
+      this.abortController.abort()
+    }
   }
 }
