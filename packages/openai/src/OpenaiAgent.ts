@@ -5,6 +5,10 @@ import { PassThrough, Readable } from 'stream'
 export interface OpenaiAgentOptions extends AgentOptions {
   apiKey: string
   model?: string
+  settings?: Omit<
+    OpenAI.Responses.ResponseCreateParamsStreaming,
+    'input' | 'model'
+  >
 }
 
 const DEFAULT_MODEL = 'gpt-4o'
@@ -49,6 +53,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
               },
             },
           ],
+          ...this.options.settings,
         },
         { signal }
       )
@@ -56,7 +61,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
         for await (const event of response) {
           switch (event.type) {
             case 'response.output_text.delta':
-              this.log('Delta:', event.delta)
+              this.log('Answer chunk:', event.delta)
               stream.write(event.delta)
               break
             case 'response.output_text.done':
@@ -93,9 +98,9 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   }
 
   cancel() {
-    if (this.abortController) {
-      this.log('Cancel request')
-      this.abortController.abort()
-    }
+    if (!this.abortController) return
+    this.log('Cancel')
+    this.abortController.abort()
+    this.abortController = undefined
   }
 }

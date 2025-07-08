@@ -25,7 +25,5 @@ export class MockTTS extends TTS {
     return audioStream
   }
 
-  cancel() {
-    // Do nothing
-  }
+  cancel() {}
 }

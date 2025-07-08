@@ -56,9 +56,9 @@ export class ElevenLabsFetchTTS extends TTS {
   }
 
   cancel() {
-    if (this.speechStream) {
-      this.speechStream.cancel?.()
-      this.speechStream = null
-    }
+    if (!this.speechStream) return
+    this.log('Cancel')
+    this.speechStream.cancel?.()
+    this.speechStream = null
   }
 }

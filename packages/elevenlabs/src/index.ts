@@ -1,3 +1,3 @@
 export * from './ElevenLabsFetchTTS'
-export * from './ElevenLabsWebsocketTTS'
+export * from './ElevenLabsTTS'
 export * from './types'

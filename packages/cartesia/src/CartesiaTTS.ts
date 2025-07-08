@@ -90,6 +90,8 @@ export class CartesiaTTS extends TTS {
   }
 
   cancel() {
+    if (!this.audioStream) return
+    this.log('Cancel')
     this.canceled = true
     this.audioStream?.end()
     this.audioStream = undefined

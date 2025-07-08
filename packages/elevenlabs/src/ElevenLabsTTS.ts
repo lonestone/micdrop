@@ -12,7 +12,7 @@ import {
 
 const WS_INACTIVITY_TIMEOUT = 180
 
-export class ElevenLabsWebsocketTTS extends TTS {
+export class ElevenLabsTTS extends TTS {
   private socket?: WebSocket
   private initPromise: Promise<void>
   private audioStream?: PassThrough
@@ -98,10 +98,10 @@ export class ElevenLabsWebsocketTTS extends TTS {
             this.audioStream = undefined
           }
           if ('error' in message) {
-            console.error('ElevenLabs error', message.error)
+            console.error('[ElevenLabsTTS] Error:', message.error)
           }
         } catch {
-          console.error('ElevenLabs error parsing message', event.data)
+          console.error('[ElevenLabsTTS] Error parsing message:', event.data)
         }
       })
 
@@ -172,8 +172,10 @@ export class ElevenLabsWebsocketTTS extends TTS {
   }
 
   cancel() {
+    if (!this.audioStream) return
+    this.log('Cancel')
     this.canceled = true
-    this.audioStream?.end()
+    this.audioStream.end()
     this.audioStream = undefined
   }
 

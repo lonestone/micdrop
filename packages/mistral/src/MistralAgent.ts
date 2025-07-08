@@ -1,20 +1,20 @@
 import { Agent, AgentOptions } from '@micdrop/server'
 import { Mistral } from '@mistralai/mistralai'
-import * as dotenv from 'dotenv'
-import { PassThrough, Readable } from 'stream'
-
-dotenv.config()
+import { ChatCompletionStreamRequest } from '@mistralai/mistralai/models/components'
+import { PassThrough, Readable, Writable } from 'stream'
 
 export interface MistralAgentOptions extends AgentOptions {
   apiKey: string
   model?: string
+  settings?: Omit<ChatCompletionStreamRequest, 'messages' | 'model'>
 }
 
-const DEFAULT_MODEL = 'mistral-large-latest'
+const DEFAULT_MODEL = 'ministral-8b-latest'
 
 export class MistralAgent extends Agent<MistralAgentOptions> {
   private mistral: Mistral
-  private abortController?: AbortController
+  private cancelled: boolean = false
+  private running: boolean = false
 
   constructor(options: MistralAgentOptions) {
     super(options)
@@ -22,54 +22,64 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
   }
 
   answer(): Readable {
-    this.abortController = new AbortController()
-    const signal = this.abortController.signal
+    this.cancelled = false
     const stream = new PassThrough()
-
-    // Generate answer
-    ;(async () => {
-      try {
-        // Note: @mistralai/mistralai does not support AbortController or cancellation via 'signal'.
-        const result = await this.mistral.chat.stream({
-          model: this.options.model || DEFAULT_MODEL,
-          messages: this.conversation.map((message) => ({
-            role: message.role,
-            content: message.content,
-          })),
-          // Add other parameters if needed (e.g., temperature)
-        })
-
-        for await (const chunk of result) {
-          const streamText = chunk.data.choices[0].delta.content
-          if (typeof streamText === 'string') {
-            this.log('Delta:', streamText)
-            stream.write(streamText)
-          }
-        }
-        stream.end()
-        // Optionally, add the full assistant message if you accumulate it
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
-          this.log('Answer aborted')
-        } else {
-          this.log('Error:', error)
-          stream.emit('error', error)
-        }
-        if (stream.writable) {
-          stream.end()
-        }
-      } finally {
-        this.abortController = undefined
-      }
-    })()
-
+    this.generateAnswer(stream)
     return stream
   }
 
-  cancel() {
-    if (this.abortController) {
-      this.log('Cancel request')
-      this.abortController.abort()
+  private async generateAnswer(stream: Writable) {
+    this.running = true
+    this.cancelled = false
+
+    // Hack: Mistral needs a user message if there is only a system message
+    if (this.conversation.length === 1) {
+      this.conversation.push({
+        role: 'user',
+        content: '',
+      })
     }
+
+    try {
+      const result = await this.mistral.chat.stream({
+        model: this.options.model || DEFAULT_MODEL,
+        messages: this.conversation.map((message) => ({
+          role: message.role,
+          content: message.content,
+        })),
+        ...this.options.settings,
+      })
+
+      // Get and stream chunks
+      let fullAnswer = ''
+      for await (const event of result) {
+        if (this.cancelled) return
+        const chunk = event.data.choices[0].delta.content
+        if (typeof chunk === 'string') {
+          this.log('Answer chunk:', chunk)
+          stream.write(chunk)
+          fullAnswer += chunk
+        }
+      }
+      stream.end()
+
+      // Add full answer to conversation
+      this.addAssistantMessage(fullAnswer)
+    } catch (error: any) {
+      console.error('[MistralAgent] Error:', error)
+      stream.emit('error', error)
+    } finally {
+      if (stream.writable) {
+        stream.end()
+      }
+      this.running = false
+    }
+  }
+
+  cancel() {
+    if (!this.running) return
+    this.log('Cancel')
+    this.cancelled = true
+    this.running = false
   }
 }

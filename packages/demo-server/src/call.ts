@@ -1,4 +1,4 @@
-import { ElevenLabsWebsocketTTS } from '@micdrop/elevenlabs'
+import { ElevenLabsTTS } from '@micdrop/elevenlabs'
 import { GladiaSTT } from '@micdrop/gladia'
 import { OpenaiAgent } from '@micdrop/openai'
 import { handleError, Logger, MicdropServer } from '@micdrop/server'
@@ -17,22 +17,20 @@ Current date: ${new Date().toLocaleDateString('en-US', {
     year: 'numeric',
   })}
 Current time: ${new Date().toLocaleTimeString()}.
-If you're first to speak, your first message must be "Hello, how can I help you today?" in this language: ${lang}.
-Otherwise, always answer in the same language as the last user message.
+If you're first to speak, your first message must be "Hello, how can I help you today?" in ${lang} language.
 If the user asks to end the call, say goodbye and say END_CALL.
 If the last user message is just an interjection or a sound that expresses emotion, hesitation, or reaction (ex: "Uh", "Ahem", "Hmm", "Ah") but doesn't carry any clear meaning like agreeing, refusing, or commanding, just say CANCEL_LAST_USER_MESSAGE.
 If the last user message is an incomplete sentence, just say SKIP_ANSWER.
 `
 }
+
 export default async (app: FastifyInstance) => {
-  app.get('/call', { websocket: true }, async (socket, req) => {
+  app.get('/call', { websocket: true }, async (socket) => {
     try {
       const { lang } = await checkParams(socket)
 
-      // const stt = new MockSTT()
-      // const tts = new MockTTS(
-      //   path.join(__dirname, '../../demo-client/public/test.mp3')
-      // )
+      /*** Agent ***/
+
       // const agent = new MockAgent()
 
       const agent = new OpenaiAgent({
@@ -41,19 +39,36 @@ export default async (app: FastifyInstance) => {
       })
       agent.logger = new Logger('OpenaiAgent')
 
+      // const agent = new MistralAgent({
+      //   apiKey: process.env.MISTRAL_API_KEY || '',
+      //   systemPrompt: getSystemPrompt(lang),
+      // })
+      // agent.logger = new Logger('MistralAgent')
+
+      /*** STT ***/
+
+      // const stt = new MockSTT()
+
       const stt = new GladiaSTT({
         apiKey: process.env.GLADIA_API_KEY || '',
       })
+      stt.logger = new Logger('GladiaSTT')
+
+      /*** TTS ***/
+
+      // const tts = new MockTTS(
+      //   path.join(__dirname, '../../demo-client/public/test.mp3')
+      // )
 
       // const stt = new OpenaiSTT({
       //   apiKey: process.env.OPENAI_API_KEY || '',
       // })
 
-      const tts = new ElevenLabsWebsocketTTS({
+      const tts = new ElevenLabsTTS({
         apiKey: process.env.ELEVENLABS_API_KEY || '',
         voiceId: process.env.ELEVENLABS_VOICE_ID || '',
       })
-      tts.logger = new Logger('ElevenLabsWebsocketTTS')
+      tts.logger = new Logger('ElevenLabsTTS')
 
       // const tts = new CartesiaTTS({
       //   apiKey: process.env.CARTESIA_API_KEY || '',

@@ -17,7 +17,5 @@ export class MockAgent extends Agent {
     return stream
   }
 
-  cancel() {
-    // Do nothing
-  }
+  cancel() {}
 }
