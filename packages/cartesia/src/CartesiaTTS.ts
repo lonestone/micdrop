@@ -156,12 +156,14 @@ export class CartesiaTTS extends TTS {
         if (this.canceled) return
         try {
           const message: CartesiaResponse = JSON.parse(event.data.toString())
-          this.log('Message', message)
           switch (message.type) {
             case 'chunk':
-              this.audioStream?.write(Buffer.from(message.data, 'base64'))
+              const chunk = Buffer.from(message.data, 'base64')
+              this.log(`Received audio chunk (${chunk.length} bytes)`)
+              this.audioStream?.write(chunk)
               break
             case 'done':
+              this.log('Audio ended')
               this.audioStream?.end()
               this.audioStream = undefined
               break

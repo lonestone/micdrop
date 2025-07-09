@@ -89,11 +89,12 @@ export class ElevenLabsTTS extends TTS {
           )
 
           if ('audio' in message && message.audio) {
-            this.log('Audio chunk received')
-            this.audioStream?.write(Buffer.from(message.audio, 'base64'))
+            const chunk = Buffer.from(message.audio, 'base64')
+            this.log(`Received audio chunk (${chunk.length} bytes)`)
+            this.audioStream?.write(chunk)
           }
           if ('isFinal' in message && message.isFinal) {
-            this.log('Audio finalized')
+            this.log('Audio ended')
             this.audioStream?.end()
             this.audioStream = undefined
           }

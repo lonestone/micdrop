@@ -17,10 +17,7 @@ Current date: ${new Date().toLocaleDateString('en-US', {
     year: 'numeric',
   })}
 Current time: ${new Date().toLocaleTimeString()}.
-If you're first to speak, your first message must be "Hello, how can I help you today?" in ${lang} language.
-If the user asks to end the call, say goodbye and say END_CALL.
-If the last user message is just an interjection or a sound that expresses emotion, hesitation, or reaction (ex: "Uh", "Ahem", "Hmm", "Ah") but doesn't carry any clear meaning like agreeing, refusing, or commanding, just say CANCEL_LAST_USER_MESSAGE.
-If the last user message is an incomplete sentence, just say SKIP_ANSWER.
+If you're first to speak, say "Hello, how can I help you today?" in ${lang} language.
 `
 }
 
@@ -36,6 +33,9 @@ export default async (app: FastifyInstance) => {
       const agent = new OpenaiAgent({
         apiKey: process.env.OPENAI_API_KEY || '',
         systemPrompt: getSystemPrompt(lang),
+        autoEndCall: true,
+        autoSemanticTurn: true,
+        autoIgnoreUserNoise: true,
       })
       agent.logger = new Logger('OpenaiAgent')
 
@@ -51,6 +51,14 @@ export default async (app: FastifyInstance) => {
 
       const stt = new GladiaSTT({
         apiKey: process.env.GLADIA_API_KEY || '',
+        settings: {
+          realtime_processing: {
+            custom_vocabulary: true,
+            custom_vocabulary_config: {
+              vocabulary: ['Micdrop', 'Cibli'],
+            },
+          },
+        },
       })
       stt.logger = new Logger('GladiaSTT')
 
@@ -78,7 +86,7 @@ export default async (app: FastifyInstance) => {
       // })
 
       // Start call
-      new MicdropServer(socket, {
+      const server = new MicdropServer(socket, {
         // firstMessage: 'Hello!',
         generateFirstMessage: true,
         agent,
@@ -88,6 +96,7 @@ export default async (app: FastifyInstance) => {
           console.log('Call ended', call)
         },
       })
+      server.logger = new Logger('MicdropServer')
     } catch (error) {
       handleError(socket, error)
     }

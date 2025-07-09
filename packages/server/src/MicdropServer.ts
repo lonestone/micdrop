@@ -4,7 +4,6 @@ import { Logger } from './Logger'
 import {
   MicdropClientCommands,
   MicdropConfig,
-  MicdropConversationMessage,
   MicdropServerCommands,
 } from './types'
 
@@ -89,13 +88,6 @@ export class MicdropServer {
       this.processing.aborted = true
     }
     this.processing = undefined
-  }
-
-  private sendMessage(message: MicdropConversationMessage) {
-    if (!this.socket || !this.config) return
-    this.socket.send(
-      `${MicdropServerCommands.Message} ${JSON.stringify(message)}`
-    )
   }
 
   private async sendAudio(

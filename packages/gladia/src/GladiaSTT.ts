@@ -11,7 +11,7 @@ import { GladiaLiveSessionPayload } from './types'
 
 export interface GladiaSTTOptions {
   apiKey: string
-  config?: DeepPartial<GladiaLiveSessionPayload>
+  settings?: DeepPartial<GladiaLiveSessionPayload>
 }
 
 export class GladiaSTT extends PcmSTT {
@@ -72,7 +72,7 @@ export class GladiaSTT extends PcmSTT {
           receive_errors: true,
           receive_lifecycle_events: false,
         },
-        ...this.options.config,
+        ...this.options.settings,
       }),
     })
 
@@ -120,9 +120,10 @@ export class GladiaSTT extends PcmSTT {
       socket.addEventListener('message', (event) => {
         // All the messages we are sending are in JSON format
         const message = JSON.parse(event.data.toString())
-        this.log('Message', message)
         if (message.type === 'transcript' && message.data.is_final) {
-          this.emit('Transcript', message.data.utterance.text)
+          const transcript = message.data.utterance.text
+          this.log('Received transcript', transcript)
+          this.emit('Transcript', transcript)
         }
       })
     })
