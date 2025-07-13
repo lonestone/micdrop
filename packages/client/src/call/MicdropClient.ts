@@ -313,9 +313,6 @@ export class MicdropClient<
           this._isProcessing = false
           this.notifyStateChange()
         }
-      } else if (event.data === MicdropServerCommands.EnableSpeakerStreaming) {
-        // Enable speaker streaming
-        speaker.enableStreaming()
       }
     }
     this.ws.onclose = (event) => {

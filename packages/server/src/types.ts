@@ -13,7 +13,6 @@ export enum MicdropServerCommands {
   CancelLastAssistantMessage = 'CancelLastAssistantMessage',
   CancelLastUserMessage = 'CancelLastUserMessage',
   SkipAnswer = 'SkipAnswer',
-  EnableSpeakerStreaming = 'EnableSpeakerStreaming',
   EndCall = 'EndCall',
 }
 

@@ -17,9 +17,6 @@ export class MicdropServer {
   // When user is speaking, we're streaming chunks for STT
   private currentUserStream?: Duplex
 
-  // Enable speaker streaming
-  private speakerStreamingEnabled = false
-
   constructor(socket: WebSocket, config: MicdropConfig) {
     this.socket = socket
     this.config = config
@@ -69,12 +66,6 @@ export class MicdropServer {
     if (!audio.readable) {
       this.log('Non readable audio, skipping', audio)
       return
-    }
-
-    // Enable speaker streaming if not already enabled
-    if (!this.speakerStreamingEnabled) {
-      this.socket.send(MicdropServerCommands.EnableSpeakerStreaming)
-      this.speakerStreamingEnabled = true
     }
 
     // Stream audio

@@ -72,14 +72,6 @@ if (Speaker.isPlaying) {
 }
 ```
 
-#### `isStreamingEnabled: boolean`
-
-Indicates whether streaming playback mode is enabled.
-
-```typescript
-console.log('Streaming enabled:', Speaker.isStreamingEnabled)
-```
-
 #### `analyser: AudioAnalyser`
 
 An instance of `AudioAnalyser` that can be used to analyze the audio output.
@@ -164,22 +156,6 @@ Speaker.stopAudio()
 - Cleans up all audio resources including MediaSource and buffers
 - Disconnects from audio analyser
 - Stops and cleans up any active media streams
-
-#### `enableStreaming(): Promise<void>`
-
-Enables streaming playback mode. In streaming mode, audio is played using MediaSource Extensions for efficient streaming and buffering.
-
-```typescript
-await Speaker.enableStreaming()
-```
-
-#### `disableStreaming(): Promise<void>`
-
-Disables streaming playback mode. Switches to non-streaming playback.
-
-```typescript
-await Speaker.disableStreaming()
-```
 
 ### Events
 

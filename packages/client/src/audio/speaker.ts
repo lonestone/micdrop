@@ -2,7 +2,6 @@ import EventEmitter from 'eventemitter3'
 import { SpeakerConcatPlayer } from './player/SpeakerConcatPlayer'
 import { SpeakerMediaSourcePlayer } from './player/SpeakerMediaSourcePlayer'
 import { SpeakerPlayer } from './player/SpeakerPlayer'
-import { SpeakerSequencePlayer } from './player/SpeakerSequencePlayer'
 import { AudioAnalyser } from './utils/AudioAnalyser'
 import { audioContext } from './utils/audioContext'
 import { LocalStorageKeys } from './utils/localStorage'
@@ -20,7 +19,6 @@ class Speaker extends EventEmitter<SpeakerEvents> {
 
   private audioElement?: HTMLAudioElement
   private player?: SpeakerPlayer
-  private streamingEnabled = false
 
   constructor() {
     super()
@@ -52,11 +50,9 @@ class Speaker extends EventEmitter<SpeakerEvents> {
   private async setupSpeakerPlayer() {
     try {
       this.player?.destroy()
-      this.player = this.streamingEnabled
-        ? SpeakerMediaSourcePlayer.isCompatible
-          ? new SpeakerMediaSourcePlayer(this.analyser.node)
-          : new SpeakerConcatPlayer(this.analyser.node)
-        : new SpeakerSequencePlayer(this.analyser.node)
+      this.player = SpeakerMediaSourcePlayer.isCompatible
+        ? new SpeakerMediaSourcePlayer(this.analyser.node)
+        : new SpeakerConcatPlayer(this.analyser.node)
       await this.player?.setup()
       this.player.on('StartPlaying', () => this.changeIsPlaying(true))
       this.player.on('StopPlaying', () => this.changeIsPlaying(false))
@@ -65,26 +61,10 @@ class Speaker extends EventEmitter<SpeakerEvents> {
     }
   }
 
-  get isStreamingEnabled() {
-    return this.streamingEnabled
-  }
-
   protected changeIsPlaying(isPlaying: boolean) {
     if (this.isPlaying == isPlaying) return
     this.isPlaying = isPlaying
     this.emit(isPlaying ? 'StartPlaying' : 'StopPlaying')
-  }
-
-  async enableStreaming() {
-    if (this.streamingEnabled) return
-    this.streamingEnabled = true
-    await this.setupSpeakerPlayer()
-  }
-
-  async disableStreaming() {
-    if (!this.streamingEnabled) return
-    this.streamingEnabled = false
-    await this.setupSpeakerPlayer()
   }
 
   canChangeDevice(): boolean {
