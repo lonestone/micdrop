@@ -13,5 +13,6 @@ export abstract class TTS {
 
   destroy() {
     this.log('Destroying...')
+    this.cancel()
   }
 }

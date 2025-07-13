@@ -55,13 +55,7 @@ export class MicdropServer {
     )
 
     // Assistant speaks first
-    if (config.firstMessage) {
-      this.config.agent.addAssistantMessage(config.firstMessage)
-      this.speak(config.firstMessage)
-    } else if (config.generateFirstMessage) {
-      const answerStream = this.config.agent.answer()
-      this.speak(answerStream)
-    }
+    this.sendFirstMessage()
 
     // Listen to events
     socket.on('close', this.onClose.bind(this))
@@ -90,46 +84,31 @@ export class MicdropServer {
     this.processing = undefined
   }
 
-  private async sendAudio(
-    audio: ArrayBuffer | Readable,
-    processing: Processing
-  ) {
-    if (!this.socket) return
-
-    // Remove last assistant message if aborted
-    const onAbort = () => {
-      this.log('Answer aborted, stop TTS')
-      this.config?.tts.cancel()
-    }
-
-    if (processing.aborted) {
-      onAbort?.()
+  private async sendAudio(audio: Readable, processing: Processing) {
+    if (!this.socket || processing.aborted) return
+    if (!audio.readable) {
+      this.log('Non readable audio, skipping', audio)
       return
     }
 
-    if (Buffer.isBuffer(audio) || audio instanceof ArrayBuffer) {
-      // Whole audio as a single buffer
-      this.log(`Send audio: (${audio.byteLength} bytes)`)
-      this.socket.send(audio)
-    } else if (audio.readable) {
-      // Enable speaker streaming if not already enabled
-      if (!this.speakerStreamingEnabled) {
-        this.socket.send(MicdropServerCommands.EnableSpeakerStreaming)
-        this.speakerStreamingEnabled = true
-      }
-
-      // Audio as a stream
-      for await (const chunk of audio) {
-        if (processing.aborted) {
-          onAbort?.()
-          return
-        }
-        this.log(`Send audio chunk (${chunk.length} bytes)`)
-        this.socket.send(chunk)
-      }
-    } else {
-      this.log(`Unknown audio type: ${JSON.stringify(audio)}`)
+    // Enable speaker streaming if not already enabled
+    if (!this.speakerStreamingEnabled) {
+      this.socket.send(MicdropServerCommands.EnableSpeakerStreaming)
+      this.speakerStreamingEnabled = true
     }
+
+    // Stream audio
+    audio.on('data', (chunk) => {
+      if (processing.aborted) return
+      this.log(`Send audio chunk (${chunk.length} bytes)`)
+      this.socket?.send(chunk)
+    })
+    audio.on('error', (error) => {
+      this.log('Error in audio stream', error)
+    })
+    audio.on('end', () => {
+      this.log('Audio stream ended')
+    })
   }
 
   private onClose() {
@@ -201,25 +180,53 @@ export class MicdropServer {
   private async onStopSpeaking() {
     this.currentUserStream?.end()
     this.currentUserStream = undefined
-    this.abortProcessing()
+
+    const conversation = this.config?.agent.conversation
+    if (conversation && conversation[conversation.length - 1].role === 'user') {
+      this.log(
+        'User stopped speaking and a transcript already exists, answering'
+      )
+      this.answer()
+    }
   }
 
   private async onTranscript(transcript: string) {
     if (!this.config) return
-    const processing = this.createProcessing()
     this.log('User transcript:', transcript)
+    this.config.agent.addUserMessage(transcript)
 
+    // Answer if user stopped speaking
+    if (!this.currentUserStream) {
+      this.log('User stopped speaking, answering')
+      this.answer()
+    }
+  }
+
+  private async sendFirstMessage() {
+    if (!this.config) return
+    const processing = this.createProcessing()
     try {
-      // Add user message to conversation
-      this.config.agent.addUserMessage(transcript)
+      if (this.config.firstMessage) {
+        this.config.agent.addAssistantMessage(this.config.firstMessage)
+        this.speak(this.config.firstMessage, processing)
+      } else if (this.config.generateFirstMessage) {
+        const answerStream = this.config.agent.answer()
+        this.speak(answerStream, processing)
+      }
+    } catch (error) {
+      console.error('[MicdropServer]', error)
+      this.socket?.send(MicdropServerCommands.SkipAnswer)
+    }
+  }
 
+  private async answer() {
+    if (!this.config) return
+    const processing = this.createProcessing()
+    try {
       // LLM: Generate answer
       const answerStream = this.config.agent.answer()
-      if (processing.aborted) {
-        this.log('Answer aborted, ignoring answer')
-        return
-      }
 
+      // TTS: Generate answer audio
       await this.speak(answerStream, processing)
     } catch (error) {
       console.error('[MicdropServer]', error)

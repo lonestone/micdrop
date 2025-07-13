@@ -82,5 +82,6 @@ export abstract class Agent<
   destroy() {
     this.log('Destroying...')
     this.removeAllListeners()
+    this.cancel()
   }
 }

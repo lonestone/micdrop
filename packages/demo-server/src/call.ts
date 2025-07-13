@@ -55,7 +55,7 @@ export default async (app: FastifyInstance) => {
           realtime_processing: {
             custom_vocabulary: true,
             custom_vocabulary_config: {
-              vocabulary: ['Micdrop', 'Cibli'],
+              vocabulary: ['Micdrop'],
             },
           },
         },
@@ -84,6 +84,7 @@ export default async (app: FastifyInstance) => {
       //   voiceId: process.env.CARTESIA_VOICE_ID || '',
       //   language: 'fr',
       // })
+      // tts.logger = new Logger('CartesiaTTS')
 
       // Start call
       const server = new MicdropServer(socket, {

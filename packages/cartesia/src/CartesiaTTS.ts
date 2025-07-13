@@ -1,6 +1,4 @@
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
-import { TTS } from '@micdrop/server'
-import ffmpeg from 'fluent-ffmpeg'
+import { convertPCMToMp3, TTS } from '@micdrop/server'
 import { PassThrough, Readable } from 'stream'
 import WebSocket from 'ws'
 import {
@@ -31,9 +29,6 @@ export class CartesiaTTS extends TTS {
 
     // Setup WebSocket connection
     this.initPromise = this.initWS()
-
-    // Setup ffmpeg
-    ffmpeg.setFfmpegPath(ffmpegInstaller.path)
   }
 
   speak(textStream: Readable) {
@@ -73,6 +68,12 @@ export class CartesiaTTS extends TTS {
       this.log(`Sent transcript: ${transcript}`)
     })
 
+    textStream.on('error', (error) => {
+      this.log('Error in text stream, ending audio stream', error)
+      this.audioStream?.end()
+      this.audioStream = undefined
+    })
+
     textStream.on('end', async () => {
       if (this.canceled) return
       await this.initPromise
@@ -86,7 +87,7 @@ export class CartesiaTTS extends TTS {
       )
     })
 
-    return this.convertToMp3(this.audioStream)
+    return convertPCMToMp3(this.audioStream)
   }
 
   cancel() {
@@ -97,14 +98,12 @@ export class CartesiaTTS extends TTS {
     this.audioStream = undefined
 
     // Signal Cartesia to stop sending data
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.socket?.send(
-        JSON.stringify({
-          context_id: this.counter.toString(),
-          cancel: true,
-        } satisfies CartesiaCancelPayload)
-      )
-    }
+    this.socket?.send(
+      JSON.stringify({
+        context_id: this.counter.toString(),
+        cancel: true,
+      } satisfies CartesiaCancelPayload)
+    )
   }
 
   destroy() {
@@ -114,9 +113,11 @@ export class CartesiaTTS extends TTS {
       this.reconnectTimeout = undefined
     }
     this.socket?.removeAllListeners()
-    this.socket?.close(1000)
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket?.close(1000)
+    }
     this.socket = undefined
-    this.audioStream?.destroy()
+    this.audioStream?.end()
     this.audioStream = undefined
   }
 
@@ -163,13 +164,14 @@ export class CartesiaTTS extends TTS {
               this.audioStream?.write(chunk)
               break
             case 'done':
+            case 'error':
               this.log('Audio ended')
               this.audioStream?.end()
               this.audioStream = undefined
               break
           }
         } catch {
-          console.error('Error parsing message', event.data)
+          console.error('[CartesiaTTS] Error parsing message', event.data)
         }
       })
     })
@@ -183,23 +185,5 @@ export class CartesiaTTS extends TTS {
         this.initWS().then(resolve).catch(reject)
       }, 1000)
     })
-  }
-
-  private convertToMp3(audioStream: Readable) {
-    const mp3Stream = new PassThrough()
-    mp3Stream.on('error', (error) => {
-      this.log('Error converting to MP3', error)
-    })
-    ffmpeg(audioStream)
-      .inputFormat('s16le')
-      .inputOptions(['-f s16le', '-ar 16000', '-ac 1'])
-      .audioCodec('libmp3lame')
-      .format('mp3')
-      .audioBitrate('32k')
-      .pipe(mp3Stream)
-      .on('error', (error) => {
-        this.log('Error converting to MP3', error)
-      })
-    return mp3Stream
   }
 }

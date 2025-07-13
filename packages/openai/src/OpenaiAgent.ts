@@ -47,9 +47,9 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   }
 
   answer(): Readable {
+    const stream = new PassThrough()
     this.abortController = new AbortController()
     const signal = this.abortController.signal
-    const stream = new PassThrough()
 
     // Generate answer
     this.openai.responses
@@ -89,15 +89,16 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
               break
           }
         }
-        this.abortController = undefined
       })
       .catch((error) => {
-        if (error.name === 'AbortError') {
+        if (error.name === 'APIUserAbortError') {
           this.log('Answer aborted')
         } else {
           this.log('Error:', error)
-          stream.emit('error', error)
         }
+      })
+      .finally(() => {
+        this.abortController = undefined
         if (stream.writable) {
           stream.end()
         }

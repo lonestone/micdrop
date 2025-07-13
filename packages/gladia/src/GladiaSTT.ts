@@ -1,4 +1,4 @@
-import { DeepPartial, PcmSTT } from '@micdrop/server'
+import { convertToPCM, DeepPartial, STT } from '@micdrop/server'
 import { Readable } from 'stream'
 import WebSocket from 'ws'
 import { GladiaLiveSessionPayload } from './types'
@@ -14,7 +14,10 @@ export interface GladiaSTTOptions {
   settings?: DeepPartial<GladiaLiveSessionPayload>
 }
 
-export class GladiaSTT extends PcmSTT {
+const SAMPLE_RATE = 16000
+const BIT_DEPTH = 16
+
+export class GladiaSTT extends STT {
   private socket?: WebSocket
   private initPromise: Promise<void>
   private reconnectTimeout?: NodeJS.Timeout
@@ -26,7 +29,9 @@ export class GladiaSTT extends PcmSTT {
     this.initPromise = this.getURL().then((url) => this.initWS(url))
   }
 
-  transcribePCM(pcmStream: Readable) {
+  transcribe(audioStream: Readable) {
+    const pcmStream = convertToPCM(audioStream, SAMPLE_RATE, BIT_DEPTH)
+
     // Read transformed stream and send to Gladia
     pcmStream.on('data', async (chunk) => {
       await this.initPromise
@@ -35,7 +40,10 @@ export class GladiaSTT extends PcmSTT {
     })
 
     // Send silence when the stream ends to force Gladia to transcribe
-    pcmStream.on('end', () => this.sendSilence(1))
+    pcmStream.on('end', async () => {
+      await this.initPromise
+      this.sendSilence(1)
+    })
   }
 
   destroy() {
@@ -45,7 +53,9 @@ export class GladiaSTT extends PcmSTT {
       this.reconnectTimeout = undefined
     }
     this.socket?.removeAllListeners()
-    this.socket?.close(1000)
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket?.close(1000)
+    }
     this.socket = undefined
   }
 
@@ -59,8 +69,8 @@ export class GladiaSTT extends PcmSTT {
       },
       body: JSON.stringify({
         encoding: 'wav/pcm',
-        sample_rate: this.sampleRate,
-        bit_depth: this.bitDepth,
+        sample_rate: SAMPLE_RATE,
+        bit_depth: BIT_DEPTH,
         channels: 1,
         messages_config: {
           receive_final_transcripts: true,
@@ -144,8 +154,8 @@ export class GladiaSTT extends PcmSTT {
 
   private sendSilence(durationSeconds: number) {
     if (!this.socket) return
-    const numSamples = Math.round(this.sampleRate * durationSeconds)
-    const bytesPerSample = this.bitDepth / 8
+    const numSamples = Math.round(SAMPLE_RATE * durationSeconds)
+    const bytesPerSample = BIT_DEPTH / 8
     const silenceBuffer = Buffer.alloc(numSamples * bytesPerSample, 0)
     this.socket.send(silenceBuffer)
     this.log(

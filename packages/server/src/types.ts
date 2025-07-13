@@ -48,7 +48,6 @@ export interface MicdropConversationMessage<
 > {
   role: 'system' | 'user' | 'assistant'
   content: string
-  commands?: MicdropAnswerCommands
   metadata?: Data
 }
 

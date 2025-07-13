@@ -61,7 +61,6 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
           fullAnswer += chunk
         }
       }
-      stream.end()
 
       // Add full answer to conversation
       this.addAssistantMessage(fullAnswer)

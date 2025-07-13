@@ -150,7 +150,6 @@ export class ElevenLabsTTS extends TTS {
     this.audioStream?.end()
     const audioStream = new PassThrough()
     this.audioStream = audioStream
-    let buffer = ''
 
     // Forward text chunks coming from the caller to ElevenLabs
     textStream.on('data', async (chunk) => {
@@ -159,6 +158,12 @@ export class ElevenLabsTTS extends TTS {
       const text = chunk.toString('utf-8')
       this.socket?.send(JSON.stringify({ text, try_trigger_generation: true }))
       this.log(`Sent transcript: ${text}`)
+    })
+
+    textStream.on('error', (error) => {
+      this.log('Error in text stream, ending audio stream', error)
+      this.audioStream?.end()
+      this.audioStream = undefined
     })
 
     textStream.on('end', async () => {
@@ -190,11 +195,13 @@ export class ElevenLabsTTS extends TTS {
       this.keepAliveInterval = undefined
     }
     this.socket?.removeAllListeners()
-    this.socket?.close(1000)
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket?.close(1000)
+    }
     this.socket = undefined
 
     if (this.audioStream) {
-      this.audioStream.destroy()
+      this.audioStream.end()
       this.audioStream = undefined
     }
 
