@@ -7,19 +7,12 @@ import {
   MicdropServerCommands,
 } from './types'
 
-interface Processing {
-  aborted: boolean
-}
-
 export class MicdropServer {
   public socket: WebSocket | null = null
   public config: MicdropConfig | null = null
   public logger?: Logger
 
   private startTime = Date.now()
-
-  // An answer can be aborted if user is speaking
-  private processing?: Processing
 
   // When user is speaking, we're streaming chunks for STT
   private currentUserStream?: Duplex
@@ -66,26 +59,13 @@ export class MicdropServer {
     this.logger?.log(...message)
   }
 
-  private createProcessing(): Processing {
-    if (this.processing) {
-      this.abortProcessing()
-    }
-    this.processing = { aborted: false }
-    return this.processing
+  private cancel() {
+    this.config?.tts.cancel()
+    this.config?.agent.cancel()
   }
 
-  private abortProcessing() {
-    if (!this.processing) return
-    if (!this.processing.aborted) {
-      this.config?.tts.cancel()
-      this.config?.agent.cancel()
-      this.processing.aborted = true
-    }
-    this.processing = undefined
-  }
-
-  private async sendAudio(audio: Readable, processing: Processing) {
-    if (!this.socket || processing.aborted) return
+  private async sendAudio(audio: Readable) {
+    if (!this.socket) return
     if (!audio.readable) {
       this.log('Non readable audio, skipping', audio)
       return
@@ -99,7 +79,6 @@ export class MicdropServer {
 
     // Stream audio
     audio.on('data', (chunk) => {
-      if (processing.aborted) return
       this.log(`Send audio chunk (${chunk.length} bytes)`)
       this.socket?.send(chunk)
     })
@@ -114,7 +93,6 @@ export class MicdropServer {
   private onClose() {
     if (!this.config) return
     this.log('Connection closed')
-    this.abortProcessing()
     const duration = Math.round((Date.now() - this.startTime) / 1000)
 
     // Destroy instances
@@ -166,7 +144,7 @@ export class MicdropServer {
   private async onMute() {
     this.currentUserStream?.end()
     this.currentUserStream = undefined
-    this.abortProcessing()
+    this.cancel()
   }
 
   private async onStartSpeaking() {
@@ -174,7 +152,7 @@ export class MicdropServer {
     this.currentUserStream?.end()
     this.currentUserStream = new PassThrough()
     this.config.stt.transcribe(this.currentUserStream)
-    this.abortProcessing()
+    this.cancel()
   }
 
   private async onStopSpeaking() {
@@ -204,14 +182,13 @@ export class MicdropServer {
 
   private async sendFirstMessage() {
     if (!this.config) return
-    const processing = this.createProcessing()
     try {
       if (this.config.firstMessage) {
         this.config.agent.addAssistantMessage(this.config.firstMessage)
-        this.speak(this.config.firstMessage, processing)
+        this.speak(this.config.firstMessage)
       } else if (this.config.generateFirstMessage) {
         const answerStream = this.config.agent.answer()
-        this.speak(answerStream, processing)
+        this.speak(answerStream)
       }
     } catch (error) {
       console.error('[MicdropServer]', error)
@@ -221,13 +198,13 @@ export class MicdropServer {
 
   private async answer() {
     if (!this.config) return
-    const processing = this.createProcessing()
+    this.cancel()
     try {
       // LLM: Generate answer
       const answerStream = this.config.agent.answer()
 
       // TTS: Generate answer audio
-      await this.speak(answerStream, processing)
+      await this.speak(answerStream)
     } catch (error) {
       console.error('[MicdropServer]', error)
       this.socket?.send(MicdropServerCommands.SkipAnswer)
@@ -235,11 +212,8 @@ export class MicdropServer {
   }
 
   // Run text-to-speech and send to client
-  private async speak(message: string | Readable, processing?: Processing) {
+  private async speak(message: string | Readable) {
     if (!this.socket || !this.config) return
-    if (!processing) {
-      processing = this.createProcessing()
-    }
 
     // TTS: Generate answer audio
     try {
@@ -258,7 +232,7 @@ export class MicdropServer {
       const audio = this.config.tts.speak(textStream)
 
       // Send audio to client
-      await this.sendAudio(audio, processing)
+      await this.sendAudio(audio)
     } catch (error) {
       console.error('[MicdropServer]', error)
       this.socket?.send(MicdropServerCommands.SkipAnswer)
