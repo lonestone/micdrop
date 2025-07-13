@@ -21,6 +21,7 @@ export class CartesiaTTS extends TTS {
   private initPromise: Promise<void>
   private counter = 0
   private audioStream?: PassThrough
+  private convertedStream?: PassThrough
   private canceled = false
   private reconnectTimeout?: NodeJS.Timeout
 
@@ -35,7 +36,7 @@ export class CartesiaTTS extends TTS {
     this.counter++
     this.canceled = false
     const context_id = this.counter.toString()
-    this.audioStream?.end()
+    this.stopStreams()
     this.audioStream = new PassThrough()
 
     const config = {
@@ -70,8 +71,7 @@ export class CartesiaTTS extends TTS {
 
     textStream.on('error', (error) => {
       this.log('Error in text stream, ending audio stream', error)
-      this.audioStream?.end()
-      this.audioStream = undefined
+      this.stopStreams()
     })
 
     textStream.on('end', async () => {
@@ -87,15 +87,15 @@ export class CartesiaTTS extends TTS {
       )
     })
 
-    return convertPCMToMp3(this.audioStream)
+    this.convertedStream = convertPCMToMp3(this.audioStream)
+    return this.convertedStream
   }
 
   cancel() {
     if (!this.audioStream) return
     this.log('Cancel')
     this.canceled = true
-    this.audioStream?.end()
-    this.audioStream = undefined
+    this.stopStreams()
 
     // Signal Cartesia to stop sending data
     this.socket?.send(
@@ -117,8 +117,14 @@ export class CartesiaTTS extends TTS {
       this.socket?.close(1000)
     }
     this.socket = undefined
+    this.stopStreams()
+  }
+
+  private stopStreams() {
     this.audioStream?.end()
     this.audioStream = undefined
+    this.convertedStream?.end()
+    this.convertedStream = undefined
   }
 
   private async initWS() {
