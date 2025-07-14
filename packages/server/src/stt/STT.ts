@@ -33,7 +33,7 @@ export abstract class STT extends EventEmitter<STTEvents> {
   }
 
   destroy() {
-    this.log('Destroying...')
+    this.log('Destroyed')
     this.removeAllListeners()
   }
 

@@ -91,11 +91,8 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
         }
       })
       .catch((error) => {
-        if (error.name === 'APIUserAbortError') {
-          this.log('Answer aborted')
-        } else {
-          this.log('Error:', error)
-        }
+        if (error instanceof OpenAI.APIUserAbortError) return
+        console.error(error)
       })
       .finally(() => {
         this.abortController = undefined

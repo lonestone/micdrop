@@ -1,4 +1,4 @@
-import { convertPCMToMp3, TTS } from '@micdrop/server'
+import { convertPCMToOpus, TTS } from '@micdrop/server'
 import { PassThrough, Readable } from 'stream'
 import WebSocket from 'ws'
 import {
@@ -22,20 +22,21 @@ export class CartesiaTTS extends TTS {
   private counter = 0
   private audioStream?: PassThrough
   private convertedStream?: PassThrough
-  private canceled = false
   private reconnectTimeout?: NodeJS.Timeout
 
   constructor(private readonly options: CartesiaTTSOptions) {
     super()
 
     // Setup WebSocket connection
-    this.initPromise = this.initWS()
+    this.initPromise = this.initWS().catch((error) => {
+      this.log('Connection error:', error)
+    })
   }
 
   speak(textStream: Readable) {
     this.counter++
-    this.canceled = false
-    const context_id = this.counter.toString()
+    const counter = this.counter
+    const context_id = counter.toString()
     this.stopStreams()
     this.audioStream = new PassThrough()
 
@@ -55,7 +56,7 @@ export class CartesiaTTS extends TTS {
     } as const
 
     textStream.on('data', async (chunk) => {
-      if (this.canceled) return
+      if (counter !== this.counter) return
       await this.initPromise
       const transcript = chunk.toString('utf-8')
       this.socket?.send(
@@ -75,7 +76,7 @@ export class CartesiaTTS extends TTS {
     })
 
     textStream.on('end', async () => {
-      if (this.canceled) return
+      if (counter !== this.counter) return
       await this.initPromise
       this.socket?.send(
         JSON.stringify({
@@ -87,14 +88,13 @@ export class CartesiaTTS extends TTS {
       )
     })
 
-    this.convertedStream = convertPCMToMp3(this.audioStream)
+    this.convertedStream = convertPCMToOpus(this.audioStream)
     return this.convertedStream
   }
 
   cancel() {
     if (!this.audioStream) return
     this.log('Cancel')
-    this.canceled = true
     this.stopStreams()
 
     // Signal Cartesia to stop sending data
@@ -104,6 +104,9 @@ export class CartesiaTTS extends TTS {
         cancel: true,
       } satisfies CartesiaCancelPayload)
     )
+
+    // Increment counter to avoid processing messages from previous calls
+    this.counter++
   }
 
   destroy() {
@@ -140,7 +143,6 @@ export class CartesiaTTS extends TTS {
       })
 
       socket.addEventListener('error', (error) => {
-        this.log('Connection error', error)
         reject(error)
       })
 
@@ -148,7 +150,6 @@ export class CartesiaTTS extends TTS {
         // The connection has been closed
         // If the "code" is equal to 1000, it means we closed intentionally the connection (after the end of the session for example).
         // Otherwise, we can reconnect to the same url.
-        this.log('Connection closed', { code, reason })
         this.socket?.removeAllListeners()
         this.socket = undefined
         this.audioStream?.end()
@@ -156,13 +157,18 @@ export class CartesiaTTS extends TTS {
 
         if (code !== 1000) {
           this.reconnect()
+        } else {
+          this.log('Connection closed', { code, reason })
         }
       })
 
       socket.addEventListener('message', (event) => {
-        if (this.canceled) return
         try {
           const message: CartesiaResponse = JSON.parse(event.data.toString())
+
+          // Ignore messages from previous calls
+          if (this.counter.toString() !== message.context_id) return
+
           switch (message.type) {
             case 'chunk':
               const chunk = Buffer.from(message.data, 'base64')
@@ -170,10 +176,12 @@ export class CartesiaTTS extends TTS {
               this.audioStream?.write(chunk)
               break
             case 'done':
-            case 'error':
               this.log('Audio ended')
               this.audioStream?.end()
               this.audioStream = undefined
+              break
+            case 'error':
+              this.log('Error', message.error)
               break
           }
         } catch {
@@ -188,7 +196,12 @@ export class CartesiaTTS extends TTS {
       this.log('Reconnecting...')
       this.reconnectTimeout = setTimeout(() => {
         this.reconnectTimeout = undefined
-        this.initWS().then(resolve).catch(reject)
+        this.initWS()
+          .then(resolve)
+          .catch((error) => {
+            this.log('Reconnection error:', error)
+            reject(error)
+          })
       }, 1000)
     })
   }

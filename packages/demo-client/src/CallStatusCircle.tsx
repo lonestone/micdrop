@@ -10,8 +10,8 @@ export default function CallStatusCircle({ size }: Props) {
   const call = useContext(CallContext)!
   const [speakerVolume, setSpeakerVolume] = useState(0) // 0-100
   const [micVolume, setMicVolume] = useState(0) // 0-100
-  const [maxMicVolume, setMaxMicVolume] = useState(0)
-  const [maxSpeakerVolume, setMaxSpeakerVolume] = useState(0)
+  const [maxMicVolume, setMaxMicVolume] = useState(50)
+  const [maxSpeakerVolume, setMaxSpeakerVolume] = useState(50)
 
   // Calculate circle size based on volume (min 20% of container size, max 100%)
   const circleSize =

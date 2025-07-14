@@ -145,7 +145,7 @@ export class MicdropClient<
       // Stop websocket
       this.stopWS()
     } catch (error) {
-      console.error('[MicdropClient] stop WS', error)
+      console.error('[MicdropClient] Error stopping WebSocket', error)
     }
 
     try {
@@ -153,7 +153,7 @@ export class MicdropClient<
       this.micRecorder?.stop()
       this.stopMic()
     } catch (error) {
-      console.error('[MicdropClient] stop mic', error)
+      console.error('[MicdropClient] Error stopping microphone', error)
     }
   }
 
@@ -192,13 +192,13 @@ export class MicdropClient<
 
         // Send chunk of user speech to server
         this.micRecorder.on('Chunk', (blob) => {
-          this.log(`[Mic] Chunk`, blob)
+          this.log(`[MicdropClient] Send chunk`, blob)
           this.ws?.send(blob)
         })
 
         // Notify server that user started speaking
         this.micRecorder.on('StartSpeaking', () => {
-          this.log('[Mic] Start speaking')
+          this.log('User start speaking')
           this.ws?.send(MicdropClientCommands.StartSpeaking)
           // Interruption
           this._isProcessing = false
@@ -208,7 +208,7 @@ export class MicdropClient<
 
         // Notify server that user speech is complete
         this.micRecorder.on('StopSpeaking', () => {
-          this.log('[Mic] Stop speaking')
+          this.log('User stop speaking')
           this.ws?.send(MicdropClientCommands.StopSpeaking)
           if (this.isWSStarted) {
             this._isProcessing = true
@@ -232,7 +232,7 @@ export class MicdropClient<
         await this.micRecorder.start(this.micStream)
       }
     } catch (error) {
-      console.error('[MicdropClient] startMic', error)
+      console.error('[MicdropClient] Error starting microphone', error)
       this.emit('Error', new MicdropClientError(MicdropClientErrorCode.Mic))
       this.stop()
     }
@@ -248,13 +248,13 @@ export class MicdropClient<
 
   private async startWS() {
     if (this.ws) {
-      throw new Error('[MicdropClient] startWS: WebSocket is already started')
+      throw new Error('[MicdropClient] WebSocket is already started')
     }
     if (!this.isMicStarted) {
-      throw new Error('[MicdropClient] startWS: Microphone is not started')
+      throw new Error('[MicdropClient] Microphone is not started')
     }
     if (!this.url) {
-      throw new Error('[MicdropClient] startWS: URL is not set')
+      throw new Error('[MicdropClient] URL is not set')
     }
 
     // Start websocket
@@ -264,7 +264,7 @@ export class MicdropClient<
 
     // Events
     this.ws.onopen = () => {
-      this.log('[WS] Opened')
+      this.log('WebSocket opened')
       this.notifyStateChange()
 
       // Send params
@@ -273,14 +273,15 @@ export class MicdropClient<
       }
     }
     this.ws.onmessage = (event) => {
-      this.log('[WS]', event.data)
+      this.log('Received message', event.data)
       if (event.data instanceof Blob) {
         // Received assistant speech
+        if (this.isPaused || this.isUserSpeaking) return
         speaker.playAudio(event.data)
         this._isProcessing = false
         this.notifyStateChange()
       } else if (typeof event.data !== 'string') {
-        console.warn(`[WS] Unknown message type: ${event.data}`)
+        console.warn(`[MicdropClient] Unknown message type: ${event.data}`)
       } else if (event.data.startsWith(MicdropServerCommands.Message)) {
         // Received user/assistant message
         const message = JSON.parse(
@@ -316,7 +317,7 @@ export class MicdropClient<
       }
     }
     this.ws.onclose = (event) => {
-      this.log('[WS] Closed', event)
+      this.log('WebSocket closed', event)
       this.stop()
 
       const error = getClientErrorFromWSCloseEvent(event)
@@ -325,7 +326,7 @@ export class MicdropClient<
       }
     }
     this.ws.onerror = (event) => {
-      console.error('[MicdropClient] [WS] Error:', event)
+      console.error('[MicdropClient] WebSocket error:', event)
       this.stop()
     }
   }
@@ -338,7 +339,7 @@ export class MicdropClient<
   }
 
   private onSpeakerStartPlaying() {
-    this.log('[Speaker] Start speaking')
+    this.log('Speaker started')
     if (this.options?.disableInterruption && !this.isPaused) {
       this.micRecorder?.mute()
     }
@@ -346,7 +347,7 @@ export class MicdropClient<
   }
 
   private onSpeakerStopPlaying() {
-    this.log('[Speaker] Stop speaking')
+    this.log('Speaker stopped')
     if (this.options?.disableInterruption && !this.isPaused) {
       this.micRecorder?.unmute()
     }
@@ -364,6 +365,6 @@ export class MicdropClient<
 
   private log(...message: any[]) {
     if (!this.debug) return
-    console.log(`[Debug ${Date.now() - this.startTime}]`, ...message)
+    console.log(`[MicdropClient ${Date.now() - this.startTime}]`, ...message)
   }
 }

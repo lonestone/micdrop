@@ -103,8 +103,9 @@ export class MicdropServer {
   }
 
   private async onMessage(message: Buffer) {
+    if (message.byteLength === 0) return
     if (!Buffer.isBuffer(message)) {
-      console.warn(`[MicdropServer] Message is not a buffer`)
+      this.log('Message is not a buffer')
       return
     }
 
@@ -126,7 +127,7 @@ export class MicdropServer {
     }
 
     // Audio chunk
-    else if (Buffer.isBuffer(message) && this.currentUserStream) {
+    else if (this.currentUserStream) {
       this.log(`Received chunk (${message.byteLength} bytes)`)
       this.currentUserStream.write(message)
     }

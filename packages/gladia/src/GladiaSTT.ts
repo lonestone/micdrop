@@ -26,21 +26,28 @@ export class GladiaSTT extends STT {
     super()
 
     // Setup Websocket connection
-    this.initPromise = this.getURL().then((url) => this.initWS(url))
+    this.initPromise = this.getURL()
+      .then((url) => this.initWS(url))
+      .catch((error) => {
+        this.log('Connection error:', error)
+      })
   }
 
   transcribe(audioStream: Readable) {
     const pcmStream = convertToPCM(audioStream, SAMPLE_RATE, BIT_DEPTH)
+    let chunksCount = 0
 
     // Read transformed stream and send to Gladia
     pcmStream.on('data', async (chunk) => {
       await this.initPromise
       this.socket?.send(chunk)
       this.log(`Sent audio chunk (${chunk.byteLength} bytes)`)
+      chunksCount++
     })
 
     // Send silence when the stream ends to force Gladia to transcribe
     pcmStream.on('end', async () => {
+      if (chunksCount === 0) return
       await this.initPromise
       this.sendSilence(1)
     })
@@ -110,7 +117,6 @@ export class GladiaSTT extends STT {
       socket.addEventListener('error', (error) => {
         // An error occurred during the connection.
         // Check the error to understand why
-        this.log('Connection error', error)
         reject(error)
       })
 
@@ -118,12 +124,13 @@ export class GladiaSTT extends STT {
         // The connection has been closed
         // If the "code" is equal to 1000, it means we closed intentionally the connection (after the end of the session for example).
         // Otherwise, we can reconnect to the same url.
-        this.log('Connection closed', { code, reason })
         this.socket?.removeAllListeners()
         this.socket = undefined
 
         if (code !== 1000) {
           this.reconnect()
+        } else {
+          this.log('Connection closed', { code, reason })
         }
       })
 
@@ -147,7 +154,10 @@ export class GladiaSTT extends STT {
         this.getURL()
           .then((url) => this.initWS(url))
           .then(resolve)
-          .catch(reject)
+          .catch((error) => {
+            this.log('Reconnection error:', error)
+            reject(error)
+          })
       }, 1000)
     })
   }

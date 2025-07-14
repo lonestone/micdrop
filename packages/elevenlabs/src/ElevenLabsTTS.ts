@@ -1,4 +1,4 @@
-import { TTS } from '@micdrop/server'
+import { convertToOpus, TTS } from '@micdrop/server'
 import { PassThrough, Readable } from 'stream'
 import WebSocket from 'ws'
 import {
@@ -16,6 +16,7 @@ export class ElevenLabsTTS extends TTS {
   private socket?: WebSocket
   private initPromise: Promise<void>
   private audioStream?: PassThrough
+  private convertedStream?: PassThrough
   private keepAliveInterval?: NodeJS.Timeout
   private reconnectTimeout?: NodeJS.Timeout
   private canceled = false
@@ -23,7 +24,74 @@ export class ElevenLabsTTS extends TTS {
   constructor(private readonly options: ElevenLabsTTSOptions) {
     super()
     // Setup WebSocket connection
-    this.initPromise = this.initWS()
+    this.initPromise = this.initWS().catch((error) => {
+      this.log('Connection error:', error)
+    })
+  }
+
+  speak(textStream: Readable) {
+    this.canceled = false
+    this.audioStream?.end()
+    this.audioStream = new PassThrough()
+
+    // Forward text chunks coming from the caller to ElevenLabs
+    textStream.on('data', async (chunk) => {
+      if (this.canceled) return
+      await this.initPromise
+      const text = chunk.toString('utf-8')
+      this.socket?.send(JSON.stringify({ text, try_trigger_generation: true }))
+      this.log(`Sent transcript: ${text}`)
+    })
+
+    textStream.on('error', (error) => {
+      this.log('Error in text stream, ending audio stream', error)
+      this.audioStream?.end()
+      this.audioStream = undefined
+    })
+
+    textStream.on('end', async () => {
+      if (this.canceled) return
+      await this.initPromise
+      // Flush buffered text and mark end of utterance.
+      this.socket?.send(JSON.stringify({ text: ' ', flush: true }))
+      this.log('Flushed text')
+    })
+
+    this.convertedStream = convertToOpus(this.audioStream)
+    return this.convertedStream
+  }
+
+  cancel() {
+    if (!this.audioStream) return
+    this.log('Cancel')
+    this.canceled = true
+    this.audioStream.end()
+    this.audioStream = undefined
+    this.convertedStream?.end()
+    this.convertedStream = undefined
+  }
+
+  destroy() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+      this.reconnectTimeout = undefined
+    }
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval)
+      this.keepAliveInterval = undefined
+    }
+    this.socket?.removeAllListeners()
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket?.close(1000)
+    }
+    this.socket = undefined
+
+    this.audioStream?.end()
+    this.audioStream = undefined
+    this.convertedStream?.end()
+    this.convertedStream = undefined
+
+    super.destroy()
   }
 
   private initWS(): Promise<void> {
@@ -77,7 +145,6 @@ export class ElevenLabsTTS extends TTS {
       })
 
       socket.addEventListener('error', (error) => {
-        this.log('Connection error', error)
         reject(error)
       })
 
@@ -110,8 +177,6 @@ export class ElevenLabsTTS extends TTS {
         // The connection has been closed
         // If the "code" is equal to 1000, it means we closed intentionally the connection (after the end of the session for example).
         // Otherwise, we can reconnect to the same url.
-        this.log('Connection closed', { code, reason })
-
         this.socket?.removeAllListeners()
         this.socket = undefined
 
@@ -129,6 +194,8 @@ export class ElevenLabsTTS extends TTS {
           code !== 1008
         ) {
           this.reconnect()
+        } else {
+          this.log('Connection closed', { code, reason })
         }
       })
     })
@@ -139,72 +206,13 @@ export class ElevenLabsTTS extends TTS {
       this.log('Reconnecting...')
       this.reconnectTimeout = setTimeout(() => {
         this.reconnectTimeout = undefined
-        this.initWS().then(resolve).catch(reject)
+        this.initWS()
+          .then(resolve)
+          .catch((error) => {
+            this.log('Reconnection error:', error)
+            reject(error)
+          })
       }, 1000)
     })
-  }
-
-  speak(textStream: Readable) {
-    this.canceled = false
-
-    this.audioStream?.end()
-    const audioStream = new PassThrough()
-    this.audioStream = audioStream
-
-    // Forward text chunks coming from the caller to ElevenLabs
-    textStream.on('data', async (chunk) => {
-      if (this.canceled) return
-      await this.initPromise
-      const text = chunk.toString('utf-8')
-      this.socket?.send(JSON.stringify({ text, try_trigger_generation: true }))
-      this.log(`Sent transcript: ${text}`)
-    })
-
-    textStream.on('error', (error) => {
-      this.log('Error in text stream, ending audio stream', error)
-      this.audioStream?.end()
-      this.audioStream = undefined
-    })
-
-    textStream.on('end', async () => {
-      if (this.canceled) return
-      await this.initPromise
-      // Flush buffered text and mark end of utterance.
-      this.socket?.send(JSON.stringify({ text: ' ', flush: true }))
-      this.log('Flushed text')
-    })
-
-    return audioStream
-  }
-
-  cancel() {
-    if (!this.audioStream) return
-    this.log('Cancel')
-    this.canceled = true
-    this.audioStream.end()
-    this.audioStream = undefined
-  }
-
-  destroy() {
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout)
-      this.reconnectTimeout = undefined
-    }
-    if (this.keepAliveInterval) {
-      clearInterval(this.keepAliveInterval)
-      this.keepAliveInterval = undefined
-    }
-    this.socket?.removeAllListeners()
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.socket?.close(1000)
-    }
-    this.socket = undefined
-
-    if (this.audioStream) {
-      this.audioStream.end()
-      this.audioStream = undefined
-    }
-
-    super.destroy()
   }
 }

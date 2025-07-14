@@ -1,5 +1,5 @@
 import { Speaker } from '@micdrop/client'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { FaPlay, FaStop } from 'react-icons/fa'
 
 interface SpeakerTestButtonProps
@@ -8,7 +8,7 @@ interface SpeakerTestButtonProps
 export default function SpeakerTestButton(props: SpeakerTestButtonProps) {
   const [loading, setLoading] = useState(false)
   const [playing, setPlaying] = useState(false)
-  const [blob, setBlob] = useState<Blob | undefined>()
+  const timeoutRef = useRef<number | undefined>()
 
   useEffect(() => {
     const onStartPlaying = () => setPlaying(true)
@@ -22,35 +22,36 @@ export default function SpeakerTestButton(props: SpeakerTestButtonProps) {
   }, [])
 
   const handleClick = async () => {
-    if (playing) {
+    clearTimeout(timeoutRef.current)
+
+    if (Speaker.isPlaying) {
       Speaker.stopAudio()
-      setPlaying(false)
       return
     }
 
-    try {
-      setLoading(true)
+    setLoading(true)
 
-      // Load audio blob if not already loaded
-      let audioBlob = blob
-      if (!audioBlob) {
-        const result = await fetch('/test.mp3')
-        audioBlob = await result.blob()
-      }
+    const filepathPattern = '/chunk-{i}.webm'
+    let i = 1
+
+    const playNextChunk = async () => {
+      // Fetch audio chunk
+      const filepath = filepathPattern.replace('{i}', i.toString())
+      const result = await fetch(filepath)
+      if (!result.ok) return
 
       // Play audio
-      setPlaying(true)
-      setBlob(audioBlob)
+      const audioBlob = await result.blob()
+      console.log('Playing audio chunk', audioBlob)
       Speaker.playAudio(audioBlob)
-
-      setTimeout(() => {
-        setPlaying(false)
-      }, 2000)
-    } catch (error) {
-      console.error(error)
-    } finally {
+      i++
       setLoading(false)
+
+      // Schedule next chunk
+      timeoutRef.current = window.setTimeout(playNextChunk, 100)
     }
+
+    playNextChunk()
   }
 
   const { className, disabled, ...restProps } = props
