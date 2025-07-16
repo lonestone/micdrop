@@ -10,6 +10,8 @@ export interface SpeakerEvents {
   StopPlaying: void
 }
 
+const AUDIO_MIME_TYPE = 'audio/webm; codecs=opus'
+
 class Speaker extends EventEmitter<SpeakerEvents> {
   public isPlaying = false
   public analyser: AudioAnalyser
@@ -21,12 +23,12 @@ class Speaker extends EventEmitter<SpeakerEvents> {
   private isBufferUpdating: boolean = false
   private isSourceBufferInitialized: boolean = false
   private analyzerSourceNode?: MediaStreamAudioSourceNode
-  private isStreamEnded: boolean = false
-  private endCheckInterval?: number
+  private endCheckTimeout?: number
   private analyserRetryCount: number = 0
   private readonly maxAnalyserRetries: number = 5
   private readonly analyserRetryDelay: number = 200
   private analyserRetryTimeout?: number
+  private lastAudioCurrentTime?: number
 
   constructor() {
     super()
@@ -62,7 +64,7 @@ class Speaker extends EventEmitter<SpeakerEvents> {
     this.audioElement.addEventListener('error', this.onAudioError)
 
     // Add timeupdate listener to detect when we've reached the end of buffered content
-    this.audioElement.addEventListener('timeupdate', this.checkForPlaybackEnd)
+    this.audioElement.addEventListener('timeupdate', this.onAudioTimeUpdate)
   }
 
   private onAudioError = () => {
@@ -71,7 +73,6 @@ class Speaker extends EventEmitter<SpeakerEvents> {
       this.audioElement?.error
     )
     // Clear any pending operations
-    this.clearEndCheckInterval()
     this.isBufferUpdating = false
 
     // Preserve the current buffer queue so we don't lose audio data
@@ -90,9 +91,7 @@ class Speaker extends EventEmitter<SpeakerEvents> {
   private onSourceOpen = () => {
     if (!this.mediaSource || this.isSourceBufferInitialized) return
     try {
-      this.sourceBuffer = this.mediaSource.addSourceBuffer(
-        'audio/webm; codecs=opus'
-      )
+      this.sourceBuffer = this.mediaSource.addSourceBuffer(AUDIO_MIME_TYPE)
       this.sourceBuffer.mode = 'sequence'
       this.sourceBuffer.addEventListener('updateend', this.onUpdateEnd)
       this.isSourceBufferInitialized = true
@@ -103,9 +102,14 @@ class Speaker extends EventEmitter<SpeakerEvents> {
   }
 
   private async processBufferQueue() {
-    if (!this.sourceBuffer || this.isBufferUpdating || !this.bufferQueue.length)
+    if (
+      !this.sourceBuffer ||
+      this.sourceBuffer.updating ||
+      this.isBufferUpdating ||
+      !this.bufferQueue.length
+    ) {
       return
-    if (this.sourceBuffer.updating) return
+    }
 
     // Check if audio element has an error before attempting to append
     if (this.audioElement?.error) {
@@ -150,60 +154,58 @@ class Speaker extends EventEmitter<SpeakerEvents> {
     }
   }
 
-  private onUpdateEnd = () => {
+  // When the source buffer is updated, process the buffer queue
+  private onUpdateEnd = async () => {
     this.isBufferUpdating = false
-    this.processBufferQueue()
-
-    // If we finished playing all chunks and the stream is ended, close the MediaSource
-    if (
-      this.bufferQueue.length === 0 &&
-      this.isStreamEnded &&
-      this.mediaSource &&
-      this.mediaSource.readyState === 'open'
-    ) {
-      try {
-        this.mediaSource.endOfStream()
-        // Start checking if playback has actually ended
-        this.startEndCheckInterval()
-      } catch (e) {
-        console.error('Error ending MediaSource stream', e)
-      }
-    }
+    await this.processBufferQueue()
   }
 
-  private checkForPlaybackEnd = () => {
-    if (!this.audioElement || !this.isPlaying) return
-
-    // Check if we've reached the end of buffered content and there's no more data coming
+  private onAudioTimeUpdate = () => {
     if (
-      this.bufferQueue.length === 0 &&
-      this.audioElement.buffered.length > 0
+      !this.audioElement ||
+      !this.isPlaying ||
+      this.audioElement.paused ||
+      this.bufferQueue.length > 0
     ) {
-      const bufferedEnd = this.audioElement.buffered.end(
-        this.audioElement.buffered.length - 1
-      )
-      const currentTime = this.audioElement.currentTime
-
-      // If we're very close to the end of buffered content (within 0.2 seconds), consider it ended
-      if (bufferedEnd - currentTime <= 0.2) {
-        this.setIsPlaying(false)
-        this.clearEndCheckInterval()
-      }
+      return
     }
+
+    // Start checking for audio end
+    this.startEndCheckInterval()
   }
 
   private startEndCheckInterval() {
+    this.lastAudioCurrentTime = this.audioElement?.currentTime
     this.clearEndCheckInterval()
-    this.endCheckInterval = window.setInterval(() => {
-      this.checkForPlaybackEnd()
-    }, 100) // Check every 100ms
+    this.endCheckTimeout = window.setTimeout(() => {
+      this.checkIfAudioEnded()
+    }, 200)
   }
 
   private clearEndCheckInterval() {
-    if (this.endCheckInterval) {
-      clearInterval(this.endCheckInterval)
-      this.endCheckInterval = undefined
+    clearTimeout(this.endCheckTimeout)
+    this.endCheckTimeout = undefined
+  }
+
+  private checkIfAudioEnded() {
+    if (
+      !this.audioElement ||
+      !this.isPlaying ||
+      this.audioElement.paused ||
+      this.bufferQueue.length > 0
+    ) {
+      this.clearEndCheckInterval()
+      return
     }
+
+    const currentTime = this.audioElement.currentTime
+    if (this.lastAudioCurrentTime == currentTime) {
+      this.audioElement.pause()
+      // "pause" event is not triggered on Firefox when the audio is paused programmatically
+      this.setIsPlaying(false)
+      this.clearEndCheckInterval()
+    }
+    this.lastAudioCurrentTime = currentTime
   }
 
   private setIsPlaying(isPlaying: boolean) {
@@ -213,7 +215,6 @@ class Speaker extends EventEmitter<SpeakerEvents> {
 
     // Clear end check interval when not playing
     if (!isPlaying) {
-      this.clearEndCheckInterval()
     }
   }
 
@@ -325,33 +326,6 @@ class Speaker extends EventEmitter<SpeakerEvents> {
     }
   }
 
-  private startNewStream() {
-    this.isStreamEnded = false
-    this.clearEndCheckInterval()
-    // Reinitialize if necessary
-    if (this.mediaSource && this.mediaSource.readyState === 'ended') {
-      this.setupMediaSource()
-    }
-  }
-
-  private endStream() {
-    this.isStreamEnded = true
-    // Trigger check to close MediaSource if queue is empty
-    if (
-      this.bufferQueue.length === 0 &&
-      this.mediaSource &&
-      this.mediaSource.readyState === 'open'
-    ) {
-      try {
-        this.mediaSource.endOfStream()
-        // Start checking if playback has actually ended
-        this.startEndCheckInterval()
-      } catch (e) {
-        console.error('Error ending MediaSource stream', e)
-      }
-    }
-  }
-
   private setupMediaSource() {
     // Clean up existing MediaSource if any
     if (this.mediaSource) {
@@ -375,9 +349,6 @@ class Speaker extends EventEmitter<SpeakerEvents> {
       this.sourceBuffer = undefined
     }
 
-    // Disconnect analyser when reinitializing MediaSource
-    this.disconnectAnalyser()
-
     // Create new MediaSource
     this.mediaSource = new MediaSource()
 
@@ -396,38 +367,17 @@ class Speaker extends EventEmitter<SpeakerEvents> {
     this.bufferQueue.length = 0
   }
 
-  private disconnectAnalyser() {
-    // Clean up analyser connection
-    if (this.analyzerSourceNode) {
-      try {
-        this.analyzerSourceNode.disconnect()
-      } catch (e) {
-        console.warn('Error disconnecting analyser', e)
-      }
-      this.analyzerSourceNode = undefined
-    }
-
-    // Clear any pending retry
-    if (this.analyserRetryTimeout) {
-      clearTimeout(this.analyserRetryTimeout)
-      this.analyserRetryTimeout = undefined
-    }
-
-    // Reset retry count
-    this.analyserRetryCount = 0
-  }
-
   async playAudio(blob: Blob) {
     if (!this.audioElement) return
     try {
-      // Start a new stream if necessary
-      if (this.mediaSource && this.mediaSource.readyState === 'ended') {
-        this.startNewStream()
+      if (!this.mediaSource) {
+        this.setupMediaSource()
       }
 
       // Add blob to buffer queue
       this.bufferQueue.push(blob)
       this.processBufferQueue()
+
       // Start playing if not already playing
       if (this.audioElement.paused) {
         this.audioElement.play()
@@ -438,6 +388,7 @@ class Speaker extends EventEmitter<SpeakerEvents> {
   }
 
   stopAudio() {
+    if (!this.isPlaying) return
     if (this.audioElement) {
       this.audioElement.pause()
 
@@ -451,9 +402,8 @@ class Speaker extends EventEmitter<SpeakerEvents> {
     }
 
     this.bufferQueue.length = 0
-    this.clearEndCheckInterval()
-    this.disconnectAnalyser()
-    this.endStream()
+    this.mediaSource?.endOfStream()
+    this.mediaSource = undefined
   }
 }
 

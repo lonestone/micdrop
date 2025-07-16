@@ -13,7 +13,7 @@ export interface ElevenLabsTTSOptions {
 }
 
 export const DEFAULT_MODEL_ID = 'eleven_turbo_v2_5'
-export const DEFAULT_OUTPUT_FORMAT = 'mp3_44100_32'
+export const DEFAULT_OUTPUT_FORMAT = 'pcm_16000'
 
 export type ElevenLabsWebSocketMessage =
   | ElevenLabsWebSocketAudioOutputMessage
@@ -22,6 +22,15 @@ export type ElevenLabsWebSocketMessage =
 
 export interface ElevenLabsWebSocketAudioOutputMessage {
   audio: string
+  normalizedAlignment: ElevenLabsWebSocketAudioOutputMessageAlignment | null
+  alignment: ElevenLabsWebSocketAudioOutputMessageAlignment | null
+  isFinal?: boolean | null
+}
+
+export interface ElevenLabsWebSocketAudioOutputMessageAlignment {
+  chars: string[]
+  charStartTimesMs: number[]
+  charDurationsMs: number[]
 }
 
 export interface ElevenLabsWebSocketFinalOutputMessage {

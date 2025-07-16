@@ -67,7 +67,7 @@ export class CartesiaTTS extends TTS {
           continue: true,
         } satisfies CartesiaPayload)
       )
-      this.log(`Sent transcript: ${transcript}`)
+      this.log(`Sent transcript: "${transcript}"`)
     })
 
     textStream.on('error', (error) => {
@@ -130,6 +130,7 @@ export class CartesiaTTS extends TTS {
     this.convertedStream = undefined
   }
 
+  // Connect to Cartesia
   private async initWS() {
     return new Promise<void>((resolve, reject) => {
       const socket = new WebSocket(
@@ -147,9 +148,6 @@ export class CartesiaTTS extends TTS {
       })
 
       socket.addEventListener('close', ({ code, reason }) => {
-        // The connection has been closed
-        // If the "code" is equal to 1000, it means we closed intentionally the connection (after the end of the session for example).
-        // Otherwise, we can reconnect to the same url.
         this.socket?.removeAllListeners()
         this.socket = undefined
         this.audioStream?.end()

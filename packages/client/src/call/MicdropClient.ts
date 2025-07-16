@@ -155,6 +155,9 @@ export class MicdropClient<
     } catch (error) {
       console.error('[MicdropClient] Error stopping microphone', error)
     }
+
+    // Stop speaker
+    speaker.stopAudio()
   }
 
   pause() {
@@ -192,7 +195,7 @@ export class MicdropClient<
 
         // Send chunk of user speech to server
         this.micRecorder.on('Chunk', (blob) => {
-          this.log(`[MicdropClient] Send chunk`, blob)
+          this.log(`[MicdropClient] User audio chunk`, blob)
           this.ws?.send(blob)
         })
 
@@ -234,7 +237,8 @@ export class MicdropClient<
     } catch (error) {
       console.error('[MicdropClient] Error starting microphone', error)
       this.emit('Error', new MicdropClientError(MicdropClientErrorCode.Mic))
-      this.stop()
+      await this.stop()
+      throw error
     }
   }
 
@@ -247,93 +251,110 @@ export class MicdropClient<
   }
 
   private async startWS() {
-    if (this.ws) {
-      throw new Error('[MicdropClient] WebSocket is already started')
-    }
-    if (!this.isMicStarted) {
-      throw new Error('[MicdropClient] Microphone is not started')
-    }
-    if (!this.url) {
-      throw new Error('[MicdropClient] URL is not set')
-    }
+    try {
+      if (this.ws) {
+        this.log('WebSocket is already started')
+        return
+      }
+      if (!this.isMicStarted) {
+        throw new MicdropClientError(MicdropClientErrorCode.Mic)
+      }
+      if (!this.url) {
+        throw new MicdropClientError(MicdropClientErrorCode.MissingUrl)
+      }
 
-    // Start websocket
-    this.ws = new WebSocket(this.url)
-    this.ws.binaryType = 'blob'
-    this.notifyStateChange()
-
-    // Events
-    this.ws.onopen = () => {
-      this.log('WebSocket opened')
+      // Start websocket
+      this.ws = new WebSocket(this.url)
+      this.ws.binaryType = 'blob'
       this.notifyStateChange()
 
-      // Send params
-      if (this.params) {
-        this.ws?.send(JSON.stringify(this.params))
-      }
-    }
-    this.ws.onmessage = (event) => {
-      this.log('Received message', event.data)
-      if (event.data instanceof Blob) {
-        // Received assistant speech
-        if (this.isPaused || this.isUserSpeaking) return
-        speaker.playAudio(event.data)
-        this._isProcessing = false
+      // Events
+      this.ws.onopen = () => {
+        this.log('WebSocket opened')
         this.notifyStateChange()
-      } else if (typeof event.data !== 'string') {
-        console.warn(`[MicdropClient] Unknown message type: ${event.data}`)
-      } else if (event.data.startsWith(MicdropServerCommands.Message)) {
-        // Received user/assistant message
-        const message = JSON.parse(
-          event.data.substring(MicdropServerCommands.Message.length + 1)
-        )
-        this.addMessage(message)
-      } else if (event.data === MicdropServerCommands.EndCall) {
-        // Call ended
-        setTimeout(() => {
-          this.emit('EndCall')
-        }, 2000) // Wait to prevent conflict
-      } else if (
-        event.data === MicdropServerCommands.CancelLastAssistantMessage
-      ) {
-        // Remove last assistant message if aborted
-        const lastMessage = this.conversation[this.conversation.length - 1]
-        if (lastMessage?.role === 'assistant') {
-          this.conversation = this.conversation.slice(0, -1)
-          this.notifyStateChange()
+
+        // Send params
+        if (this.params) {
+          this.ws?.send(JSON.stringify(this.params))
         }
-      } else if (event.data === MicdropServerCommands.SkipAnswer) {
-        // Answer was skipped, listen again
-        this._isProcessing = false
-        this.notifyStateChange()
-      } else if (event.data === MicdropServerCommands.CancelLastUserMessage) {
-        // Remove last user message if aborted
-        const lastMessage = this.conversation[this.conversation.length - 1]
-        if (lastMessage?.role === 'user') {
-          this.conversation = this.conversation.slice(0, -1)
+      }
+      this.ws.onmessage = (event) => {
+        this.log('Received message:', event.data)
+        if (event.data instanceof Blob) {
+          // Received assistant speech
+          if (this.isPaused || this.isUserSpeaking) return
+          speaker.playAudio(event.data)
           this._isProcessing = false
           this.notifyStateChange()
+        } else if (typeof event.data !== 'string') {
+          console.warn(`[MicdropClient] Unknown message type: ${event.data}`)
+        } else if (event.data.startsWith(MicdropServerCommands.Message)) {
+          // Received user/assistant message
+          const message = JSON.parse(
+            event.data.substring(MicdropServerCommands.Message.length + 1)
+          )
+          this._isProcessing = false
+          this.addMessage(message)
+        } else if (event.data === MicdropServerCommands.EndCall) {
+          // Call ended
+          setTimeout(() => {
+            this.emit('EndCall')
+          }, 2000) // Wait to prevent conflict
+        } else if (
+          event.data === MicdropServerCommands.CancelLastAssistantMessage
+        ) {
+          // Remove last assistant message if aborted
+          const lastMessage = this.conversation[this.conversation.length - 1]
+          if (lastMessage?.role === 'assistant') {
+            this.conversation = this.conversation.slice(0, -1)
+            this.notifyStateChange()
+          }
+        } else if (event.data === MicdropServerCommands.SkipAnswer) {
+          // Answer was skipped, listen again
+          this._isProcessing = false
+          this.notifyStateChange()
+        } else if (event.data === MicdropServerCommands.CancelLastUserMessage) {
+          // Remove last user message if aborted
+          const lastMessage = this.conversation[this.conversation.length - 1]
+          if (lastMessage?.role === 'user') {
+            this.conversation = this.conversation.slice(0, -1)
+            this._isProcessing = false
+            this.notifyStateChange()
+          }
         }
       }
-    }
-    this.ws.onclose = (event) => {
-      this.log('WebSocket closed', event)
-      this.stop()
+      this.ws.onclose = (event) => {
+        this.log('WebSocket closed', event)
+        this.stop()
 
-      const error = getClientErrorFromWSCloseEvent(event)
-      if (error) {
-        this.emit('Error', error)
+        const error = getClientErrorFromWSCloseEvent(event)
+        if (error) {
+          this.emit('Error', error)
+        }
       }
-    }
-    this.ws.onerror = (event) => {
-      console.error('[MicdropClient] WebSocket error:', event)
-      this.stop()
+      this.ws.onerror = (event) => {
+        console.error('[MicdropClient] WebSocket error:', event)
+        this.stop()
+      }
+    } catch (error) {
+      console.error('[MicdropClient] Error starting WebSocket', error)
+      this.emit(
+        'Error',
+        new MicdropClientError(MicdropClientErrorCode.Connection)
+      )
+      await this.stop()
+      throw error
     }
   }
 
   private stopWS() {
     if (!this.ws) return
-    this.ws.close()
+    if (
+      this.ws.readyState === WebSocket.OPEN ||
+      this.ws.readyState === WebSocket.CONNECTING
+    ) {
+      this.ws.close()
+    }
     this.ws = undefined
     this.notifyStateChange()
   }

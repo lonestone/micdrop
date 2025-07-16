@@ -1,10 +1,11 @@
-import { convertToOpus, TTS } from '@micdrop/server'
+import { convertPCMToOpus, TTS } from '@micdrop/server'
 import { PassThrough, Readable } from 'stream'
 import WebSocket from 'ws'
 import {
   DEFAULT_MODEL_ID,
   DEFAULT_OUTPUT_FORMAT,
   ElevenLabsTTSOptions,
+  ElevenLabsWebSocketAudioOutputMessage,
   ElevenLabsWebSocketMessage,
 } from './types'
 
@@ -17,6 +18,10 @@ export class ElevenLabsTTS extends TTS {
   private initPromise: Promise<void>
   private audioStream?: PassThrough
   private convertedStream?: PassThrough
+  private textEnded = false // Whether the text stream has ended
+  private textSent = '' // Text sent to ElevenLabs
+  private textBuffer = '' // Buffer of text to send to ElevenLabs
+  private receivedAudioText = '' // Text of chunks received from ElevenLabs
   private keepAliveInterval?: NodeJS.Timeout
   private reconnectTimeout?: NodeJS.Timeout
   private canceled = false
@@ -33,14 +38,23 @@ export class ElevenLabsTTS extends TTS {
     this.canceled = false
     this.audioStream?.end()
     this.audioStream = new PassThrough()
+    this.textEnded = false
+    this.textBuffer = ''
+    this.textSent = ''
+    this.receivedAudioText = ''
 
     // Forward text chunks coming from the caller to ElevenLabs
     textStream.on('data', async (chunk) => {
       if (this.canceled) return
       await this.initPromise
-      const text = chunk.toString('utf-8')
-      this.socket?.send(JSON.stringify({ text, try_trigger_generation: true }))
-      this.log(`Sent transcript: ${text}`)
+      const text = chunk.toString('utf-8').replace(/[\r\n]+/g, ' ')
+      const spaceIndex = text.lastIndexOf(' ')
+      if (spaceIndex === -1) {
+        this.textBuffer += text
+      } else {
+        this.sendTranscript(this.textBuffer + text.slice(0, spaceIndex + 1))
+        this.textBuffer = text.slice(spaceIndex + 1)
+      }
     })
 
     textStream.on('error', (error) => {
@@ -52,12 +66,18 @@ export class ElevenLabsTTS extends TTS {
     textStream.on('end', async () => {
       if (this.canceled) return
       await this.initPromise
+      // Send last buffered text
+      if (this.textBuffer.trim()) {
+        this.sendTranscript(this.textBuffer + ' ')
+        this.textBuffer = ''
+      }
+      this.textEnded = true
       // Flush buffered text and mark end of utterance.
       this.socket?.send(JSON.stringify({ text: ' ', flush: true }))
       this.log('Flushed text')
     })
 
-    this.convertedStream = convertToOpus(this.audioStream)
+    this.convertedStream = convertPCMToOpus(this.audioStream)
     return this.convertedStream
   }
 
@@ -65,6 +85,8 @@ export class ElevenLabsTTS extends TTS {
     if (!this.audioStream) return
     this.log('Cancel')
     this.canceled = true
+    this.textSent = ''
+    this.receivedAudioText = ''
     this.audioStream.end()
     this.audioStream = undefined
     this.convertedStream?.end()
@@ -114,6 +136,7 @@ export class ElevenLabsTTS extends TTS {
 
       const uri = `wss://api.elevenlabs.io/v1/text-to-speech/${this.options.voiceId}/stream-input?${params.toString()}`
 
+      // Connect to ElevenLabs
       const socket = new WebSocket(uri, {
         headers: {
           'xi-api-key': this.options.apiKey,
@@ -151,32 +174,14 @@ export class ElevenLabsTTS extends TTS {
       socket.addEventListener('message', (event) => {
         if (this.canceled) return
         try {
-          const message: ElevenLabsWebSocketMessage = JSON.parse(
-            event.data.toString()
-          )
-
-          if ('audio' in message && message.audio) {
-            const chunk = Buffer.from(message.audio, 'base64')
-            this.log(`Received audio chunk (${chunk.length} bytes)`)
-            this.audioStream?.write(chunk)
-          }
-          if ('isFinal' in message && message.isFinal) {
-            this.log('Audio ended')
-            this.audioStream?.end()
-            this.audioStream = undefined
-          }
-          if ('error' in message) {
-            console.error('[ElevenLabsTTS] Error:', message.error)
-          }
-        } catch {
-          console.error('[ElevenLabsTTS] Error parsing message:', event.data)
+          this.onMessage(JSON.parse(event.data.toString()))
+        } catch (error) {
+          console.error('[ElevenLabsTTS] Error:', error)
+          console.error('[ElevenLabsTTS] Event data during error:', event.data)
         }
       })
 
       socket.addEventListener('close', ({ code, reason }) => {
-        // The connection has been closed
-        // If the "code" is equal to 1000, it means we closed intentionally the connection (after the end of the session for example).
-        // Otherwise, we can reconnect to the same url.
         this.socket?.removeAllListeners()
         this.socket = undefined
 
@@ -189,7 +194,6 @@ export class ElevenLabsTTS extends TTS {
         }
 
         if (
-          code !== 1000 &&
           // Error: voice_id_does_not_exist
           code !== 1008
         ) {
@@ -199,6 +203,58 @@ export class ElevenLabsTTS extends TTS {
         }
       })
     })
+  }
+
+  private onMessage(message: ElevenLabsWebSocketMessage) {
+    if ('audio' in message && message.audio) {
+      this.processAudioMessage(message)
+    }
+    if ('isFinal' in message && message.isFinal) {
+      this.log('Audio ended')
+      this.audioStream?.end()
+      this.audioStream = undefined
+    }
+    if ('error' in message) {
+      throw new Error(message.error)
+    }
+  }
+
+  private processAudioMessage(message: ElevenLabsWebSocketAudioOutputMessage) {
+    const chunk = Buffer.from(message.audio, 'base64')
+
+    // Check text of received audio chunk
+    if (message.alignment) {
+      const chunkText = message.alignment.chars.join('')
+      const receivedAudioText = this.receivedAudioText + chunkText
+
+      // Ignore chunk if it is from previous session
+      if (this.textSent.trim().indexOf(receivedAudioText.trim()) === -1) {
+        this.log(`Ignore audio chunk ("${chunkText}")`)
+        return
+      }
+
+      this.log(`Received audio chunk ("${chunkText}")`)
+      this.receivedAudioText = receivedAudioText
+
+      // Fix isFinal (apparently ElevenLabs doesn't send it like it should)
+      this.fixIsFinal(message)
+    }
+
+    // Send to audio stream
+    this.audioStream?.write(chunk)
+  }
+
+  private fixIsFinal(message: ElevenLabsWebSocketAudioOutputMessage) {
+    if (message.isFinal || !this.textEnded) return
+    if (this.receivedAudioText.trim() === this.textSent.trim()) {
+      message.isFinal = true
+    }
+  }
+
+  private sendTranscript(text: string) {
+    this.textSent += text
+    this.socket?.send(JSON.stringify({ text, try_trigger_generation: true }))
+    this.log(`Sent transcript: "${text}"`)
   }
 
   private reconnect() {

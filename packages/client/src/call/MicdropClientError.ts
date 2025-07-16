@@ -1,4 +1,5 @@
 export enum MicdropClientErrorCode {
+  MissingUrl = 'MissingUrl',
   Mic = 'Mic',
   Connection = 'Connection',
   InternalServer = 'InternalServer',

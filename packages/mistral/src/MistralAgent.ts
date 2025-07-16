@@ -22,6 +22,7 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
   }
 
   answer(): Readable {
+    this.log('Start answering')
     this.cancelled = false
     const stream = new PassThrough()
     this.generateAnswer(stream)
@@ -56,7 +57,7 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
         if (this.cancelled) return
         const chunk = event.data.choices[0].delta.content
         if (typeof chunk === 'string') {
-          this.log('Answer chunk:', chunk)
+          this.log(`Answer chunk: "${chunk}"`)
           stream.write(chunk)
           fullAnswer += chunk
         }

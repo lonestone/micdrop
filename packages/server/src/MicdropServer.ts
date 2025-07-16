@@ -61,26 +61,6 @@ export class MicdropServer {
     this.config?.agent.cancel()
   }
 
-  private async sendAudio(audio: Readable) {
-    if (!this.socket) return
-    if (!audio.readable) {
-      this.log('Non readable audio, skipping', audio)
-      return
-    }
-
-    // Stream audio
-    audio.on('data', (chunk) => {
-      this.log(`Send audio chunk (${chunk.length} bytes)`)
-      this.socket?.send(chunk)
-    })
-    audio.on('error', (error) => {
-      this.log('Error in audio stream', error)
-    })
-    audio.on('end', () => {
-      this.log('Audio stream ended')
-    })
-  }
-
   private onClose() {
     if (!this.config) return
     this.log('Connection closed')
@@ -162,7 +142,7 @@ export class MicdropServer {
 
   private async onTranscript(transcript: string) {
     if (!this.config) return
-    this.log('User transcript:', transcript)
+    this.log(`User transcript: "${transcript}"`)
     this.config.agent.addUserMessage(transcript)
 
     // Answer if user stopped speaking
@@ -177,10 +157,10 @@ export class MicdropServer {
     try {
       if (this.config.firstMessage) {
         this.config.agent.addAssistantMessage(this.config.firstMessage)
-        this.speak(this.config.firstMessage)
+        await this.speak(this.config.firstMessage)
       } else if (this.config.generateFirstMessage) {
         const answerStream = this.config.agent.answer()
-        this.speak(answerStream)
+        await this.speak(answerStream)
       }
     } catch (error) {
       console.error('[MicdropServer]', error)
@@ -207,27 +187,41 @@ export class MicdropServer {
   private async speak(message: string | Readable) {
     if (!this.socket || !this.config) return
 
-    // TTS: Generate answer audio
-    try {
-      // Convert message to stream if needed
-      let textStream: Readable
-      if (typeof message === 'string') {
-        const stream = new PassThrough()
-        stream.write(message)
-        stream.end()
-        textStream = stream
-      } else {
-        textStream = message
-      }
-
-      // Run TTS
-      const audio = this.config.tts.speak(textStream)
-
-      // Send audio to client
-      await this.sendAudio(audio)
-    } catch (error) {
-      console.error('[MicdropServer]', error)
-      this.socket?.send(MicdropServerCommands.SkipAnswer)
+    // Convert message to stream if needed
+    let textStream: Readable
+    if (typeof message === 'string') {
+      const stream = new PassThrough()
+      stream.write(message)
+      stream.end()
+      textStream = stream
+    } else {
+      textStream = message
     }
+
+    // Run TTS
+    const audio = this.config.tts.speak(textStream)
+
+    // Send audio to client
+    await this.sendAudio(audio)
+  }
+
+  private async sendAudio(audio: Readable) {
+    if (!this.socket) return
+    if (!audio.readable) {
+      this.log('Non readable audio, skipping', audio)
+      return
+    }
+
+    // Stream audio
+    audio.on('data', (chunk) => {
+      this.log(`Send audio chunk (${chunk.byteLength} bytes)`)
+      this.socket?.send(chunk)
+    })
+    audio.on('error', (error) => {
+      this.log('Error in audio stream', error)
+    })
+    audio.on('end', () => {
+      this.log('Audio stream ended')
+    })
   }
 }

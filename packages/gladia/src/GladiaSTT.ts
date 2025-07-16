@@ -66,8 +66,8 @@ export class GladiaSTT extends STT {
     this.socket = undefined
   }
 
+  // Register real-time transcription to get a WebSocket URL
   private async getURL() {
-    // Register real-time transcription to get a WebSocket URL
     const response = await fetch('https://api.gladia.io/v2/live', {
       method: 'POST',
       headers: {
@@ -103,27 +103,22 @@ export class GladiaSTT extends STT {
     return url
   }
 
+  // Connect to Gladia
   private async initWS(url: string) {
     return new Promise<void>((resolve, reject) => {
       const socket = new WebSocket(url)
       this.socket = socket
 
       socket.addEventListener('open', () => {
-        // Connection is opened. You can start sending audio chunks.
         this.log('Connection opened')
         resolve()
       })
 
       socket.addEventListener('error', (error) => {
-        // An error occurred during the connection.
-        // Check the error to understand why
         reject(error)
       })
 
       socket.addEventListener('close', ({ code, reason }) => {
-        // The connection has been closed
-        // If the "code" is equal to 1000, it means we closed intentionally the connection (after the end of the session for example).
-        // Otherwise, we can reconnect to the same url.
         this.socket?.removeAllListeners()
         this.socket = undefined
 
@@ -135,11 +130,10 @@ export class GladiaSTT extends STT {
       })
 
       socket.addEventListener('message', (event) => {
-        // All the messages we are sending are in JSON format
         const message = JSON.parse(event.data.toString())
         if (message.type === 'transcript' && message.data.is_final) {
           const transcript = message.data.utterance.text
-          this.log('Received transcript', transcript)
+          this.log(`Received transcript: "${transcript}"`)
           this.emit('Transcript', transcript)
         }
       })

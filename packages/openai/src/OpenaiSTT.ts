@@ -46,6 +46,9 @@ export class OpenaiSTT extends FileSTT {
       throw new Error(`Failed to transcribe audio: ${response.statusText}`)
     }
 
-    return await response.text()
+    const transcript = await response.text()
+    this.log(`Received transcript: "${transcript}"`)
+
+    return transcript
   }
 }

@@ -47,6 +47,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   }
 
   answer(): Readable {
+    this.log('Start answering')
     const stream = new PassThrough()
     this.abortController = new AbortController()
     const signal = this.abortController.signal
@@ -73,7 +74,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
         for await (const event of response) {
           switch (event.type) {
             case 'response.output_text.delta':
-              this.log('Answer chunk:', event.delta)
+              this.log(`Answer chunk: "${event.delta}"`)
               stream.write(event.delta)
               break
             case 'response.output_text.done':
