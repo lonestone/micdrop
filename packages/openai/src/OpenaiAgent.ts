@@ -40,9 +40,9 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   private tools: OpenAI.Responses.Tool[]
   private abortController?: AbortController
 
-  constructor(config: OpenaiAgentOptions) {
-    super(config)
-    this.openai = new OpenAI({ apiKey: config.apiKey })
+  constructor(options: OpenaiAgentOptions) {
+    super(options)
+    this.openai = new OpenAI({ apiKey: options.apiKey })
     this.tools = this.getTools()
   }
 
@@ -51,6 +51,9 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
     const stream = new PassThrough()
     this.abortController = new AbortController()
     const signal = this.abortController.signal
+
+    // Disable tools if first message
+    const enableTools = this.conversation.length > 1
 
     // Generate answer
     this.openai.responses
@@ -64,7 +67,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
           temperature: 0.5,
           max_output_tokens: 250,
           stream: true,
-          tools: this.tools,
+          tools: enableTools ? this.tools : undefined,
           parallel_tool_calls: false,
           ...this.options.settings,
         },
