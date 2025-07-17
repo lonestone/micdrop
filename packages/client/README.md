@@ -31,41 +31,85 @@ pnpm add @micdrop/client
 
 ## Quick Start
 
+### Start a call
+
+`Micdrop` is a singleton instance of `MicdropClient` that can be used to start, stop and manage a call.
+
 ```typescript
-import { MicdropClient } from '@micdrop/client'
+import { Micdrop } from '@micdrop/client'
 
-// Create a new call handler instance
-const call = MicdropClient.getInstance<YourParamsType>({
-  // VAD (see docs)
-  vad: ['volume', 'silero'],
+// Start a call
+await Micdrop.start({
+  url: 'wss://your-server.com/ws',
 })
+```
 
-// Configure the call
-call.url = 'wss://your-server.com/ws'
-call.params = {
-  /* your parameters (to check auth, etc) */
-}
+### Control the call
 
-// Listen for events
-call.on('StateChange', () => {
+```typescript
+// Pause/resume
+Micdrop.pause()
+Micdrop.resume()
+
+// Stop the call
+await Micdrop.stop()
+```
+
+### Listen for events
+
+You can listen for events to get the state of the call and handle errors.
+
+```typescript
+Micdrop.on('StateChange', () => {
   console.log('State changed')
 })
-call.on('EndCall', () => {
+Micdrop.on('EndCall', () => {
   console.log('Call ended by assistant')
 })
-call.on('Error', (error) => {
+Micdrop.on('Error', (error) => {
+  console.error('Error occurred:', error)
+})
+```
+
+### Complete Example
+
+```typescript
+import { Micdrop } from '@micdrop/client'
+
+// Start a call
+await Micdrop.start({
+  // URL of the WebSocket server (using @micdrop/server)
+  url: 'wss://your-server.com/ws',
+  // Parameters (optional) to check auth or provide other data
+  params: {
+    authorization: '1234',
+    lang: navigator.language,
+  },
+  // Voice Activity Detection (see docs)
+  vad: ['volume', 'silero'],
+  // Disable ability for the user to interrupt the assistant when it is speaking
+  disableInterruption: true,
+  // Enable debug logging
+  debugLog: true,
+})
+
+// Listen for events
+Micdrop.on('StateChange', () => {
+  console.log('State changed')
+})
+Micdrop.on('EndCall', () => {
+  console.log('Call ended by assistant')
+})
+Micdrop.on('Error', (error) => {
   console.error('Error occurred:', error)
 })
 
-// Start the call
-await call.start()
-
 // Pause/resume
-call.pause()
-call.resume()
+Micdrop.pause()
+Micdrop.resume()
 
 // Stop the call
-await call.stop()
+await Micdrop.stop()
 ```
 
 ## Demo
@@ -90,12 +134,15 @@ Here's a simplified version from the demo:
 
 - **[Speaker](./docs/Speaker.md)** - Handles audio output devices and playback with analysis capabilities
 
+- **[VAD](./docs/VAD.md)** - Voice Activity Detection, how to use and customize
+
 ## Browser Support
 
 Requires browsers with support for:
 
 - WebSocket API
 - MediaRecorder API
+- MediaSource API
 - Web Audio API
 - getUserMedia API
 

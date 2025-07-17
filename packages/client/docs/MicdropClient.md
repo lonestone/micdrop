@@ -7,17 +7,22 @@ The `MicdropClient` class manages real-time audio communication between a client
 ```typescript
 import { MicdropClient } from '@micdrop/client'
 
-// Get the singleton instance with your params type and options
-const micdrop = MicdropClient.getInstance<YourParamsType>({
-  vad: ['silero', 'volume'], // or 'volume', or an instance, or array (see VAD section)
-  disableInterruption: true, // disables mic interruption when assistant is speaking
+// Start a call
+const micdrop = new MicdropClient({
+  // URL of the WebSocket server (using @micdrop/server)
+  url: 'wss://your-server.com/ws',
+  // Parameters (optional) to check auth or provide other data
+  params: {
+    authorization: '1234',
+    lang: navigator.language,
+  },
+  // Voice Activity Detection (see docs)
+  vad: ['volume', 'silero'],
+  // Disable ability for the user to interrupt the assistant when it is speaking
+  disableInterruption: true,
+  // Enable debug logging
+  debugLog: true,
 })
-
-// Configure the micdrop
-micdrop.url = 'wss://your-server.com/ws'
-micdrop.params = {
-  /* your parameters (to check auth, etc) */
-}
 
 // Listen for state changes
 micdrop.on('StateChange', () => {
@@ -56,6 +61,7 @@ micdrop.on('Error', (error) => {
 })
 
 // Start the call
+// You can also pass options instead or in addition to the constructor
 await micdrop.start()
 
 // Pause/resume
@@ -68,10 +74,13 @@ await micdrop.stop()
 
 ## Options
 
-You can pass an options object to `MicdropClient.getInstance`:
+You can pass an options object to `MicdropClient` constructor or to the `start` method:
 
+- `url`: URL of the WebSocket server (using @micdrop/server)
+- `params`: Parameters (optional) to check auth or provide other data
 - `vad`: VAD configuration (see [VAD](./VAD.md) section)
 - `disableInterruption`: If true, disables automatic mic muting when the assistant is speaking (default: false)
+- `debugLog`: Boolean flag to enable/disable debug logging
 
 ## Events
 
@@ -85,20 +94,14 @@ The `MicdropClient` emits the following events:
 
 ### Public Properties
 
-Params that can be changed before starting the call:
-
-- `url`: WebSocket URL for the connection
-- `params`: Generic type parameters for the handler
-- `debug`: Boolean flag to enable/disable debug logging
-
 Accessible properties that must not be changed:
 
 - `micRecorder`: Instance of `MicRecorder` for handling microphone input (do not change)
-- `vad`: The VAD instance in use (do not change)
 - `conversation`: Array storing the conversation history (do not change)
 
 ### State Properties (Getters)
 
+- `vad`: The VAD instance in use
 - `isStarted`: Returns true if both WebSocket and microphone recording are active
 - `isStarting`: Returns true if either WebSocket or microphone are in starting state
 - `isWSStarted`: Returns true if WebSocket connection is open
@@ -116,7 +119,7 @@ Accessible properties that must not be changed:
 ### Core Methods
 
 ```typescript
-async start(): Promise<void>
+async start(options?: MicdropClientOptions): Promise<void>
 ```
 
 Initializes the handler by starting the microphone and WebSocket connection.
@@ -139,19 +142,21 @@ resume(): void
 
 Unmutes the microphone and resumes audio playback if available.
 
-```typescript
-async destroy(): Promise<void>
-```
-
-Cleans up all listeners and resources. Call this if you want to fully dispose the singleton and reset state.
-
 ### Microphone Control
 
 ```typescript
-async startMic(deviceId?: string, record = true): Promise<void>
+async startMic(params: {
+  vad?: VADConfig
+  deviceId?: string
+  record?: boolean
+}): Promise<void>
 ```
 
 Starts the microphone with optional device selection and recording control.
+
+- `vad`: VAD configuration (see [VAD](./VAD.md) section)
+- `deviceId`: Device ID to use for the microphone
+- `record`: Boolean flag to enable/disable recording
 
 ## VAD
 

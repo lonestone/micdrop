@@ -7,10 +7,9 @@ import {
   VAD,
 } from '@micdrop/client'
 import EventEmitter from 'eventemitter3'
+import { Mic, Speaker } from '../audio'
 import { MicRecorder } from '../audio/MicRecorder'
-import { mic } from '../audio/mic'
-import { speaker } from '../audio/speaker'
-import { getVAD, VADConfig } from '../audio/vad/getVAD'
+import { VADConfig } from '../audio/vad/getVAD'
 import {
   MicdropClientError,
   MicdropClientErrorCode,
@@ -23,36 +22,16 @@ export interface MicdropClientEvents {
 }
 
 export interface MicdropClientOptions {
+  url?: string
+  params?: Record<string, any>
   vad?: VADConfig
   disableInterruption?: boolean
+  debugLog?: boolean
 }
 
-declare global {
-  interface Window {
-    micdropMicdropClient: any
-  }
-}
-
-export class MicdropClient<
-  Params extends {},
-  Options extends MicdropClientOptions = MicdropClientOptions,
-> extends EventEmitter<MicdropClientEvents> {
-  public static getInstance<
-    P extends {},
-    O extends MicdropClientOptions = MicdropClientOptions,
-  >(options?: O): MicdropClient<P, O> {
-    if (!window.micdropMicdropClient) {
-      window.micdropMicdropClient = new MicdropClient<P, O>(options)
-    }
-    return window.micdropMicdropClient
-  }
-
-  public url?: string
-  public params?: Params
+export class MicdropClient extends EventEmitter<MicdropClientEvents> {
   public micRecorder?: MicRecorder
-  public vad: VAD
   public conversation: MicdropConversation = []
-  public debug = false
 
   private ws?: WebSocket
   private micStream?: MediaStream
@@ -60,15 +39,16 @@ export class MicdropClient<
   private _isProcessing = false
   private _isPaused = false
 
-  private constructor(private options?: Options) {
+  constructor(public options: MicdropClientOptions = {}) {
     super()
-
-    // Init VAD
-    this.vad = getVAD(this.options?.vad)
 
     // Add speaker listener
     Speaker.on('StartPlaying', this.onSpeakerStartPlaying)
     Speaker.on('StopPlaying', this.onSpeakerStopPlaying)
+  }
+
+  get vad(): VAD | undefined {
+    return this.micRecorder?.vad
   }
 
   get isStarted(): boolean {
@@ -122,7 +102,9 @@ export class MicdropClient<
     return Speaker.isPlaying
   }
 
-  async start() {
+  start = async (options?: MicdropClientOptions) => {
+    this.options = { ...this.options, ...options }
+
     // Reset state
     this.startTime = Date.now()
     this.conversation = []
@@ -130,13 +112,13 @@ export class MicdropClient<
     this._isPaused = false
 
     // Start mic if not already started
-    await this.startMic(undefined, true)
+    await this.startMic({ record: true })
 
     // Start websocket
     await this.startWS()
   }
 
-  async stop() {
+  stop = async () => {
     this._isProcessing = false
     this._isPaused = false
     try {
@@ -158,7 +140,7 @@ export class MicdropClient<
     Speaker.stopAudio()
   }
 
-  pause() {
+  pause = () => {
     if (this.isPaused) return
     this.micRecorder?.mute()
     this._isPaused = true
@@ -168,25 +150,28 @@ export class MicdropClient<
     this.ws?.send(MicdropClientCommands.Mute)
   }
 
-  resume() {
+  resume = () => {
     if (!this.isPaused) return
     this.micRecorder?.unmute()
     this._isPaused = false
     this.notifyStateChange()
   }
 
-  async destroy() {
-    window.micdropMicdropClient = undefined
-    this.stop()
-    this.removeAllListeners()
-    Speaker.off('StartPlaying', this.onSpeakerStartPlaying)
-    Speaker.off('StopPlaying', this.onSpeakerStopPlaying)
-  }
-
-  async startMic(deviceId?: string, record = true) {
+  startMic = async ({
+    vad,
+    deviceId,
+    record = true,
+  }: {
+    vad?: VADConfig
+    deviceId?: string
+    record?: boolean
+  }) => {
+    if (vad) {
+      this.options.vad = vad
+    }
     try {
       if (!this.micRecorder) {
-        this.micRecorder = new MicRecorder(this.vad)
+        this.micRecorder = new MicRecorder(this.options.vad)
 
         // Notify mic recorder state change
         this.micRecorder.on('StateChange', () => {
@@ -259,12 +244,12 @@ export class MicdropClient<
       if (!this.isMicStarted) {
         throw new MicdropClientError(MicdropClientErrorCode.Mic)
       }
-      if (!this.url) {
+      if (!this.options.url) {
         throw new MicdropClientError(MicdropClientErrorCode.MissingUrl)
       }
 
       // Start websocket
-      this.ws = new WebSocket(this.url)
+      this.ws = new WebSocket(this.options.url)
       this.ws.binaryType = 'blob'
       this.notifyStateChange()
 
@@ -289,8 +274,8 @@ export class MicdropClient<
     this.notifyStateChange()
 
     // Send params
-    if (this.params) {
-      this.ws?.send(JSON.stringify(this.params))
+    if (this.options.params) {
+      this.ws?.send(JSON.stringify(this.options.params))
     }
   }
 
@@ -369,7 +354,7 @@ export class MicdropClient<
 
   private onSpeakerStartPlaying = () => {
     this.log('Speaker started')
-    if (this.options?.disableInterruption && !this.isPaused) {
+    if (this.options.disableInterruption && !this.isPaused) {
       this.micRecorder?.mute()
     }
     this.notifyStateChange()
@@ -377,7 +362,7 @@ export class MicdropClient<
 
   private onSpeakerStopPlaying = () => {
     this.log('Speaker stopped')
-    if (this.options?.disableInterruption && !this.isPaused) {
+    if (this.options.disableInterruption && !this.isPaused) {
       this.micRecorder?.unmute()
     }
     this.notifyStateChange()
@@ -393,7 +378,7 @@ export class MicdropClient<
   }
 
   private log(...message: any[]) {
-    if (!this.debug) return
+    if (!this.options.debugLog) return
     console.log(`[MicdropClient ${Date.now() - this.startTime}]`, ...message)
   }
 }

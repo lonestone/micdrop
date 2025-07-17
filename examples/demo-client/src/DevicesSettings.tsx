@@ -1,4 +1,4 @@
-import { LocalStorageKeys, Speaker } from '@micdrop/client'
+import { LocalStorageKeys, Micdrop, Speaker } from '@micdrop/client'
 import { ChangeEventHandler, useContext, useEffect, useState } from 'react'
 import { FaMicrophone, FaVolumeUp } from 'react-icons/fa'
 import { CallContext } from './CallContext'
@@ -45,7 +45,7 @@ export default function DevicesSettings() {
   ) => {
     const deviceId = event.target.value
     setAudioInputId(deviceId)
-    call?.startMic(deviceId)
+    Micdrop.startMic({ deviceId })
   }
 
   // Change audio output (speaker)

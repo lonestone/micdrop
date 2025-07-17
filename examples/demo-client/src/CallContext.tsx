@@ -1,17 +1,11 @@
 import {
-  MicdropClient,
+  Micdrop,
   MicdropClientError,
   MicdropConversation,
 } from '@micdrop/client'
-import type { CallParams } from '@micdrop/demo-server/src/params'
-import React, { createContext, useCallback, useEffect, useState } from 'react'
+import React, { createContext, useEffect, useState } from 'react'
 
 export interface CallContextValue {
-  start: () => Promise<void>
-  stop: () => void
-  startMic: (deviceId?: string) => Promise<void>
-  pause: () => void
-  resume: () => void
   isStarting: boolean
   isStarted: boolean
   isPaused: boolean
@@ -34,52 +28,26 @@ interface CallContextProviderProps {
 }
 
 export function CallContextProvider({ children }: CallContextProviderProps) {
-  // Setup call handler
-  const call = MicdropClient.getInstance<CallParams>({
-    vad: ['silero', 'volume'],
-  })
-
-  // Start call
-  const handleStart = useCallback(async () => {
-    setValue((v) => ({
-      ...v,
-      error: undefined,
-    }))
-
-    call.url = 'ws://localhost:8081/call'
-    call.params = {
-      authorization: '1234',
-      lang: navigator.language,
-    }
-    call.debug = true
-    call.start()
-  }, [])
-
-  // Stop call
-  const handleStop = useCallback(() => {
-    call.stop()
-  }, [])
-
   useEffect(() => {
     // Handle state changes
-    call.on('StateChange', () => {
+    Micdrop.on('StateChange', () => {
       setValue((v) => ({
         ...v,
-        conversation: call.conversation,
-        isStarting: call.isStarting,
-        isStarted: call.isStarted,
-        isPaused: call.isPaused,
-        isListening: call.isListening,
-        isProcessing: call.isProcessing,
-        isUserSpeaking: call.isUserSpeaking,
-        isAssistantSpeaking: call.isAssistantSpeaking,
-        isMicStarted: call.isMicStarted,
-        isMicMuted: call.isMicMuted,
+        conversation: Micdrop.conversation,
+        isStarting: Micdrop.isStarting,
+        isStarted: Micdrop.isStarted,
+        isPaused: Micdrop.isPaused,
+        isListening: Micdrop.isListening,
+        isProcessing: Micdrop.isProcessing,
+        isUserSpeaking: Micdrop.isUserSpeaking,
+        isAssistantSpeaking: Micdrop.isAssistantSpeaking,
+        isMicStarted: Micdrop.isMicStarted,
+        isMicMuted: Micdrop.isMicMuted,
       }))
     })
 
     // Handle errors
-    call.on('Error', (error) => {
+    Micdrop.on('Error', (error) => {
       setValue((v) => ({
         ...v,
         error,
@@ -87,25 +55,20 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     })
 
     // Handle end of call
-    call.on('EndCall', () => {
-      call.stop()
+    Micdrop.on('EndCall', () => {
+      Micdrop.stop()
       console.log('Call ended by assistant')
     })
 
     // Stop call on unmount
     return () => {
-      call.stop()
-      call.removeAllListeners()
+      Micdrop.stop()
+      Micdrop.removeAllListeners()
     }
   }, [])
 
   // Provider value
   const [value, setValue] = useState<CallContextValue>(() => ({
-    start: handleStart,
-    stop: handleStop,
-    startMic: call.startMic.bind(call),
-    pause: call.pause.bind(call),
-    resume: call.resume.bind(call),
     isStarting: false,
     isStarted: false,
     isPaused: false,
@@ -118,14 +81,6 @@ export function CallContextProvider({ children }: CallContextProviderProps) {
     conversation: [],
     error: undefined,
   }))
-
-  // Update values that have deps
-  useEffect(() => {
-    setValue((v) => ({
-      ...v,
-      start: handleStart,
-    }))
-  }, [handleStart])
 
   return <CallContext.Provider value={value}>{children}</CallContext.Provider>
 }

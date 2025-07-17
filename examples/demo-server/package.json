@@ -4,7 +4,6 @@
   "author": "Lonestone",
   "license": "MIT",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

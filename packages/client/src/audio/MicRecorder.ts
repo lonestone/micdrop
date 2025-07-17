@@ -34,9 +34,9 @@ interface AudioInfo {
 
 export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   public state: MicRecorderState
+  public vad: VAD
 
   private audioInfo = this.getAudioInfo()
-  private vad: VAD
   private recorder: MediaRecorder | undefined
   private delayedStream: MediaStream | undefined
   private speakingConfirmed = false
@@ -52,7 +52,7 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     this.vad = getVAD(vadConfig)
   }
 
-  async start(stream: MediaStream) {
+  start = async (stream: MediaStream) => {
     if (this.state.isStarted) {
       throw new Error('MicRecorder is already started')
     }
@@ -94,16 +94,16 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     }
   }
 
-  mute() {
+  mute = () => {
     this.changeState({ isMuted: true, isSpeaking: false })
     this.recorder?.stop()
   }
 
-  unmute() {
+  unmute = () => {
     this.changeState({ isMuted: false })
   }
 
-  stop() {
+  stop = () => {
     this.changeState({
       isStarting: false,
       isStarted: false,
