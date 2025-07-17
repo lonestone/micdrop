@@ -23,7 +23,7 @@ export class MicdropServer {
     this.log(`Call started`)
 
     // Setup STT
-    this.config.stt.on('Transcript', this.onTranscript.bind(this))
+    this.config.stt.on('Transcript', this.onTranscript)
 
     // Setup agent
     this.config.agent.on('Message', (message) =>
@@ -48,8 +48,8 @@ export class MicdropServer {
     this.sendFirstMessage()
 
     // Listen to events
-    socket.on('close', this.onClose.bind(this))
-    socket.on('message', this.onMessage.bind(this))
+    socket.on('close', this.onClose)
+    socket.on('message', this.onMessage)
   }
 
   private log(...message: any[]) {
@@ -61,7 +61,7 @@ export class MicdropServer {
     this.config?.agent.cancel()
   }
 
-  private onClose() {
+  private onClose = () => {
     if (!this.config) return
     this.log('Connection closed')
     const duration = Math.round((Date.now() - this.startTime) / 1000)
@@ -82,7 +82,7 @@ export class MicdropServer {
     this.config = null
   }
 
-  private async onMessage(message: Buffer) {
+  private onMessage = async (message: Buffer) => {
     if (message.byteLength === 0) return
     if (!Buffer.isBuffer(message)) {
       this.log('Message is not a buffer')
@@ -140,7 +140,7 @@ export class MicdropServer {
     }
   }
 
-  private async onTranscript(transcript: string) {
+  private onTranscript = async (transcript: string) => {
     if (!this.config) return
     this.log(`User transcript: "${transcript}"`)
     this.config.agent.addUserMessage(transcript)

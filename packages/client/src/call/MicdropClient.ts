@@ -67,10 +67,8 @@ export class MicdropClient<
     this.vad = getVAD(this.options?.vad)
 
     // Add speaker listener
-    this.onSpeakerStartPlaying = this.onSpeakerStartPlaying.bind(this)
-    this.onSpeakerStopPlaying = this.onSpeakerStopPlaying.bind(this)
-    speaker.on('StartPlaying', this.onSpeakerStartPlaying)
-    speaker.on('StopPlaying', this.onSpeakerStopPlaying)
+    Speaker.on('StartPlaying', this.onSpeakerStartPlaying)
+    Speaker.on('StopPlaying', this.onSpeakerStopPlaying)
   }
 
   get isStarted(): boolean {
@@ -121,7 +119,7 @@ export class MicdropClient<
   }
 
   get isAssistantSpeaking(): boolean {
-    return speaker.isPlaying
+    return Speaker.isPlaying
   }
 
   async start() {
@@ -157,7 +155,7 @@ export class MicdropClient<
     }
 
     // Stop speaker
-    speaker.stopAudio()
+    Speaker.stopAudio()
   }
 
   pause() {
@@ -166,7 +164,7 @@ export class MicdropClient<
     this._isPaused = true
     this._isProcessing = false
     this.notifyStateChange()
-    speaker.pauseAudio()
+    Speaker.pauseAudio()
     this.ws?.send(MicdropClientCommands.Mute)
   }
 
@@ -178,9 +176,11 @@ export class MicdropClient<
   }
 
   async destroy() {
+    window.micdropMicdropClient = undefined
     this.stop()
-    speaker.off('StartPlaying', this.onSpeakerStartPlaying)
-    speaker.off('StopPlaying', this.onSpeakerStopPlaying)
+    this.removeAllListeners()
+    Speaker.off('StartPlaying', this.onSpeakerStartPlaying)
+    Speaker.off('StopPlaying', this.onSpeakerStopPlaying)
   }
 
   async startMic(deviceId?: string, record = true) {
@@ -206,7 +206,7 @@ export class MicdropClient<
           // Interruption
           this._isProcessing = false
           this.notifyStateChange()
-          speaker.stopAudio()
+          Speaker.stopAudio()
         })
 
         // Notify server that user speech is complete
@@ -227,12 +227,12 @@ export class MicdropClient<
       }
 
       // Start microphone
-      this.micStream = await mic.start(deviceId)
+      this.micStream = await Mic.start(deviceId)
       this.notifyStateChange()
 
       // Restart recorder if it was running
       if (isRecorderStarted || record) {
-        await this.micRecorder.start(this.micStream)
+        await this.micRecorder.start(this.micStream!)
       }
     } catch (error) {
       console.error('[MicdropClient] Error starting microphone', error)
@@ -245,7 +245,7 @@ export class MicdropClient<
   private stopMic() {
     this.micRecorder?.stop()
     this.micRecorder = undefined
-    mic.stop()
+    Mic.stop()
     this.micStream = undefined
     this.notifyStateChange()
   }
@@ -269,73 +269,10 @@ export class MicdropClient<
       this.notifyStateChange()
 
       // Events
-      this.ws.onopen = () => {
-        this.log('WebSocket opened')
-        this.notifyStateChange()
-
-        // Send params
-        if (this.params) {
-          this.ws?.send(JSON.stringify(this.params))
-        }
-      }
-      this.ws.onmessage = (event) => {
-        this.log('Received message:', event.data)
-        if (event.data instanceof Blob) {
-          // Received assistant speech
-          if (this.isPaused || this.isUserSpeaking) return
-          speaker.playAudio(event.data)
-          this._isProcessing = false
-          this.notifyStateChange()
-        } else if (typeof event.data !== 'string') {
-          console.warn(`[MicdropClient] Unknown message type: ${event.data}`)
-        } else if (event.data.startsWith(MicdropServerCommands.Message)) {
-          // Received user/assistant message
-          const message = JSON.parse(
-            event.data.substring(MicdropServerCommands.Message.length + 1)
-          )
-          this._isProcessing = false
-          this.addMessage(message)
-        } else if (event.data === MicdropServerCommands.EndCall) {
-          // Call ended
-          setTimeout(() => {
-            this.emit('EndCall')
-          }, 2000) // Wait to prevent conflict
-        } else if (
-          event.data === MicdropServerCommands.CancelLastAssistantMessage
-        ) {
-          // Remove last assistant message if aborted
-          const lastMessage = this.conversation[this.conversation.length - 1]
-          if (lastMessage?.role === 'assistant') {
-            this.conversation = this.conversation.slice(0, -1)
-            this.notifyStateChange()
-          }
-        } else if (event.data === MicdropServerCommands.SkipAnswer) {
-          // Answer was skipped, listen again
-          this._isProcessing = false
-          this.notifyStateChange()
-        } else if (event.data === MicdropServerCommands.CancelLastUserMessage) {
-          // Remove last user message if aborted
-          const lastMessage = this.conversation[this.conversation.length - 1]
-          if (lastMessage?.role === 'user') {
-            this.conversation = this.conversation.slice(0, -1)
-            this._isProcessing = false
-            this.notifyStateChange()
-          }
-        }
-      }
-      this.ws.onclose = (event) => {
-        this.log('WebSocket closed', event)
-        this.stop()
-
-        const error = getClientErrorFromWSCloseEvent(event)
-        if (error) {
-          this.emit('Error', error)
-        }
-      }
-      this.ws.onerror = (event) => {
-        console.error('[MicdropClient] WebSocket error:', event)
-        this.stop()
-      }
+      this.ws.onopen = this.onWSOpen
+      this.ws.onmessage = this.onWSMessage
+      this.ws.onclose = this.onWSClose
+      this.ws.onerror = this.onWSError
     } catch (error) {
       console.error('[MicdropClient] Error starting WebSocket', error)
       this.emit(
@@ -345,6 +282,77 @@ export class MicdropClient<
       await this.stop()
       throw error
     }
+  }
+
+  private onWSOpen = () => {
+    this.log('WebSocket opened')
+    this.notifyStateChange()
+
+    // Send params
+    if (this.params) {
+      this.ws?.send(JSON.stringify(this.params))
+    }
+  }
+
+  private onWSMessage = (event: MessageEvent) => {
+    this.log('Received message:', event.data)
+    if (event.data instanceof Blob) {
+      // Received assistant speech
+      if (this.isPaused || this.isUserSpeaking) return
+      Speaker.playAudio(event.data)
+      this._isProcessing = false
+      this.notifyStateChange()
+    } else if (typeof event.data !== 'string') {
+      console.warn(`[MicdropClient] Unknown message type: ${event.data}`)
+    } else if (event.data.startsWith(MicdropServerCommands.Message)) {
+      // Received user/assistant message
+      const message = JSON.parse(
+        event.data.substring(MicdropServerCommands.Message.length + 1)
+      )
+      this._isProcessing = false
+      this.addMessage(message)
+    } else if (event.data === MicdropServerCommands.EndCall) {
+      // Call ended
+      setTimeout(() => {
+        this.emit('EndCall')
+      }, 2000) // Wait to prevent conflict
+    } else if (
+      event.data === MicdropServerCommands.CancelLastAssistantMessage
+    ) {
+      // Remove last assistant message if aborted
+      const lastMessage = this.conversation[this.conversation.length - 1]
+      if (lastMessage?.role === 'assistant') {
+        this.conversation = this.conversation.slice(0, -1)
+        this.notifyStateChange()
+      }
+    } else if (event.data === MicdropServerCommands.SkipAnswer) {
+      // Answer was skipped, listen again
+      this._isProcessing = false
+      this.notifyStateChange()
+    } else if (event.data === MicdropServerCommands.CancelLastUserMessage) {
+      // Remove last user message if aborted
+      const lastMessage = this.conversation[this.conversation.length - 1]
+      if (lastMessage?.role === 'user') {
+        this.conversation = this.conversation.slice(0, -1)
+        this._isProcessing = false
+        this.notifyStateChange()
+      }
+    }
+  }
+
+  private onWSClose = (event: CloseEvent) => {
+    this.log('WebSocket closed', event)
+    this.stop()
+
+    const error = getClientErrorFromWSCloseEvent(event)
+    if (error) {
+      this.emit('Error', error)
+    }
+  }
+
+  private onWSError = (event: Event) => {
+    console.error('[MicdropClient] WebSocket error:', event)
+    this.stop()
   }
 
   private stopWS() {
@@ -359,7 +367,7 @@ export class MicdropClient<
     this.notifyStateChange()
   }
 
-  private onSpeakerStartPlaying() {
+  private onSpeakerStartPlaying = () => {
     this.log('Speaker started')
     if (this.options?.disableInterruption && !this.isPaused) {
       this.micRecorder?.mute()
@@ -367,7 +375,7 @@ export class MicdropClient<
     this.notifyStateChange()
   }
 
-  private onSpeakerStopPlaying() {
+  private onSpeakerStopPlaying = () => {
     this.log('Speaker stopped')
     if (this.options?.disableInterruption && !this.isPaused) {
       this.micRecorder?.unmute()
