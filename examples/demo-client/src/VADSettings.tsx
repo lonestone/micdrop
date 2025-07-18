@@ -24,14 +24,31 @@ interface VADProps<T extends VAD> {
 }
 
 function AnyVADSettings<T extends VAD>({ vad, className }: VADProps<T>) {
-  if (vad instanceof SileroVAD) {
-    return <SileroVADSettings vad={vad} className={className} />
+  // Check name of VAD to use the correct component
+  // We don't use instanceof because it's not reliable with hot reloading
+  if (vad.name === 'SileroVAD') {
+    return (
+      <SileroVADSettings
+        vad={vad as unknown as SileroVAD}
+        className={className}
+      />
+    )
   }
-  if (vad instanceof VolumeVAD) {
-    return <VolumeVADSettings vad={vad} className={className} />
+  if (vad.name === 'VolumeVAD') {
+    return (
+      <VolumeVADSettings
+        vad={vad as unknown as VolumeVAD}
+        className={className}
+      />
+    )
   }
-  if (vad instanceof MultipleVAD) {
-    return <MultipleVADSettings vad={vad} className={className} />
+  if (vad.name === 'MultipleVAD') {
+    return (
+      <MultipleVADSettings
+        vad={vad as unknown as MultipleVAD}
+        className={className}
+      />
+    )
   }
   console.warn('Unknown VAD', vad)
   return <div>Unknown VAD</div>
@@ -39,7 +56,12 @@ function AnyVADSettings<T extends VAD>({ vad, className }: VADProps<T>) {
 
 function MultipleVADSettings({ vad, className }: VADProps<MultipleVAD>) {
   return (
-    <VADCard name="MultipleVAD" vad={vad} className={className}>
+    <VADCard
+      name="MultipleVAD"
+      description="Combines multiple VAD algorithms"
+      vad={vad}
+      className={className}
+    >
       {vad.vads.map((vad, i) => (
         <AnyVADSettings key={i} vad={vad} />
       ))}
@@ -55,8 +77,18 @@ function SileroVADSettings({ vad, className }: VADProps<SileroVAD>) {
     vad.setOptions({ [key]: value })
   }
 
+  const resetOptions = () => {
+    vad.resetOptions()
+    setOptions(vad.options)
+  }
+
   return (
-    <VADCard name="SileroVAD" vad={vad} className={className}>
+    <VADCard
+      name="SileroVAD"
+      description="AI-powered voice activity detection"
+      vad={vad}
+      className={className}
+    >
       <div className="flex items-center gap-2">
         <label>Positive Speech Threshold</label>
         <input
@@ -113,6 +145,14 @@ function SileroVADSettings({ vad, className }: VADProps<SileroVAD>) {
         />
         <span>{options.redemptionFrames}</span>
       </div>
+      <div className="flex justify-end">
+        <button
+          onClick={resetOptions}
+          className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded border border-gray-300 transition-colors"
+        >
+          Reset to default
+        </button>
+      </div>
     </VADCard>
   )
 }
@@ -125,8 +165,18 @@ function VolumeVADSettings({ vad, className }: VADProps<VolumeVAD>) {
     vad.setOptions({ [key]: value })
   }
 
+  const resetOptions = () => {
+    vad.resetOptions()
+    setOptions(vad.options)
+  }
+
   return (
-    <VADCard name="VolumeVAD" vad={vad} className={className}>
+    <VADCard
+      name="VolumeVAD"
+      description="Volume-based voice detection"
+      vad={vad}
+      className={className}
+    >
       <div className="flex items-center gap-2">
         <label>History</label>
         <input
@@ -151,18 +201,33 @@ function VolumeVADSettings({ vad, className }: VADProps<VolumeVAD>) {
         />
         <span>{options.threshold} dB</span>
       </div>
+      <div className="flex justify-end">
+        <button
+          onClick={resetOptions}
+          className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded border border-gray-300 transition-colors"
+        >
+          Reset to default
+        </button>
+      </div>
     </VADCard>
   )
 }
 
 interface VADCardProps {
   name: string
+  description: string
   vad: VAD
   className?: string
   children: React.ReactNode
 }
 
-function VADCard({ name, vad, className, children }: VADCardProps) {
+function VADCard({
+  name,
+  description,
+  vad,
+  className,
+  children,
+}: VADCardProps) {
   const [isOpen, setIsOpen] = useState(false)
   return (
     <div className={`border border-gray-200 shadow-sm rounded-lg ${className}`}>
@@ -171,7 +236,10 @@ function VADCard({ name, vad, className, children }: VADCardProps) {
         onClick={() => setIsOpen(!isOpen)}
       >
         <VADStatusCircle vad={vad} />
-        <strong className="flex-1">{name}</strong>
+        <div className="flex-1">
+          <strong>{name}</strong>
+          <span className="ml-3 text-sm text-gray-600">{description}</span>
+        </div>
         <FaChevronDown className={`w-4 h-4 ${isOpen ? 'rotate-180' : ''}`} />
       </div>
       {isOpen && <div className="flex flex-col gap-4 p-4 pt-2">{children}</div>}
