@@ -14,6 +14,7 @@ export class MicdropClientError extends Error {
 
   constructor(code = MicdropClientErrorCode.Unknown, message?: string) {
     super(message)
+    this.name = `MicdropClientError:${code}`
     this.code = code
   }
 }

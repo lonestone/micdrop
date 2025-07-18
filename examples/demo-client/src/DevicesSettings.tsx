@@ -1,14 +1,14 @@
 import { LocalStorageKeys, Micdrop, Speaker } from '@micdrop/client'
-import { ChangeEventHandler, useContext, useEffect, useState } from 'react'
+import { ChangeEventHandler, useEffect, useState } from 'react'
 import { FaMicrophone, FaVolumeUp } from 'react-icons/fa'
-import { CallContext } from './CallContext'
 import MicVolume from './MicVolume'
 import SpeakerTestButton from './SpeakerTestButton'
+import { useMicdropState } from './useMicdropState'
 
 export default function DevicesSettings() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | undefined>()
-  const call = useContext(CallContext)
+  const { isMicStarted } = useMicdropState()
 
   // Lists of available devices
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([])
@@ -57,7 +57,7 @@ export default function DevicesSettings() {
     Speaker.changeDevice(deviceId)
   }
 
-  if (!call?.isMicStarted) return null
+  if (!isMicStarted) return null
 
   return (
     <div className="p-4 rounded-lg border border-gray-200 shadow-sm">

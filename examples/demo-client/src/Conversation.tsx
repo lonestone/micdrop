@@ -1,23 +1,23 @@
-import { useContext, useEffect, useRef } from 'react'
-import { CallContext } from './CallContext'
+import { useEffect, useRef } from 'react'
+import { useMicdropState } from './useMicdropState'
 
 interface Props {
   className?: string
 }
 
 export default function Conversation({ className }: Props) {
-  const call = useContext(CallContext)
+  const { conversation } = useMicdropState()
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Scroll to the bottom of the conversation
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [call?.conversation.length])
+  }, [conversation.length])
 
   return (
     <div className={`flex flex-col overflow-y-auto p-6 ${className}`}>
       <div className="flex flex-col gap-4">
-        {call?.conversation.map(({ role, content }, index) => (
+        {conversation.map(({ role, content }, index) => (
           <div
             key={index}
             className={`max-w-[80%] p-3 rounded-xl ${

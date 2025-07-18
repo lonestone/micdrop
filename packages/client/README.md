@@ -2,6 +2,8 @@
 
 A browser library for handling real-time voice conversations with microphone and speaker management.
 
+It is framework agnostic, you can use it with React, Vue, Angular or any other framework.
+
 For server implementation, see [@micdrop/server](../server/README.md) package.
 
 ## Features

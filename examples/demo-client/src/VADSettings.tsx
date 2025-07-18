@@ -7,13 +7,13 @@ import {
   VolumeVAD,
   VolumeVADOptions,
 } from '@micdrop/client'
-import { useContext, useState } from 'react'
+import { useState } from 'react'
 import { FaChevronDown } from 'react-icons/fa'
-import { CallContext } from './CallContext'
 import VADStatusCircle from './VADStatusCircle'
+import { useMicdropState } from './useMicdropState'
 
 export default function VADSettings({ className }: { className?: string }) {
-  useContext(CallContext) // Rerender when call state changes
+  useMicdropState() // Rerender when VAD changes
   if (!Micdrop.vad) return null
   return <AnyVADSettings vad={Micdrop.vad} className={className} />
 }

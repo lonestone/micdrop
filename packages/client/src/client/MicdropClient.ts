@@ -29,9 +29,24 @@ export interface MicdropClientOptions {
   debugLog?: boolean
 }
 
+export interface MicdropState {
+  isStarting: boolean
+  isStarted: boolean
+  isPaused: boolean
+  isListening: boolean
+  isProcessing: boolean
+  isUserSpeaking: boolean
+  isAssistantSpeaking: boolean
+  isMicStarted: boolean
+  isMicMuted: boolean
+  conversation: MicdropConversation
+  error: MicdropClientError | undefined
+}
+
 export class MicdropClient extends EventEmitter<MicdropClientEvents> {
   public micRecorder?: MicRecorder
   public conversation: MicdropConversation = []
+  public error?: MicdropClientError
 
   private ws?: WebSocket
   private micStream?: MediaStream
@@ -102,7 +117,24 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
     return Speaker.isPlaying
   }
 
+  get state(): MicdropState {
+    return {
+      isStarting: this.isStarting,
+      isStarted: this.isStarted,
+      isPaused: this.isPaused,
+      isListening: this.isListening,
+      isProcessing: this.isProcessing,
+      isUserSpeaking: this.isUserSpeaking,
+      isAssistantSpeaking: this.isAssistantSpeaking,
+      isMicStarted: this.isMicStarted,
+      isMicMuted: this.isMicMuted,
+      conversation: this.conversation,
+      error: this.error,
+    }
+  }
+
   start = async (options?: MicdropClientOptions) => {
+    this.error = undefined
     this.options = { ...this.options, ...options }
 
     // Reset state
@@ -166,6 +198,7 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
     deviceId?: string
     record?: boolean
   }) => {
+    this.error = undefined
     if (vad) {
       this.options.vad = vad
     }
@@ -220,8 +253,12 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
         await this.micRecorder.start(this.micStream!)
       }
     } catch (error) {
-      console.error('[MicdropClient] Error starting microphone', error)
-      this.emit('Error', new MicdropClientError(MicdropClientErrorCode.Mic))
+      this.setError(
+        new MicdropClientError(
+          MicdropClientErrorCode.Mic,
+          (error as any)?.message
+        )
+      )
       await this.stop()
       throw error
     }
@@ -259,10 +296,11 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
       this.ws.onclose = this.onWSClose
       this.ws.onerror = this.onWSError
     } catch (error) {
-      console.error('[MicdropClient] Error starting WebSocket', error)
-      this.emit(
-        'Error',
-        new MicdropClientError(MicdropClientErrorCode.Connection)
+      this.setError(
+        new MicdropClientError(
+          MicdropClientErrorCode.Connection,
+          (error as any)?.message
+        )
       )
       await this.stop()
       throw error
@@ -331,12 +369,12 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
 
     const error = getClientErrorFromWSCloseEvent(event)
     if (error) {
-      this.emit('Error', error)
+      this.setError(error)
     }
   }
 
   private onWSError = (event: Event) => {
-    console.error('[MicdropClient] WebSocket error:', event)
+    this.setError(new MicdropClientError(MicdropClientErrorCode.Connection))
     this.stop()
   }
 
@@ -371,6 +409,13 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
   private addMessage(message: MicdropConversationMessage) {
     this.conversation.push(message)
     this.notifyStateChange()
+  }
+
+  private setError(error: MicdropClientError) {
+    console.error('[MicdropClient] Error:', error)
+    this.error = error
+    this.notifyStateChange()
+    this.emit('Error', error)
   }
 
   private notifyStateChange() {
