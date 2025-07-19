@@ -39,6 +39,10 @@ export interface MicdropState {
   isAssistantSpeaking: boolean
   isMicStarted: boolean
   isMicMuted: boolean
+  micDeviceId: string | undefined
+  speakerDeviceId: string | undefined
+  micDevices: MediaDeviceInfo[]
+  speakerDevices: MediaDeviceInfo[]
   conversation: MicdropConversation
   error: MicdropClientError | undefined
 }
@@ -53,6 +57,7 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
   private startTime = 0
   private _isProcessing = false
   private _isPaused = false
+  private devices: MediaDeviceInfo[] = []
 
   constructor(public options: MicdropClientOptions = {}) {
     super()
@@ -60,6 +65,9 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
     // Add speaker listener
     Speaker.on('StartPlaying', this.onSpeakerStartPlaying)
     Speaker.on('StopPlaying', this.onSpeakerStopPlaying)
+
+    // Listen to device changes
+    navigator.mediaDevices.addEventListener('devicechange', this.getDevices)
   }
 
   get vad(): VAD | undefined {
@@ -117,6 +125,22 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
     return Speaker.isPlaying
   }
 
+  get micDeviceId(): string | undefined {
+    return Mic.deviceId
+  }
+
+  get speakerDeviceId(): string | undefined {
+    return Speaker.deviceId
+  }
+
+  get micDevices(): MediaDeviceInfo[] {
+    return this.devices.filter((device) => device.kind === 'audioinput')
+  }
+
+  get speakerDevices(): MediaDeviceInfo[] {
+    return this.devices.filter((device) => device.kind === 'audiooutput')
+  }
+
   get state(): MicdropState {
     return {
       isStarting: this.isStarting,
@@ -130,6 +154,10 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
       isMicMuted: this.isMicMuted,
       conversation: this.conversation,
       error: this.error,
+      micDeviceId: this.micDeviceId,
+      speakerDeviceId: this.speakerDeviceId,
+      micDevices: this.micDevices,
+      speakerDevices: this.speakerDevices,
     }
   }
 
@@ -245,13 +273,17 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
       }
 
       // Start microphone
-      this.micStream = await Mic.start(deviceId)
-      this.notifyStateChange()
+      const micStream = await Mic.start(deviceId)
+      this.micStream = micStream
 
       // Restart recorder if it was running
       if (isRecorderStarted || record) {
-        await this.micRecorder.start(this.micStream!)
+        await this.micRecorder.start(micStream)
       }
+
+      // Get devices after starting mic
+      // It's necessary for Firefox that return an empty list before any stream is started
+      await this.getDevices()
     } catch (error) {
       this.setError(
         new MicdropClientError(
@@ -264,11 +296,26 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
     }
   }
 
+  changeMicDevice = async (deviceId: string) => {
+    await this.startMic({ deviceId })
+  }
+
+  changeSpeakerDevice = async (deviceId: string) => {
+    await Speaker.changeDevice(deviceId)
+    this.notifyStateChange()
+  }
+
   private stopMic() {
     this.micRecorder?.stop()
     this.micRecorder = undefined
     Mic.stop()
     this.micStream = undefined
+    this.notifyStateChange()
+  }
+
+  private getDevices = async () => {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    this.devices = devices
     this.notifyStateChange()
   }
 

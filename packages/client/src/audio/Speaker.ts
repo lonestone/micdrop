@@ -13,6 +13,7 @@ const AUDIO_MIME_TYPE = 'audio/webm; codecs=opus'
 export class Speaker extends EventEmitter<SpeakerEvents> {
   public isPlaying = false
   public analyser: AudioAnalyser
+  public deviceId: string | undefined
 
   private audioElement?: HTMLAudioElement
   private mediaSource?: MediaSource
@@ -31,38 +32,8 @@ export class Speaker extends EventEmitter<SpeakerEvents> {
   constructor() {
     super()
     this.analyser = new AudioAnalyser(audioContext)
-
-    // Create audio element if it doesn't exist
-    this.audioElement = new Audio()
-    this.audioElement.autoplay = true
-
-    // Select speaker device if speakerId is in local storage
-    const speakerId = localStorage.getItem(LocalStorageKeys.SpeakerDevice)
-    if (speakerId) {
-      this.changeDevice(speakerId)
-    }
-
-    // MediaSource setup
+    this.setupAudioElement()
     this.setupMediaSource()
-
-    // Connect analyser once when audio starts playing
-    this.audioElement.addEventListener('canplay', this.connectAnalyser)
-
-    // Add event listeners to track playing state
-    this.audioElement.addEventListener('play', () => this.setIsPlaying(true))
-    this.audioElement.addEventListener('pause', () => this.setIsPlaying(false))
-    this.audioElement.addEventListener('ended', () => this.setIsPlaying(false))
-    this.audioElement.addEventListener('playing', () => {
-      this.setIsPlaying(true)
-      // Try to connect analyser when actually playing
-      this.connectAnalyser()
-    })
-
-    // Add error event listener to handle media errors
-    this.audioElement.addEventListener('error', this.onAudioError)
-
-    // Add timeupdate listener to detect when we've reached the end of buffered content
-    this.audioElement.addEventListener('timeupdate', this.onAudioTimeUpdate)
   }
 
   private onAudioError = () => {
@@ -70,20 +41,8 @@ export class Speaker extends EventEmitter<SpeakerEvents> {
       'Audio element error detected, reinitializing MediaSource',
       this.audioElement?.error
     )
-    // Clear any pending operations
-    this.isBufferUpdating = false
-
-    // Preserve the current buffer queue so we don't lose audio data
-    const preservedQueue = [...this.bufferQueue]
-
-    // Reinitialize the MediaSource to recover from the error
+    this.setIsPlaying(false)
     this.setupMediaSource()
-
-    // Restore the preserved queue after a short delay to allow MediaSource to initialize
-    setTimeout(() => {
-      this.bufferQueue.unshift(...preservedQueue)
-      this.processBufferQueue()
-    }, 100)
   }
 
   private onSourceOpen = () => {
@@ -301,14 +260,14 @@ export class Speaker extends EventEmitter<SpeakerEvents> {
     )
   }
 
-  async changeDevice(speakerId: string) {
+  async changeDevice(deviceId: string) {
     if (!this.canChangeDevice()) return
     try {
-      // @ts-ignore
-      await this.audioElement?.setSinkId(speakerId)
-      localStorage.setItem(LocalStorageKeys.SpeakerDevice, speakerId)
+      this.deviceId = deviceId
+      localStorage.setItem(LocalStorageKeys.SpeakerDevice, deviceId)
+      await this.audioElement?.setSinkId(deviceId)
     } catch (error) {
-      console.error(`Error setting Audio Output to ${speakerId}`, error)
+      console.error(`Error setting Audio Output to ${deviceId}`, error)
     }
   }
 
@@ -322,6 +281,44 @@ export class Speaker extends EventEmitter<SpeakerEvents> {
     if (this.audioElement) {
       this.audioElement.play()
     }
+  }
+
+  private setupAudioElement() {
+    // Dispose of the existing audio element
+    if (this.audioElement) {
+      this.audioElement.pause()
+      this.audioElement.src = ''
+      this.audioElement = undefined
+    }
+
+    // Create audio element if it doesn't exist
+    this.audioElement = new Audio()
+    this.audioElement.autoplay = true
+
+    // Select speaker device if speakerId is in local storage
+    const deviceId = localStorage.getItem(LocalStorageKeys.SpeakerDevice)
+    if (deviceId) {
+      this.changeDevice(deviceId)
+    }
+
+    // Connect analyser once when audio starts playing
+    this.audioElement.addEventListener('canplay', this.connectAnalyser)
+
+    // Add event listeners to track playing state
+    this.audioElement.addEventListener('play', () => this.setIsPlaying(true))
+    this.audioElement.addEventListener('pause', () => this.setIsPlaying(false))
+    this.audioElement.addEventListener('ended', () => this.setIsPlaying(false))
+    this.audioElement.addEventListener('playing', () => {
+      this.setIsPlaying(true)
+      // Try to connect analyser when actually playing
+      this.connectAnalyser()
+    })
+
+    // Add error event listener to handle media errors
+    this.audioElement.addEventListener('error', this.onAudioError)
+
+    // Add timeupdate listener to detect when we've reached the end of buffered content
+    this.audioElement.addEventListener('timeupdate', this.onAudioTimeUpdate)
   }
 
   private setupMediaSource() {
@@ -359,6 +356,10 @@ export class Speaker extends EventEmitter<SpeakerEvents> {
 
     if (this.audioElement) {
       this.audioElement.src = URL.createObjectURL(this.mediaSource)
+      // Set deviceId again
+      if (this.deviceId) {
+        this.changeDevice(this.deviceId)
+      }
     }
 
     this.isSourceBufferInitialized = false

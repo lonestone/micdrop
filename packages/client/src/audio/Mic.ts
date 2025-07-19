@@ -5,8 +5,8 @@ import { stopStream } from './utils/stopStream'
 
 export class Mic {
   public analyser: AudioAnalyser
+  public deviceId: string | undefined
 
-  private currentDeviceId: string | undefined
   private audioStream: MediaStream | undefined
   private sourceNode: MediaStreamAudioSourceNode | undefined
 
@@ -44,7 +44,7 @@ export class Mic {
 
     if (this.audioStream) {
       // deviceId has not changed, reuse previous stream
-      if (this.currentDeviceId === deviceId) {
+      if (this.deviceId === deviceId) {
         return this.audioStream
       }
 
@@ -63,10 +63,10 @@ export class Mic {
       track && track.getCapabilities && track.getCapabilities().deviceId
     if (newDeviceId) {
       localStorage.setItem(LocalStorageKeys.MicDevice, newDeviceId)
-      this.currentDeviceId = newDeviceId
+      this.deviceId = newDeviceId
     } else {
       localStorage.removeItem(LocalStorageKeys.MicDevice)
-      this.currentDeviceId = undefined
+      this.deviceId = undefined
     }
 
     // Connect to AudioContext
