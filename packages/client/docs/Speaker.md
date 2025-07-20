@@ -10,30 +10,30 @@ The Speaker module provides functionality for managing audio output devices and 
 - 💾 Persistent device selection
 - 🔄 Dynamic device switching
 - ⏯️ Playing state events
-- 🚦 Streaming mode toggle
 
 ## Usage Example
 
 ```typescript
 import { Speaker } from '@micdrop/client'
 
-// Check if device selection is supported
-if (Speaker.canChangeDevice()) {
-  // Change to a specific output device
-  await Speaker.changeDevice('device-id')
-}
+// Change to a specific output device
+await Speaker.changeDevice('device-id')
 
-// Play an audio blob
-const audioBlob = new Blob(
-  [
-    /* audio data */
-  ],
-  { type: 'audio/mpeg' }
-)
-await Speaker.playAudio(audioBlob)
+// Play an audio blob (audio/webm; codecs=opus)
+const audioResponse = await fetch('audio.webm')
+if (audioResponse.ok) {
+  const audioBlob = await audioResponse.blob()
+  await Speaker.playAudio(audioBlob)
+}
 
 // Pause playback
 Speaker.pauseAudio()
+
+// Resume playback
+Speaker.resumeAudio()
+
+// Stop playback and cleanup
+Speaker.stopAudio()
 
 // Monitor volume changes using the audio analyser
 // Volume is in dB range -100 to 0
@@ -50,12 +50,6 @@ Speaker.on('StartPlaying', () => {
 Speaker.on('StopPlaying', () => {
   console.log('Speaker stopped playing')
 })
-
-// Resume playback
-Speaker.resumeAudio()
-
-// Stop playback and cleanup
-Speaker.stopAudio()
 ```
 
 ## API Reference
@@ -87,17 +81,7 @@ console.log(Speaker.analyser.node)
 
 ### Functions
 
-#### `canChangeDevice(): boolean`
-
-Checks if the browser supports changing audio output devices.
-
-```typescript
-console.log(Speaker.canChangeDevice())
-```
-
-Returns `true` if the browser supports changing audio output devices, `false` otherwise.
-
-#### `changeDevice(speakerId: string): Promise<void>`
+#### `changeDevice(deviceId: string): Promise<void>`
 
 Changes the current audio output device.
 
@@ -105,23 +89,16 @@ Changes the current audio output device.
 await Speaker.changeDevice(deviceId)
 ```
 
-- `speakerId`: The ID of the audio output device to use
-- Saves the selected device ID to local storage
-- Automatically initializes audio pipeline if needed
-
 #### `playAudio(blob: Blob): Promise<void>`
 
-Plays an audio blob through the current audio output device using MediaSource Extensions.
+Plays an audio blob.
 
 ```typescript
 await Speaker.playAudio(audioBlob)
 ```
 
-- `blob`: The audio blob to play
-- Queues blobs for continuous playback
-- Automatically handles audio pipeline initialization
-- Connects to audio analyser for visualization (see `analyser`)
-- Supports streaming playback with automatic buffer management
+- Audio must be in `audio/webm; codecs=opus` format.
+- An audio can be split into chunks and provided sequentially to `playAudio` as long as the first chunk has headers.
 
 #### `pauseAudio(): void`
 
@@ -131,9 +108,6 @@ Pauses the currently playing audio.
 Speaker.pauseAudio()
 ```
 
-- Pauses playback while maintaining the audio pipeline
-- Can be resumed using `resumeAudio()`
-
 #### `resumeAudio(): void`
 
 Resumes paused audio playback.
@@ -142,8 +116,6 @@ Resumes paused audio playback.
 Speaker.resumeAudio()
 ```
 
-- Resumes playback from where it was paused
-
 #### `stopAudio(): void`
 
 Stops audio playback and cleans up resources.
@@ -151,11 +123,6 @@ Stops audio playback and cleans up resources.
 ```typescript
 Speaker.stopAudio()
 ```
-
-- Stops playback completely
-- Cleans up all audio resources including MediaSource and buffers
-- Disconnects from audio analyser
-- Stops and cleans up any active media streams
 
 ### Events
 
@@ -180,20 +147,10 @@ Speaker.on('StopPlaying', () => {
 
 ## Browser Support
 
-Requires browsers with support for:
+Fully supported in Chrome, Firefox, Safari and Edge.
+
+Requires support for:
 
 - Web Audio API
 - MediaSource Extensions (MSE)
-- `HTMLMediaElement.setSinkId()` for device selection
-- `HTMLMediaElement.captureStream()` for audio analysis
-- AudioContext and related APIs
-
-## Notes
-
-- Device selection is persisted in localStorage under `micdrop.speakerDevice`
-- Uses MediaSource Extensions for efficient streaming playback
-- Supports queueing of audio blobs for continuous playback
-- Automatically handles audio context initialization and unlocking
-- Implements automatic recovery from invalid states
-- Audio analysis is available through the `analyser` instance
-- Error handling is implemented with detailed console logging for debugging
+- `HTMLMediaElement.setSinkId()` or `AudioContext.setSinkId()` for device selection

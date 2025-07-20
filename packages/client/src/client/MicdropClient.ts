@@ -15,13 +15,13 @@ import {
   MicdropClientErrorCode,
 } from './MicdropClientError'
 
-export interface MicdropClientEvents {
+export interface MicdropEvents {
   EndCall: []
   Error: [MicdropClientError]
   StateChange: [MicdropState]
 }
 
-export interface MicdropClientOptions {
+export interface MicdropOptions {
   url?: string
   params?: Record<string, any>
   vad?: VADConfig
@@ -47,20 +47,23 @@ export interface MicdropState {
   error: MicdropClientError | undefined
 }
 
-export class MicdropClient extends EventEmitter<MicdropClientEvents> {
+export class MicdropClient
+  extends EventEmitter<MicdropEvents>
+  implements MicdropState
+{
   public micRecorder?: MicRecorder
   public conversation: MicdropConversation = []
-  public error?: MicdropClientError
+  public error: MicdropClientError | undefined
+  public speakerDevices: MediaDeviceInfo[] = []
+  public micDevices: MediaDeviceInfo[] = []
 
   private ws?: WebSocket
   private micStream?: MediaStream
   private startTime = 0
   private _isProcessing = false
   private _isPaused = false
-  private speakerDevices: MediaDeviceInfo[] = []
-  private micDevices: MediaDeviceInfo[] = []
 
-  constructor(public options: MicdropClientOptions = {}) {
+  constructor(public options: MicdropOptions = {}) {
     super()
 
     // Add speaker listener
@@ -154,7 +157,7 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
     }
   }
 
-  start = async (options?: MicdropClientOptions) => {
+  start = async (options?: MicdropOptions) => {
     this.error = undefined
     this.options = { ...this.options, ...options }
 
@@ -199,7 +202,7 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
     this._isPaused = true
     this._isProcessing = false
     this.notifyStateChange()
-    Speaker.pauseAudio()
+    Speaker.stopAudio()
     this.ws?.send(MicdropClientCommands.Mute)
   }
 

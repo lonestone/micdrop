@@ -8,7 +8,6 @@ The Mic module provides functionality for managing microphone input and audio re
 - 🔊 Audio stream handling
 - 📊 Real-time audio analysis
 - 💾 Persistent device selection
-- ⏱️ Delayed audio stream creation
 
 ## Usage Example
 
@@ -19,7 +18,10 @@ import { Mic } from '@micdrop/client'
 const stream = await Mic.start()
 
 // Start microphone with specific device
-const deviceStream = await Mic.start()
+const deviceStream = await Mic.start('device-id')
+
+// Stop microphone and cleanup when done
+Mic.stop()
 
 // Monitor volume changes using the audio analyser
 // Volume is in dB range -100 to 0
@@ -28,9 +30,6 @@ Mic.analyser.on('volume', (volume: number) => {
   const normalizedVolume = Math.max(0, volume + 100)
   console.log('Current volume:', normalizedVolume)
 })
-
-// Stop microphone and cleanup when done
-Mic.stop()
 ```
 
 ## API Reference
@@ -51,11 +50,6 @@ or
 const stream = await Mic.start(deviceId)
 ```
 
-- `deviceId`: Optional ID of the microphone device to use
-- Stores selected device ID in localStorage
-- Returns a promise that resolves with the microphone's MediaStream
-- **Throws** if the AudioContext is not initialized or if microphone permissions are denied
-
 #### `stop(): void`
 
 Stops the microphone stream and cleans up resources.
@@ -63,10 +57,6 @@ Stops the microphone stream and cleans up resources.
 ```typescript
 Mic.stop()
 ```
-
-- Disconnects the audio source
-- Stops the media stream
-- Cleans up internal references
 
 ### Variables
 
@@ -86,18 +76,9 @@ console.log(Mic.analyser.node)
 
 ## Browser Support
 
-Requires browsers with support for:
+Fully supported in Chrome, Firefox, Safari and Edge.
+
+Requires support for:
 
 - Web Audio API
 - MediaDevices API
-- getUserMedia API
-- AudioContext and related APIs
-
-## Notes
-
-- Device selection is persisted in localStorage
-- Audio analysis is available through the `analyser` instance
-- The module automatically handles AudioContext initialization and unlocking
-- Default configuration includes echo cancellation and noise suppression
-- Sample rate is set to 16kHz for optimal voice recording
-- Advanced features like voice activity detection (VAD) or audio recording are handled by other modules (e.g., `MicRecorder`), not by `Mic` itself

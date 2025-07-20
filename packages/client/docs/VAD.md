@@ -15,10 +15,16 @@ You can also pass instances of these VADs, or combine them in an array. See belo
 
 ## Volume VAD: Speech detection based on volume
 
-By default, `MicdropClient` uses `VolumeVAD` for speech detection. You can use it explicitly:
+By default, `MicdropClient` uses `VolumeVAD` for speech detection. You can use it explicitly when starting Micdrop:
 
 ```typescript
-const call = Micdrop({ vad: 'volume' })
+Micdrop.start({ vad: 'volume' })
+```
+
+or when starting the microphone (before starting the call):
+
+```typescript
+Micdrop.startMic({ vad: 'volume' })
 ```
 
 It is inspired by [hark](https://github.com/otalk/hark) and triggers speech detection events based on volume changes.
@@ -30,7 +36,7 @@ const vad = new VolumeVAD({
   history: 5, // Number of frames to consider for volume calculation
   threshold: -55, // Threshold in decibels for speech detection
 })
-const call = Micdrop({ vad })
+Micdrop.start({ vad })
 ```
 
 - **Default options:** `{ history: 5, threshold: -55 }`
@@ -41,7 +47,7 @@ const call = Micdrop({ vad })
 To use `SileroVAD` for speech detection:
 
 ```typescript
-const call = Micdrop({ vad: 'silero' })
+Micdrop.start({ vad: 'silero' })
 ```
 
 It is based on [@ricky0123/vad-web](https://github.com/ricky0123/vad) which runs a [Silero VAD](https://github.com/snakers4/silero-vad) model in the browser using [ONNX Runtime Web](https://github.com/microsoft/onnxruntime/tree/main/js/web).
@@ -57,7 +63,7 @@ const vad = new SileroVAD({
   minSpeechFrames: 8, // Minimum number of frames to consider for speech detection
   redemptionFrames: 20, // Number of frames to consider for silence detection
 })
-const call = Micdrop({ vad })
+Micdrop.start({ vad })
 ```
 
 - **Default options:** `{ positiveSpeechThreshold: 0.18, negativeSpeechThreshold: 0.11, minSpeechFrames: 8, redemptionFrames: 20 }`
@@ -73,16 +79,14 @@ Combining multiple VADs is useful to get more accurate speech detection:
 You can combine multiple VADs by passing an array of VAD names:
 
 ```typescript
-const call = Micdrop({
-  vad: ['volume', 'silero'],
-})
+Micdrop.start({ vad: ['volume', 'silero'] })
 ```
 
 Or with instances:
 
 ```typescript
 const vad = [new VolumeVAD(), new SileroVAD()]
-const call = Micdrop({ vad })
+Micdrop.start({ vad })
 ```
 
 Or mix names and instances.
@@ -99,7 +103,7 @@ Or mix names and instances.
 You can also pass your own VAD implementation:
 
 ```typescript
-const call = Micdrop({ vad: new MyVAD() })
+Micdrop.start({ vad: new MyVAD() })
 ```
 
 Your VAD implementation should extend the `VAD` class:

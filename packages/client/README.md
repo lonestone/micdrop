@@ -1,8 +1,12 @@
+# 🖐️🎤 Micdrop: Real-Time Voice Conversations with AI
+
+Micdrop is a set of open source Typescript packages to build real-time voice conversations with AI agents. It handles all the complexities on the browser and server side (microphone, speaker, VAD, network communication, etc) and provides ready-to-use implementations for various AI providers.
+
 # @micdrop/client
 
-A browser library for handling real-time voice conversations with microphone and speaker management.
+The browser implementation of [Micdrop](../../README.md).
 
-It is framework agnostic, you can use it with React, Vue, Angular or any other framework.
+It is framework agnostic, you can use it with React, Vue, Angular or any other framework. See [demo-client](../../examples/demo-client/README.md) for a complete example with React.
 
 For server implementation, see [@micdrop/server](../server/README.md) package.
 
@@ -96,8 +100,8 @@ await Micdrop.start({
 })
 
 // Listen for events
-Micdrop.on('StateChange', () => {
-  console.log('State changed')
+Micdrop.on('StateChange', (state) => {
+  console.log('State:', state)
 })
 Micdrop.on('EndCall', () => {
   console.log('Call ended by assistant')
@@ -116,15 +120,13 @@ await Micdrop.stop()
 
 ## Demo
 
-Check out the demo implementation in the [@micdrop/demo-client](../demo-client/README.md) package. It shows:
+Check out the demo implementation in the [demo-client example](../../examples/demo-client/README.md) package. It shows:
 
 - Setting up a React application with WebSocket communication
 - Configuring the MicdropClient with custom parameters
 - Managing microphone input and audio playback
 - Handling conversation state and UI updates
 - Error handling patterns
-
-Here's a simplified version from the demo:
 
 ## Documentation
 
@@ -140,13 +142,15 @@ Here's a simplified version from the demo:
 
 ## Browser Support
 
+Fully supported in Chrome, Firefox, Safari and Edge.
+
 Requires browsers with support for:
 
 - WebSocket API
-- MediaRecorder API
-- MediaSource API
 - Web Audio API
-- getUserMedia API
+- MediaDevices API
+- MediaRecorder API
+- MediaSource Extensions (MSE)
 
 ## License
 
@@ -154,6 +158,4 @@ MIT
 
 ## Author
 
-Originally developed for [Raconte.ai](https://www.raconte.ai)
-
-by [Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))
+Originally developed for [Raconte.ai](https://www.raconte.ai) and open sourced by [Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))

@@ -11,6 +11,6 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": "."
   },
-  "include": ["src", "../demo-server/src/ai"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }
