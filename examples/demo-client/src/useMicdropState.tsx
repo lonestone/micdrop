@@ -11,10 +11,9 @@ export function useMicdropState(): MicdropState {
 
   useEffect(() => {
     // Subscribe to StateChange event
-    const handleStateChange = () => setState(Micdrop.state)
-    Micdrop.on('StateChange', handleStateChange)
+    Micdrop.on('StateChange', setState)
     return () => {
-      Micdrop.off('StateChange', handleStateChange)
+      Micdrop.off('StateChange', setState)
     }
   }, [])
 

@@ -18,7 +18,7 @@ import {
 export interface MicdropClientEvents {
   EndCall: []
   Error: [MicdropClientError]
-  StateChange: void
+  StateChange: [MicdropState]
 }
 
 export interface MicdropClientOptions {
@@ -491,7 +491,7 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
   }
 
   private notifyStateChange() {
-    this.emit('StateChange')
+    this.emit('StateChange', this.state)
   }
 
   private log(...message: any[]) {
