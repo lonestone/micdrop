@@ -26,12 +26,6 @@ if (audioResponse.ok) {
   await Speaker.playAudio(audioBlob)
 }
 
-// Pause playback
-Speaker.pauseAudio()
-
-// Resume playback
-Speaker.resumeAudio()
-
 // Stop playback and cleanup
 Speaker.stopAudio()
 
@@ -99,22 +93,6 @@ await Speaker.playAudio(audioBlob)
 
 - Audio must be in `audio/webm; codecs=opus` format.
 - An audio can be split into chunks and provided sequentially to `playAudio` as long as the first chunk has headers.
-
-#### `pauseAudio(): void`
-
-Pauses the currently playing audio.
-
-```typescript
-Speaker.pauseAudio()
-```
-
-#### `resumeAudio(): void`
-
-Resumes paused audio playback.
-
-```typescript
-Speaker.resumeAudio()
-```
 
 #### `stopAudio(): void`
 

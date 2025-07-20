@@ -95,18 +95,6 @@ export class Speaker extends EventEmitter<SpeakerEvents> {
     )
   }
 
-  pauseAudio() {
-    if (this.audioElement) {
-      this.audioElement.pause()
-    }
-  }
-
-  resumeAudio() {
-    if (this.audioElement) {
-      this.audioElement.play()
-    }
-  }
-
   private async setDevice(deviceId: string | undefined) {
     if (!this.mediaElementSource) {
       console.error(
