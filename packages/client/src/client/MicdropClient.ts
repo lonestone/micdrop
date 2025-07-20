@@ -57,7 +57,8 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
   private startTime = 0
   private _isProcessing = false
   private _isPaused = false
-  private devices: MediaDeviceInfo[] = []
+  private speakerDevices: MediaDeviceInfo[] = []
+  private micDevices: MediaDeviceInfo[] = []
 
   constructor(public options: MicdropClientOptions = {}) {
     super()
@@ -67,7 +68,7 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
     Speaker.on('StopPlaying', this.onSpeakerStopPlaying)
 
     // Listen to device changes
-    navigator.mediaDevices.addEventListener('devicechange', this.getDevices)
+    navigator.mediaDevices.addEventListener('devicechange', this.updateDevices)
   }
 
   get vad(): VAD | undefined {
@@ -131,14 +132,6 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
 
   get speakerDeviceId(): string | undefined {
     return Speaker.deviceId
-  }
-
-  get micDevices(): MediaDeviceInfo[] {
-    return this.devices.filter((device) => device.kind === 'audioinput')
-  }
-
-  get speakerDevices(): MediaDeviceInfo[] {
-    return this.devices.filter((device) => device.kind === 'audiooutput')
   }
 
   get state(): MicdropState {
@@ -283,7 +276,13 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
 
       // Get devices after starting mic
       // It's necessary for Firefox that return an empty list before any stream is started
-      await this.getDevices()
+      await this.updateDevices()
+
+      // Start speaker
+      // Must be after devices update
+      await Speaker.start()
+
+      this.notifyStateChange()
     } catch (error) {
       this.setError(
         new MicdropClientError(
@@ -313,9 +312,35 @@ export class MicdropClient extends EventEmitter<MicdropClientEvents> {
     this.notifyStateChange()
   }
 
-  private getDevices = async () => {
-    const devices = await navigator.mediaDevices.enumerateDevices()
-    this.devices = devices
+  private updateDevices = async () => {
+    const rawDevices = await navigator.mediaDevices.enumerateDevices()
+    if (rawDevices.length === 0) return
+
+    // Move default devices to the beginning of the list
+    // and get rid of devices with deviceId=default
+    const defaultDevices = rawDevices.filter(
+      (device) => device.deviceId === 'default'
+    )
+    const devices = rawDevices.filter((device) => device.deviceId !== 'default')
+    const defaultDevicesIndexes = defaultDevices
+      .map((device) =>
+        devices.findIndex(
+          (d) => d.groupId === device.groupId && d.kind === device.kind
+        )
+      )
+      .filter((index) => index !== -1)
+    for (const index of defaultDevicesIndexes) {
+      const device = devices[index]
+      devices.splice(index, 1)
+      devices.unshift(device)
+    }
+
+    this.micDevices = devices.filter((device) => device.kind === 'audioinput')
+    this.speakerDevices = devices.filter(
+      (device) => device.kind === 'audiooutput'
+    )
+    Speaker.devices = this.speakerDevices
+
     this.notifyStateChange()
   }
 

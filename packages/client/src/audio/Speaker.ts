@@ -12,28 +12,148 @@ const AUDIO_MIME_TYPE = 'audio/webm; codecs=opus'
 
 export class Speaker extends EventEmitter<SpeakerEvents> {
   public isPlaying = false
-  public analyser: AudioAnalyser
+  public analyser = new AudioAnalyser(audioContext)
   public deviceId: string | undefined
 
+  // Set by MicdropClient, useful to detect default device
+  public devices: MediaDeviceInfo[] = []
+
   private audioElement?: HTMLAudioElement
+  private mediaElementSource?: MediaElementAudioSourceNode
+  private audioElementDestination?: HTMLAudioElement // Used when audiocontext sinkId is not available
   private mediaSource?: MediaSource
   private sourceBuffer?: SourceBuffer
   private bufferQueue: Blob[] = []
   private isBufferUpdating: boolean = false
   private isSourceBufferInitialized: boolean = false
-  private analyzerSourceNode?: MediaStreamAudioSourceNode
   private endCheckTimeout?: number
-  private analyserRetryCount: number = 0
-  private readonly maxAnalyserRetries: number = 5
-  private readonly analyserRetryDelay: number = 200
-  private analyserRetryTimeout?: number
   private lastAudioCurrentTime?: number
 
-  constructor() {
-    super()
-    this.analyser = new AudioAnalyser(audioContext)
-    this.setupAudioElement()
-    this.setupMediaSource()
+  async start() {
+    if (!this.audioElement) {
+      await this.setupAudioElement()
+    }
+  }
+
+  async playAudio(blob: Blob) {
+    try {
+      if (!this.audioElement) {
+        await this.setupAudioElement()
+      }
+      if (!this.mediaSource) {
+        this.setupMediaSource()
+      }
+
+      // Add blob to buffer queue
+      this.bufferQueue.push(blob)
+      this.processBufferQueue()
+
+      // Start playing if not already playing
+      if (this.audioElement?.paused) {
+        this.audioElement.play()
+      }
+    } catch (error) {
+      console.error('Error playing audio blob', error, blob)
+    }
+  }
+
+  stopAudio() {
+    if (!this.isPlaying) return
+    if (this.audioElement) {
+      this.audioElement.pause()
+
+      // Seek to the end of loaded chunks to prevent resuming from current position
+      if (this.audioElement.buffered.length > 0) {
+        const lastBufferedEnd = this.audioElement.buffered.end(
+          this.audioElement.buffered.length - 1
+        )
+        this.audioElement.currentTime = lastBufferedEnd
+      }
+    }
+
+    this.bufferQueue.length = 0
+    this.mediaSource?.endOfStream()
+    this.mediaSource = undefined
+  }
+
+  async changeDevice(deviceId: string) {
+    await this.setDevice(deviceId)
+
+    // Update local storage
+    if (this.isDefaultDevice) {
+      localStorage.removeItem(LocalStorageKeys.SpeakerDevice)
+    } else {
+      localStorage.setItem(LocalStorageKeys.SpeakerDevice, deviceId)
+    }
+  }
+
+  get isDefaultDevice(): boolean {
+    return (
+      !this.deviceId ||
+      this.devices.length === 0 ||
+      this.deviceId === this.devices[0].deviceId
+    )
+  }
+
+  pauseAudio() {
+    if (this.audioElement) {
+      this.audioElement.pause()
+    }
+  }
+
+  resumeAudio() {
+    if (this.audioElement) {
+      this.audioElement.play()
+    }
+  }
+
+  private async setDevice(deviceId: string | undefined) {
+    if (!this.mediaElementSource) {
+      console.error(
+        'MediaElementAudioSourceNode not initialized, setDevice called before setupAudioElement'
+      )
+      return
+    }
+    try {
+      this.deviceId = deviceId
+      const defaultDevice = this.isDefaultDevice
+      const sinkId = !deviceId || defaultDevice ? '' : deviceId
+
+      if (defaultDevice || 'setSinkId' in audioContext) {
+        // Play through audiocontext destination when possible
+        // It is the preferred way, as it's the only way to have echo cancellation
+        await (audioContext as any).setSinkId?.(sinkId)
+        this.mediaElementSource.disconnect()
+        this.mediaElementSource.connect(audioContext.destination)
+        this.mediaElementSource.connect(this.analyser.node)
+
+        // Reset audio element destination if it exists
+        if (this.audioElementDestination) {
+          this.audioElementDestination.pause()
+          this.audioElementDestination.srcObject = null
+          this.audioElementDestination = undefined
+        }
+      } else {
+        // On Firefox, we can't set sinkId on audio context
+        // So we stream non-default devices back to an audio element for which we set sinkId
+        if (!this.audioElementDestination) {
+          // Create a media stream destination to stream the audio to
+          const mediaStreamDestination =
+            audioContext.createMediaStreamDestination()
+          this.mediaElementSource.disconnect()
+          this.mediaElementSource.connect(mediaStreamDestination)
+          this.mediaElementSource.connect(this.analyser.node)
+
+          // Play stream to audio element destination
+          this.audioElementDestination = new Audio()
+          this.audioElementDestination.autoplay = true
+          this.audioElementDestination.srcObject = mediaStreamDestination.stream
+        }
+        await this.audioElementDestination.setSinkId(sinkId)
+      }
+    } catch (error) {
+      console.error(`Error setting Audio Output to ${deviceId}`, error)
+    }
   }
 
   private onAudioError = () => {
@@ -175,150 +295,34 @@ export class Speaker extends EventEmitter<SpeakerEvents> {
     }
   }
 
-  private connectAnalyser = () => {
-    // Don't try to connect if already connected or no audio element
-    if (this.analyzerSourceNode || !this.audioElement) return
-
-    // Clear any pending retry
-    if (this.analyserRetryTimeout) {
-      clearTimeout(this.analyserRetryTimeout)
-      this.analyserRetryTimeout = undefined
-    }
-
-    try {
-      // Check if audio element is ready and playing
-      if (this.audioElement.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-        throw new Error('Audio element not ready')
-      }
-
-      // Try to capture stream from audio element (Chrome/Edge approach)
-      let stream: MediaStream | null = null
-
-      // Check if captureStream is available (not on Firefox)
-      if (typeof (this.audioElement as any).captureStream === 'function') {
-        try {
-          stream = (this.audioElement as any).captureStream()
-        } catch (e) {
-          console.warn('captureStream failed, trying alternative approach', e)
-        }
-      }
-
-      // Firefox-compatible alternative: Use Web Audio API with MediaStreamDestination
-      if (!stream || stream.getAudioTracks().length === 0) {
-        // For Firefox and browsers without captureStream support,
-        // we need to route the audio through Web Audio API
-
-        // Create a MediaElementAudioSourceNode from the audio element
-        const mediaElementSource = audioContext.createMediaElementSource(
-          this.audioElement
-        )
-
-        // Create a MediaStreamDestination to convert back to MediaStream
-        const mediaStreamDestination =
-          audioContext.createMediaStreamDestination()
-
-        // Create a gain node for audio passthrough
-        const gainNode = audioContext.createGain()
-        gainNode.gain.value = 1.0
-
-        // Connect: MediaElement -> Gain -> MediaStreamDestination
-        mediaElementSource.connect(gainNode)
-        gainNode.connect(mediaStreamDestination)
-
-        // Also connect back to audioContext.destination so we can still hear the audio
-        gainNode.connect(audioContext.destination)
-
-        // Get the stream from the destination
-        stream = mediaStreamDestination.stream
-      }
-
-      if (!stream || stream.getAudioTracks().length === 0) {
-        throw new Error('No audio tracks available')
-      }
-
-      // Successfully got the stream, create analyser connection
-      this.analyzerSourceNode = audioContext.createMediaStreamSource(stream)
-      this.analyzerSourceNode.connect(this.analyser.node)
-      this.analyserRetryCount = 0 // Reset retry count on success
-    } catch (e) {
-      // Retry after a delay if we haven't exceeded max retries
-      if (this.analyserRetryCount < this.maxAnalyserRetries) {
-        console.log('Retrying analyser connection', this.analyserRetryCount)
-        this.analyserRetryCount++
-        this.analyserRetryTimeout = window.setTimeout(() => {
-          this.connectAnalyser()
-        }, this.analyserRetryDelay)
-      } else {
-        console.error('Error connecting analyser to audioElement', e)
-      }
-    }
-  }
-
-  canChangeDevice(): boolean {
-    return (
-      window.HTMLMediaElement && 'sinkId' in window.HTMLMediaElement.prototype
-    )
-  }
-
-  async changeDevice(deviceId: string) {
-    if (!this.canChangeDevice()) return
-    try {
-      this.deviceId = deviceId
-      localStorage.setItem(LocalStorageKeys.SpeakerDevice, deviceId)
-      await this.audioElement?.setSinkId(deviceId)
-    } catch (error) {
-      console.error(`Error setting Audio Output to ${deviceId}`, error)
-    }
-  }
-
-  pauseAudio() {
-    if (this.audioElement) {
-      this.audioElement.pause()
-    }
-  }
-
-  resumeAudio() {
-    if (this.audioElement) {
-      this.audioElement.play()
-    }
-  }
-
-  private setupAudioElement() {
-    // Dispose of the existing audio element
-    if (this.audioElement) {
-      this.audioElement.pause()
-      this.audioElement.src = ''
-      this.audioElement = undefined
-    }
+  private async setupAudioElement() {
+    if (this.audioElement) return
 
     // Create audio element if it doesn't exist
     this.audioElement = new Audio()
     this.audioElement.autoplay = true
 
-    // Select speaker device if speakerId is in local storage
-    const deviceId = localStorage.getItem(LocalStorageKeys.SpeakerDevice)
-    if (deviceId) {
-      this.changeDevice(deviceId)
-    }
-
-    // Connect analyser once when audio starts playing
-    this.audioElement.addEventListener('canplay', this.connectAnalyser)
-
     // Add event listeners to track playing state
     this.audioElement.addEventListener('play', () => this.setIsPlaying(true))
     this.audioElement.addEventListener('pause', () => this.setIsPlaying(false))
     this.audioElement.addEventListener('ended', () => this.setIsPlaying(false))
-    this.audioElement.addEventListener('playing', () => {
-      this.setIsPlaying(true)
-      // Try to connect analyser when actually playing
-      this.connectAnalyser()
-    })
+    this.audioElement.addEventListener('playing', () => this.setIsPlaying(true))
 
     // Add error event listener to handle media errors
     this.audioElement.addEventListener('error', this.onAudioError)
 
     // Add timeupdate listener to detect when we've reached the end of buffered content
     this.audioElement.addEventListener('timeupdate', this.onAudioTimeUpdate)
+
+    // Create a media element source to analyze speaker and play sound through selected device
+    this.mediaElementSource = audioContext.createMediaElementSource(
+      this.audioElement
+    )
+
+    // Select speaker device if speakerId is in local storage
+    const deviceId =
+      localStorage.getItem(LocalStorageKeys.SpeakerDevice) ?? undefined
+    await this.setDevice(deviceId)
   }
 
   private setupMediaSource() {
@@ -356,52 +360,9 @@ export class Speaker extends EventEmitter<SpeakerEvents> {
 
     if (this.audioElement) {
       this.audioElement.src = URL.createObjectURL(this.mediaSource)
-      // Set deviceId again
-      if (this.deviceId) {
-        this.changeDevice(this.deviceId)
-      }
     }
 
     this.isSourceBufferInitialized = false
     this.bufferQueue.length = 0
-  }
-
-  async playAudio(blob: Blob) {
-    if (!this.audioElement) return
-    try {
-      if (!this.mediaSource) {
-        this.setupMediaSource()
-      }
-
-      // Add blob to buffer queue
-      this.bufferQueue.push(blob)
-      this.processBufferQueue()
-
-      // Start playing if not already playing
-      if (this.audioElement.paused) {
-        this.audioElement.play()
-      }
-    } catch (error) {
-      console.error('Error playing audio blob', error, blob)
-    }
-  }
-
-  stopAudio() {
-    if (!this.isPlaying) return
-    if (this.audioElement) {
-      this.audioElement.pause()
-
-      // Seek to the end of loaded chunks to prevent resuming from current position
-      if (this.audioElement.buffered.length > 0) {
-        const lastBufferedEnd = this.audioElement.buffered.end(
-          this.audioElement.buffered.length - 1
-        )
-        this.audioElement.currentTime = lastBufferedEnd
-      }
-    }
-
-    this.bufferQueue.length = 0
-    this.mediaSource?.endOfStream()
-    this.mediaSource = undefined
   }
 }

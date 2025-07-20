@@ -4,15 +4,11 @@ import { LocalStorageKeys } from './utils/localStorage'
 import { stopStream } from './utils/stopStream'
 
 export class Mic {
-  public analyser: AudioAnalyser
+  public analyser = new AudioAnalyser(audioContext)
   public deviceId: string | undefined
 
   private audioStream: MediaStream | undefined
   private sourceNode: MediaStreamAudioSourceNode | undefined
-
-  constructor() {
-    this.analyser = new AudioAnalyser(audioContext)
-  }
 
   private getMicConstraints(deviceId?: string): MediaStreamConstraints {
     return {

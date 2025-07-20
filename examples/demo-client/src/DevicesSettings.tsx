@@ -1,4 +1,4 @@
-import { Micdrop, Speaker } from '@micdrop/client'
+import { Micdrop } from '@micdrop/client'
 import { FaMicrophone, FaVolumeUp } from 'react-icons/fa'
 import MicVolume from './MicVolume'
 import SpeakerTestButton from './SpeakerTestButton'
@@ -8,8 +8,8 @@ export default function DevicesSettings() {
   const {
     isMicStarted,
     micDeviceId,
-    speakerDeviceId,
     micDevices,
+    speakerDeviceId,
     speakerDevices,
   } = useMicdropState()
   if (!isMicStarted) return null
@@ -21,9 +21,7 @@ export default function DevicesSettings() {
         <select
           value={micDeviceId}
           className="flex-1 form-select min-w-0 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
-          onChange={(event) =>
-            Micdrop.startMic({ deviceId: event.target.value })
-          }
+          onChange={(event) => Micdrop.changeMicDevice(event.target.value)}
         >
           {micDevices.map(({ deviceId, label }) => (
             <option key={deviceId} value={deviceId}>
@@ -41,7 +39,7 @@ export default function DevicesSettings() {
         <select
           value={speakerDeviceId}
           className="flex-1 form-select min-w-0 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
-          onChange={(event) => Speaker.changeDevice(event.target.value)}
+          onChange={(event) => Micdrop.changeSpeakerDevice(event.target.value)}
         >
           {speakerDevices.map(({ deviceId, label }) => (
             <option key={deviceId} value={deviceId}>
