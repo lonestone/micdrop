@@ -1,8 +1,8 @@
 import { Micdrop } from '@micdrop/client'
+import { useMicdropState } from '@micdrop/react'
 import { FaMicrophone, FaVolumeUp } from 'react-icons/fa'
 import MicVolume from './MicVolume'
 import SpeakerTestButton from './SpeakerTestButton'
-import { useMicdropState } from './useMicdropState'
 
 export default function DevicesSettings() {
   const {

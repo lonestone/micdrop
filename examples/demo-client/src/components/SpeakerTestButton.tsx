@@ -1,25 +1,15 @@
 import { Speaker } from '@micdrop/client'
-import React, { useEffect, useRef, useState } from 'react'
+import { useMicdropState } from '@micdrop/react'
+import React, { useRef, useState } from 'react'
 import { FaPlay, FaStop } from 'react-icons/fa'
 
 interface SpeakerTestButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
 
 export default function SpeakerTestButton(props: SpeakerTestButtonProps) {
+  const { isAssistantSpeaking } = useMicdropState()
   const [loading, setLoading] = useState(false)
-  const [playing, setPlaying] = useState(false)
   const timeoutRef = useRef<number | undefined>()
-
-  useEffect(() => {
-    const onStartPlaying = () => setPlaying(true)
-    const onStopPlaying = () => setPlaying(false)
-    Speaker.on('StartPlaying', onStartPlaying)
-    Speaker.on('StopPlaying', onStopPlaying)
-    return () => {
-      Speaker.off('StartPlaying', onStartPlaying)
-      Speaker.off('StopPlaying', onStopPlaying)
-    }
-  }, [])
 
   const handleClick = async () => {
     clearTimeout(timeoutRef.current)
@@ -71,7 +61,7 @@ export default function SpeakerTestButton(props: SpeakerTestButtonProps) {
       `}
       {...restProps}
     >
-      {playing ? (
+      {isAssistantSpeaking ? (
         <FaStop size={14} className="mr-2" />
       ) : (
         <FaPlay size={14} className="mr-2" />

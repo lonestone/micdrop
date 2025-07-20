@@ -17,6 +17,10 @@ Micdrop is a set of open source Typescript packages to build real-time voice con
 - [`@micdrop/mistral`](./packages/mistral/README.md) - Mistral AI agent integration for conversation handling
 - [`@micdrop/gladia`](./packages/gladia/README.md) - Gladia speech-to-text integration for audio transcription
 
+### Utility Packages
+
+- [`@micdrop/react`](./packages/react/README.md) - React hooks for Micdrop
+
 ### Demo Applications
 
 - [`demo-client`](./packages/demo-client/README.md) - Example web application with React.

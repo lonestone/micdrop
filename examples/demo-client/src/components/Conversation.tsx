@@ -1,5 +1,5 @@
+import { useMicdropState } from '@micdrop/react'
 import { useEffect, useRef } from 'react'
-import { useMicdropState } from './useMicdropState'
 
 interface Props {
   className?: string

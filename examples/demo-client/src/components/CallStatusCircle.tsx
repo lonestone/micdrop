@@ -1,6 +1,5 @@
-import { Mic, MicdropState, Speaker } from '@micdrop/client'
-import { useEffect, useState } from 'react'
-import { useMicdropState } from './useMicdropState'
+import { MicdropState } from '@micdrop/client'
+import { useMicdropState, useMicVolume, useSpeakerVolume } from '@micdrop/react'
 
 interface Props {
   size: number
@@ -8,10 +7,8 @@ interface Props {
 
 export default function CallStatusCircle({ size }: Props) {
   const state = useMicdropState()
-  const [speakerVolume, setSpeakerVolume] = useState(0) // 0-100
-  const [micVolume, setMicVolume] = useState(0) // 0-100
-  const [maxMicVolume, setMaxMicVolume] = useState(50)
-  const [maxSpeakerVolume, setMaxSpeakerVolume] = useState(50)
+  const { speakerVolume, maxSpeakerVolume } = useSpeakerVolume()
+  const { micVolume, maxMicVolume } = useMicVolume()
 
   // Calculate circle size based on volume (min 20% of container size, max 100%)
   const circleSize =
@@ -22,24 +19,6 @@ export default function CallStatusCircle({ size }: Props) {
       speakerVolume,
       maxSpeakerVolume
     ) * size
-
-  // Update speaker and mic volume
-  useEffect(() => {
-    const onSpeakerVolumeChange = (volume: number) => {
-      setSpeakerVolume(Math.max(0, volume + 100))
-      setMaxSpeakerVolume((v) => Math.max(v, volume + 100))
-    }
-    const onMicVolumeChange = (volume: number) => {
-      setMicVolume(Math.max(0, volume + 100))
-      setMaxMicVolume((v) => Math.max(v, volume + 100))
-    }
-    Speaker.analyser.on('volume', onSpeakerVolumeChange)
-    Mic.analyser.on('volume', onMicVolumeChange)
-    return () => {
-      Speaker.analyser.off('volume', onSpeakerVolumeChange)
-      Mic.analyser.off('volume', onMicVolumeChange)
-    }
-  }, [])
 
   return (
     <div
@@ -74,10 +53,12 @@ function getSizeRatio(
   if (state.isListening) return 0.6
   if (state.isProcessing) return 0.4
   if (state.isUserSpeaking) {
-    return 0.2 + 0.8 * Math.max(0, micVolume / maxMicVolume)
+    return 0.2 + 0.8 * Math.max(0, (micVolume + 100) / (maxMicVolume + 100))
   }
   if (state.isAssistantSpeaking) {
-    return 0.2 + 0.8 * Math.max(0, speakerVolume / maxSpeakerVolume)
+    return (
+      0.2 + 0.8 * Math.max(0, (speakerVolume + 100) / (maxSpeakerVolume + 100))
+    )
   }
   return 0.5
 }

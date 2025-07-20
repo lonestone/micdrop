@@ -1,8 +1,7 @@
 import { Micdrop } from '@micdrop/client'
+import { useMicdropEndCall, useMicdropState } from '@micdrop/react'
 import { FaMicrophone, FaPause, FaPlay, FaStop } from 'react-icons/fa'
 import CallStatusCircle from './CallStatusCircle'
-import { useMicdropEndCall } from './useMicdropEndCall'
-import { useMicdropState } from './useMicdropState'
 
 export default function CallControls() {
   const { isStarted, isPaused, isMicStarted, isStarting, error } =

@@ -1,0 +1,47 @@
+{
+  "name": "@micdrop/react",
+  "version": "1.0.0",
+  "description": "React hooks for Micdrop voice conversation client",
+  "author": "Lonestone",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lonestone/micdrop.git",
+    "directory": "packages/react"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "react",
+    "hooks",
+    "microphone",
+    "audio",
+    "browser",
+    "voice",
+    "conversation"
+  ],
+  "peerDependencies": {
+    "@micdrop/client": ">=2.0.0",
+    "react": ">=16.8.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "react": "^18.0.0",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3"
+  }
+}

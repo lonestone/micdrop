@@ -1,7 +1,7 @@
-import CallControls from './CallControls'
-import Conversation from './Conversation'
-import DevicesSettings from './DevicesSettings'
-import VADSettings from './VADSettings'
+import CallControls from './components/CallControls'
+import Conversation from './components/Conversation'
+import DevicesSettings from './components/DevicesSettings'
+import VADSettings from './components/VADSettings'
 
 export default function App() {
   return (
