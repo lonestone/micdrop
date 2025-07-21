@@ -14,7 +14,6 @@ This package provides high-quality real-time text-to-speech implementation using
   - Configurable speech speed (fast, normal, slow)
   - Automatic reconnection on connection loss
   - Streaming cancellation support
-  - High-quality PCM to Opus audio conversion
 
 ## Installation
 

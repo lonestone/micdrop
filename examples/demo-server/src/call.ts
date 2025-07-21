@@ -72,15 +72,16 @@ export default async (app: FastifyInstance) => {
       })
       stt.logger = new Logger('GladiaSTT')
 
-      /*** TTS ***/
-
-      // const tts = new MockTTS(
-      //   path.join(__dirname, '../../demo-client/public/test.mp3')
-      // )
-
       // const stt = new OpenaiSTT({
       //   apiKey: process.env.OPENAI_API_KEY || '',
       // })
+
+      /*** TTS ***/
+
+      // const tts = new MockTTS([
+      //   path.join(__dirname, '../../demo-client/public/chunk-1.wav'),
+      //   path.join(__dirname, '../../demo-client/public/chunk-2.wav'),
+      // ])
 
       const tts = new ElevenLabsTTS({
         apiKey: process.env.ELEVENLABS_API_KEY || '',

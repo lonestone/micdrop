@@ -1,4 +1,4 @@
-import { convertPCMToOpus, TTS } from '@micdrop/server'
+import { TTS } from '@micdrop/server'
 import { PassThrough, Readable } from 'stream'
 import WebSocket from 'ws'
 import {
@@ -17,7 +17,6 @@ export class ElevenLabsTTS extends TTS {
   private socket?: WebSocket
   private initPromise: Promise<void>
   private audioStream?: PassThrough
-  private convertedStream?: PassThrough
   private textEnded = false // Whether the text stream has ended
   private textSent = '' // Text sent to ElevenLabs
   private textBuffer = '' // Buffer of text to send to ElevenLabs
@@ -77,8 +76,7 @@ export class ElevenLabsTTS extends TTS {
       this.log('Flushed text')
     })
 
-    this.convertedStream = convertPCMToOpus(this.audioStream)
-    return this.convertedStream
+    return this.audioStream
   }
 
   cancel() {
@@ -89,8 +87,6 @@ export class ElevenLabsTTS extends TTS {
     this.receivedAudioText = ''
     this.audioStream.end()
     this.audioStream = undefined
-    this.convertedStream?.end()
-    this.convertedStream = undefined
   }
 
   destroy() {
@@ -110,8 +106,6 @@ export class ElevenLabsTTS extends TTS {
 
     this.audioStream?.end()
     this.audioStream = undefined
-    this.convertedStream?.end()
-    this.convertedStream = undefined
 
     super.destroy()
   }

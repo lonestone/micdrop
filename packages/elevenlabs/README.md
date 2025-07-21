@@ -14,7 +14,6 @@ This package provides high-quality real-time text-to-speech implementation using
   - Automatic reconnection on connection loss
   - Streaming cancellation support
   - Keep-alive functionality for long sessions
-  - High-quality PCM to Opus audio conversion
 - 🚀 **ElevenLabsFetchTTS** - Simple fetch-based TTS for non-streaming use cases
 
 ## Installation

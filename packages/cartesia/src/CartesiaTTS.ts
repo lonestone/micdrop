@@ -1,4 +1,4 @@
-import { convertPCMToOpus, TTS } from '@micdrop/server'
+import { TTS } from '@micdrop/server'
 import { PassThrough, Readable } from 'stream'
 import WebSocket from 'ws'
 import {
@@ -21,7 +21,6 @@ export class CartesiaTTS extends TTS {
   private initPromise: Promise<void>
   private counter = 0
   private audioStream?: PassThrough
-  private convertedStream?: PassThrough
   private reconnectTimeout?: NodeJS.Timeout
 
   constructor(private readonly options: CartesiaTTSOptions) {
@@ -88,8 +87,7 @@ export class CartesiaTTS extends TTS {
       )
     })
 
-    this.convertedStream = convertPCMToOpus(this.audioStream)
-    return this.convertedStream
+    return this.audioStream
   }
 
   cancel() {
@@ -126,8 +124,6 @@ export class CartesiaTTS extends TTS {
   private stopStreams() {
     this.audioStream?.end()
     this.audioStream = undefined
-    this.convertedStream?.end()
-    this.convertedStream = undefined
   }
 
   // Connect to Cartesia

@@ -21,7 +21,7 @@ export default function SpeakerTestButton(props: SpeakerTestButtonProps) {
 
     setLoading(true)
 
-    const filepathPattern = '/chunk-{i}.webm'
+    const filepathPattern = '/chunk-{i}.wav'
     let i = 1
 
     const playNextChunk = async () => {

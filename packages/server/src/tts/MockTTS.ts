@@ -3,23 +3,19 @@ import { PassThrough, Readable } from 'stream'
 import { TTS } from './TTS'
 
 export class MockTTS extends TTS {
-  private sampleBuffer: Buffer
-
-  constructor(sampleFilePathOrBuffer: string | Buffer) {
+  constructor(private audioFilePaths: string[]) {
     super()
-    if (typeof sampleFilePathOrBuffer === 'string') {
-      this.sampleBuffer = fs.readFileSync(sampleFilePathOrBuffer)
-    } else {
-      this.sampleBuffer = sampleFilePathOrBuffer
-    }
   }
 
   speak(textStream: Readable) {
     const audioStream = new PassThrough()
-    textStream.once('data', (chunk) => {
-      audioStream.write(this.sampleBuffer)
-    })
-    textStream.on('end', () => {
+    textStream.once('data', async () => {
+      for (const filePath of this.audioFilePaths) {
+        await new Promise((resolve) => setTimeout(resolve, 200))
+        const audioBuffer = fs.readFileSync(filePath)
+        this.log(`Loaded chunk (${audioBuffer.length} bytes)`)
+        audioStream.write(audioBuffer)
+      }
       audioStream.end()
     })
     return audioStream

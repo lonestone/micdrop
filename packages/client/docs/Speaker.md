@@ -19,8 +19,8 @@ import { Speaker } from '@micdrop/client'
 // Change to a specific output device
 await Speaker.changeDevice('device-id')
 
-// Play an audio blob (audio/webm; codecs=opus)
-const audioResponse = await fetch('audio.webm')
+// Play an audio blob (pcm_s16le)
+const audioResponse = await fetch('audio.wav')
 if (audioResponse.ok) {
   const audioBlob = await audioResponse.blob()
   await Speaker.playAudio(audioBlob)
@@ -91,7 +91,7 @@ Plays an audio blob.
 await Speaker.playAudio(audioBlob)
 ```
 
-- Audio must be in `audio/webm; codecs=opus` format.
+- Audio must be in `pcm_s16le` format.
 - An audio can be split into chunks and provided sequentially to `playAudio` as long as the first chunk has headers.
 
 #### `stopAudio(): void`

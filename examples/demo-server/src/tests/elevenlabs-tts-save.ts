@@ -22,7 +22,7 @@ let i = 0
 audioStream.on('data', (chunk) => {
   i++
   console.log(`Chunk received and saved #${i} (${chunk.length} bytes)`)
-  fs.writeFileSync(`chunk-${i}.webm`, chunk)
+  fs.writeFileSync(`chunk-${i}.wav`, chunk)
 })
 
 audioStream.on('error', (error) => {

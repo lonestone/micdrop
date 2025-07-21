@@ -87,7 +87,7 @@ tts.logger = new Logger('CustomTTS')
 For real-time streaming text-to-speech services:
 
 ```typescript
-import { convertPCMToOpus, TTS } from '@micdrop/server'
+import { TTS } from '@micdrop/server'
 import { PassThrough, Readable } from 'stream'
 import WebSocket from 'ws'
 
@@ -101,7 +101,6 @@ export class CustomStreamingTTS extends TTS {
   private socket?: WebSocket
   private initPromise: Promise<void>
   private audioStream?: PassThrough
-  private convertedStream?: PassThrough
   private reconnectTimeout?: NodeJS.Timeout
   private sessionId = 0
 
@@ -144,9 +143,8 @@ export class CustomStreamingTTS extends TTS {
       this.finalizeSession(currentSession)
     })
 
-    // Convert audio to WebM/Opus for web streaming
-    this.convertedStream = convertPCMToOpus(this.audioStream)
-    return this.convertedStream
+    // Return PCM audio stream
+    return this.audioStream
   }
 
   private async initConnection(): Promise<void> {
@@ -187,7 +185,7 @@ export class CustomStreamingTTS extends TTS {
       voice_id: this.options.voiceId,
       language: this.options.language || 'en',
       output_format: {
-        encoding: 'pcm',
+        encoding: 'pcm_s16le',
         sample_rate: 16000,
         channels: 1,
       },
@@ -259,8 +257,6 @@ export class CustomStreamingTTS extends TTS {
   private stopCurrentStreams() {
     this.audioStream?.end()
     this.audioStream = undefined
-    this.convertedStream?.end()
-    this.convertedStream = undefined
   }
 
   private reconnect() {
@@ -315,7 +311,7 @@ const server = new MicdropServer(socket, {
 For services that process complete text before generating audio:
 
 ```typescript
-import { convertToOpus, TTS } from '@micdrop/server'
+import { TTS } from '@micdrop/server'
 import { PassThrough, Readable } from 'stream'
 import { text } from 'stream/consumers'
 
@@ -369,7 +365,7 @@ export class CustomFetchTTS extends TTS {
           voice_id: this.options.voiceId,
           model: this.options.model || 'neural-v1',
           language: this.options.language || 'en',
-          output_format: 'pcm_16000', // 16kHz PCM
+          output_format: 'pcm_s16le', // 16-bit signed little-endian PCM at 16kHz
         }),
         signal: this.currentRequest.signal,
       })
@@ -535,23 +531,23 @@ audioStream.on('end', () => {
 
 ### Output Format
 
-TTS implementations typically need to output audio in WebM/Opus (`audio/webm; codecs=opus`) to be compatible with most web browsers.
+TTS implementations should output audio in PCM format (specifically `pcm_s16le` - 16-bit signed little-endian PCM) for optimal compatibility and performance with Micdrop.
 
-So you should use `convertToOpus` or `convertPCMToOpus` to convert audio stream to WebM/Opus.
+The recommended audio specifications are:
 
-### Conversion Utilities
+- **Format**: PCM (pcm_s16le)
+- **Sample Rate**: 16000 Hz
+- **Channels**: 1 (mono)
+- **Bit Depth**: 16-bit signed integers
 
-Micdrop provides audio conversion utilities:
+### Why PCM?
 
-```typescript
-import { convertPCMToOpus, convertToOpus } from '@micdrop/server'
+PCM format is recommended because:
 
-// Convert PCM audio stream to WebM/Opus
-const webmStream = convertPCMToOpus(pcmAudioStream)
-
-// Convert any audio format to Opus
-const opusStream = convertToOpus(audioStream)
-```
+- **Low latency**: No encoding/decoding overhead
+- **Universal compatibility**: Supported by all audio systems
+- **Real-time streaming**: Optimal for live conversation scenarios
+- **Simplicity**: Direct audio data without compression artifacts
 
 ### Streaming Considerations
 
