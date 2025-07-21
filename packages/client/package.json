@@ -33,7 +33,7 @@
     "conversation"
   ],
   "dependencies": {
-    "@ricky0123/vad-web": "https://gitpkg.vercel.app/ricky0123/vad/packages/web?aef5853f5822af89fbbe23458f98702f9081941d",
+    "@ricky0123/vad-web": "0.0.24",
     "eventemitter3": "^5.0.1"
   },
   "devDependencies": {

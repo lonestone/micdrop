@@ -7,8 +7,8 @@
     "examples/*"
   ],
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
+    "build": "turbo run build --concurrency=12",
+    "dev": "turbo run dev --concurrency=12",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "clean": "turbo run clean",
