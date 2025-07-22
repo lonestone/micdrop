@@ -32,12 +32,6 @@ export interface MicdropCallSummary {
 
 export type MicdropConversation = MicdropConversationMessage[]
 
-export type MicdropAnswerCommands = {
-  endCall?: boolean
-  cancelLastUserMessage?: boolean
-  skipAnswer?: boolean
-}
-
 export type MicdropAnswerMetadata = {
   [key: string]: any
 }

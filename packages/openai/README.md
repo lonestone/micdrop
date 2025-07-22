@@ -100,6 +100,73 @@ new MicdropServer(socket, {
 | `model`    | `string` | `'whisper-1'` | Whisper model to use            |
 | `language` | `string` | Optional      | Language code for transcription |
 
+## Tool Management
+
+The OpenAI Agent supports adding and removing custom tools to extend its capabilities.
+
+### Adding Tools
+
+Use `addTool()` to add custom functions that the agent can call during conversations:
+
+```typescript
+import { z } from 'zod'
+
+const agent = new OpenaiAgent({
+  apiKey: process.env.OPENAI_API_KEY || '',
+  systemPrompt: 'You are a helpful assistant that can manage user information.',
+})
+
+// Add a simple tool without parameters
+agent.addTool({
+  name: 'get_time',
+  description: 'Get the current time',
+  callback: () => new Date().toLocaleTimeString(),
+})
+
+// Add a tool with typed parameters using Zod schema
+agent.addTool({
+  name: 'set_user_info',
+  description: 'Save user information to the database',
+  parameters: z.object({
+    city: z.string().describe('City'),
+    jobTitle: z.string().describe('Job title').nullable(),
+    experience: z
+      .number()
+      .describe('Number of years of experience of the user')
+      .nullable(),
+  }),
+  callback: ({ city, jobTitle, experience }) => {
+    // Your implementation here
+    console.log('Saving user:', { city, jobTitle, experience })
+    return { success: true, message: 'User information saved' }
+  },
+})
+
+// Add a tool that returns data for the conversation
+agent.addTool({
+  name: 'search_database',
+  description: 'Search for items in the database',
+  parameters: z.object({
+    query: z.string().describe('Search query'),
+    limit: z.number().default(10).describe('Maximum number of results'),
+  }),
+  callback: async ({ query, limit }) => {
+    // Your search implementation
+    const results = await searchDatabase(query, limit)
+    return { results, total: results.length }
+  },
+})
+```
+
+### Removing Tools
+
+Use `removeTool()` to remove tools by name:
+
+```typescript
+// Remove a specific tool
+agent.removeTool('get_time')
+```
+
 ## Advanced Features
 
 ### Auto End Call

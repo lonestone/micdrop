@@ -1,10 +1,19 @@
-import { Agent, AgentOptions } from '@micdrop/server'
+import { Agent, AgentOptions, TextPromise } from '@micdrop/server'
 import OpenAI from 'openai'
-import { PassThrough, Readable } from 'stream'
+import { PassThrough } from 'stream'
+import { z } from 'zod'
+import {
+  createToolCallOutput,
+  createToolSchema,
+  Tool,
+  ToolCall,
+  ToolCallOutput,
+} from './tools'
 
 export interface OpenaiAgentOptions extends AgentOptions {
   apiKey: string
   model?: string
+  maxCalls?: number
   settings?: Omit<
     OpenAI.Responses.ResponseCreateParamsStreaming,
     'input' | 'model'
@@ -24,6 +33,7 @@ export interface OpenaiAgentOptions extends AgentOptions {
 }
 
 const DEFAULT_MODEL = 'gpt-4o'
+const DEFAULT_MAX_CALLS = 5
 
 const AUTO_END_CALL_TOOL_NAME = 'end_call'
 const AUTO_END_CALL_PROMPT = 'User asks to end the call'
@@ -37,143 +47,177 @@ const AUTO_IGNORE_USER_NOISE_PROMPT =
 
 export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   private openai: OpenAI
-  private tools: OpenAI.Responses.Tool[]
+  private tools: Tool[]
   private abortController?: AbortController
 
   constructor(options: OpenaiAgentOptions) {
     super(options)
     this.openai = new OpenAI({ apiKey: options.apiKey })
-    this.tools = this.getTools()
+    this.tools = this.getDefaultTools()
   }
 
-  answer(): Readable {
+  answer() {
+    this.cancel()
     this.log('Start answering')
     const stream = new PassThrough()
+    const textPromise = this.createTextPromise()
+
+    this.generateAnswer(stream, textPromise).finally(() => {
+      this.abortController = undefined
+      if (stream.writable) {
+        stream.end()
+      }
+    })
+
+    return { text: textPromise.promise, stream }
+  }
+
+  private async generateAnswer(
+    stream: PassThrough,
+    textPromise: TextPromise,
+    callCount = 0,
+    toolInputs?: OpenAI.Responses.ResponseInputItem[]
+  ): Promise<void> {
+    if (callCount >= (this.options.maxCalls || DEFAULT_MAX_CALLS)) {
+      console.error('[OpenaiAgent] Max calls reached')
+      textPromise.reject(new Error('Max calls reached'))
+      return
+    }
+
     this.abortController = new AbortController()
     const signal = this.abortController.signal
 
     // Disable tools if first message
     const enableTools = this.conversation.length > 1
 
-    // Generate answer
-    this.openai.responses
-      .create(
+    // Build input
+    const input: OpenAI.Responses.ResponseInput = this.conversation.map(
+      (message) => ({
+        role: message.role,
+        content: message.content,
+      })
+    )
+    if (toolInputs) {
+      input.push(...toolInputs)
+    }
+
+    try {
+      // Generate answer
+      const response = await this.openai.responses.create(
         {
           model: this.options.model || DEFAULT_MODEL,
-          input: this.conversation.map((message) => ({
-            role: message.role,
-            content: message.content,
-          })),
+          input,
           temperature: 0.5,
           max_output_tokens: 250,
           stream: true,
-          tools: enableTools ? this.tools : undefined,
-          parallel_tool_calls: false,
+          tools: enableTools ? this.tools.map(createToolSchema) : undefined,
           ...this.options.settings,
         },
         { signal }
       )
-      .then(async (response) => {
-        for await (const event of response) {
-          switch (event.type) {
-            case 'response.output_text.delta':
-              this.log(`Answer chunk: "${event.delta}"`)
-              stream.write(event.delta)
-              break
-            case 'response.output_text.done':
-              stream.end()
-              this.addAssistantMessage(event.text)
-              break
-            case 'response.output_item.done':
-              if (event.item.type === 'function_call') {
-                this.executeTool(event.item)
-              }
-              break
-            default:
-              break
-          }
-        }
-      })
-      .catch((error) => {
-        if (error instanceof OpenAI.APIUserAbortError) return
-        console.error(error)
-      })
-      .finally(() => {
-        this.abortController = undefined
-        if (stream.writable) {
-          stream.end()
-        }
-      })
+      const toolOutputs: OpenAI.Responses.ResponseInputItem[] = []
 
-    return stream
+      // Handle response events
+      for await (const event of response) {
+        switch (event.type) {
+          case 'response.output_text.delta':
+            this.log(`Answer chunk: "${event.delta}"`)
+            stream.write(event.delta)
+            break
+
+          case 'response.output_text.done':
+            this.addAssistantMessage(event.text)
+            stream.end()
+            textPromise.resolve(event.text)
+            break
+
+          case 'response.output_item.done':
+            if (event.item.type === 'function_call') {
+              toolOutputs.push(event.item)
+              const toolOutput = await this.executeTool(event.item)
+              toolOutputs.push(toolOutput)
+            }
+            break
+
+          default:
+            break
+        }
+      }
+
+      // Query again in case of tool call
+      if (toolOutputs.length > 0) {
+        await this.generateAnswer(
+          stream,
+          textPromise,
+          callCount + 1,
+          toolOutputs
+        )
+      }
+    } catch (error) {
+      textPromise.reject(error)
+      if (!(error instanceof OpenAI.APIUserAbortError)) {
+        console.error('[OpenaiAgent] Error answering:', error)
+      }
+    }
   }
 
-  private getTools() {
-    const tools: OpenAI.Responses.Tool[] = []
+  addTool<Schema extends z.ZodObject>(tool: Tool<Schema>) {
+    this.tools.push(tool)
+  }
+
+  removeTool(name: string) {
+    this.tools = this.tools.filter((tool) => tool.name !== name)
+  }
+
+  private getDefaultTools() {
+    const tools: Tool[] = []
     if (this.options.autoEndCall) {
-      tools.push(
-        this.getToolSchema(
-          AUTO_END_CALL_TOOL_NAME,
+      tools.push({
+        name: AUTO_END_CALL_TOOL_NAME,
+        description:
           typeof this.options.autoEndCall === 'string'
             ? this.options.autoEndCall
-            : AUTO_END_CALL_PROMPT
-        )
-      )
+            : AUTO_END_CALL_PROMPT,
+        callback: () => this.endCall(),
+      })
     }
     if (this.options.autoSemanticTurn) {
-      tools.push(
-        this.getToolSchema(
-          AUTO_SEMANTIC_TURN_TOOL_NAME,
+      tools.push({
+        name: AUTO_SEMANTIC_TURN_TOOL_NAME,
+        description:
           typeof this.options.autoSemanticTurn === 'string'
             ? this.options.autoSemanticTurn
-            : AUTO_SEMANTIC_TURN_PROMPT
-        )
-      )
+            : AUTO_SEMANTIC_TURN_PROMPT,
+        callback: () => this.skipAnswer(),
+      })
     }
     if (this.options.autoIgnoreUserNoise) {
-      tools.push(
-        this.getToolSchema(
-          AUTO_IGNORE_USER_NOISE_TOOL_NAME,
+      tools.push({
+        name: AUTO_IGNORE_USER_NOISE_TOOL_NAME,
+        description:
           typeof this.options.autoIgnoreUserNoise === 'string'
             ? this.options.autoIgnoreUserNoise
-            : AUTO_IGNORE_USER_NOISE_PROMPT
-        )
-      )
+            : AUTO_IGNORE_USER_NOISE_PROMPT,
+        callback: () => this.cancelLastUserMessage(),
+      })
     }
     return tools
   }
 
-  private getToolSchema(
-    name: string,
-    description: string
-  ): OpenAI.Responses.Tool {
-    return {
-      type: 'function',
-      name,
-      description,
-      strict: true,
-      parameters: {
-        type: 'object',
-        properties: {},
-        additionalProperties: false,
-      },
-    }
-  }
+  private async executeTool(toolCall: ToolCall): Promise<ToolCallOutput> {
+    try {
+      const tool = this.tools.find((tool) => tool.name === toolCall.name)
+      if (!tool) {
+        throw new Error(`Tool not found "${toolCall.name}"`)
+      }
 
-  private executeTool(toolCall: OpenAI.Responses.ResponseFunctionToolCall) {
-    switch (toolCall.name) {
-      case AUTO_END_CALL_TOOL_NAME:
-        this.endCall()
-        break
-      case AUTO_SEMANTIC_TURN_TOOL_NAME:
-        this.skipAnswer()
-        break
-      case AUTO_IGNORE_USER_NOISE_TOOL_NAME:
-        this.cancelLastUserMessage()
-        break
-      default:
-        this.log('Tool not found:', toolCall.name)
-        break
+      this.log('Executing tool:', toolCall.name, toolCall.arguments)
+      const args = JSON.parse(toolCall.arguments)
+      const result = await tool.callback(args)
+      return createToolCallOutput(toolCall, result || {})
+    } catch (error: any) {
+      console.error('[OpenaiAgent] Error executing tool:', error)
+      return createToolCallOutput(toolCall, { error: error.message })
     }
   }
 

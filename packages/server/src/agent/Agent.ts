@@ -15,6 +15,17 @@ export interface AgentEvents {
   EndCall: []
 }
 
+export interface AgentAnswerReturn {
+  text: Promise<string>
+  stream: Readable
+}
+
+export interface TextPromise {
+  promise: Promise<string>
+  resolve: (value: string) => void
+  reject: (reason?: any) => void
+}
+
 export abstract class Agent<
   Options extends AgentOptions = AgentOptions,
 > extends EventEmitter {
@@ -28,7 +39,7 @@ export abstract class Agent<
     this.conversation = [{ role: 'system', content: options.systemPrompt }]
   }
 
-  abstract answer(): Readable
+  abstract answer(): AgentAnswerReturn
   abstract cancel(): void
 
   public addUserMessage(text: string) {
@@ -73,6 +84,15 @@ export abstract class Agent<
   protected skipAnswer() {
     this.log('Skipping answer')
     this.emit('SkipAnswer')
+  }
+
+  protected createTextPromise(): TextPromise {
+    const result: any = {}
+    result.promise = new Promise<string>((resolve, reject) => {
+      result.resolve = resolve
+      result.reject = reject
+    })
+    return result
   }
 
   protected log(...message: any[]) {

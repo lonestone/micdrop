@@ -11,11 +11,11 @@ const agent = new OpenaiAgent({
 agent.logger = new Logger('OpenaiAgent')
 
 agent.addUserMessage('Tell me a story')
-const answerStream = agent.answer()
+const { stream } = agent.answer()
 
 const COUNT_STOP = 10
 let i = 0
-answerStream.on('data', (chunk) => {
+stream.on('data', (chunk) => {
   i++
   console.log(`Chunk received #${i}: ${chunk}`)
   if (i === COUNT_STOP) {
@@ -24,11 +24,11 @@ answerStream.on('data', (chunk) => {
   }
 })
 
-answerStream.on('error', (error) => {
+stream.on('error', (error) => {
   console.log('Answer stream error', error)
 })
 
-answerStream.on('end', () => {
+stream.on('end', () => {
   console.log('Answer stream ended, destroying agent')
   agent.destroy()
 })

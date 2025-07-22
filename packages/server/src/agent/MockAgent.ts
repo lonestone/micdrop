@@ -9,12 +9,16 @@ export class MockAgent extends Agent {
   }
 
   answer() {
-    const answer = `Assistant Message ${this.i++}`
-    this.addAssistantMessage(answer)
     const stream = new PassThrough()
-    stream.write(answer)
+    const textPromise = this.createTextPromise()
+
+    // Answer message
+    const message = `Assistant Message ${this.i++}`
+    this.addAssistantMessage(message)
+    stream.write(message)
     stream.end()
-    return stream
+    textPromise.resolve(message)
+    return { text: textPromise.promise, stream }
   }
 
   cancel() {}

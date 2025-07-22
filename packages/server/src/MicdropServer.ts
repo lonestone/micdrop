@@ -159,8 +159,7 @@ export class MicdropServer {
         this.config.agent.addAssistantMessage(this.config.firstMessage)
         await this.speak(this.config.firstMessage)
       } else if (this.config.generateFirstMessage) {
-        const answerStream = this.config.agent.answer()
-        await this.speak(answerStream)
+        await this.answer()
       }
     } catch (error) {
       console.error('[MicdropServer]', error)
@@ -173,10 +172,10 @@ export class MicdropServer {
     this.cancel()
     try {
       // LLM: Generate answer
-      const answerStream = this.config.agent.answer()
+      const { stream } = this.config.agent.answer()
 
       // TTS: Generate answer audio
-      await this.speak(answerStream)
+      await this.speak(stream)
     } catch (error) {
       console.error('[MicdropServer]', error)
       this.socket?.send(MicdropServerCommands.SkipAnswer)

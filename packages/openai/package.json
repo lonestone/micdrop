@@ -34,7 +34,8 @@
     "openai"
   ],
   "dependencies": {
-    "openai": "^5.8.2"
+    "openai": "^5.8.2",
+    "zod": "^4.0.5"
   },
   "peerDependencies": {
     "@micdrop/server": "*"

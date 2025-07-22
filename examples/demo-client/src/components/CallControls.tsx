@@ -14,7 +14,8 @@ export default function CallControls() {
 
   const handleStart = async () => {
     await Micdrop.start({
-      url: 'ws://localhost:8081/call',
+      //url: 'ws://localhost:8081/call',
+      url: 'wss://3qstpd8n-8081.uks1.devtunnels.ms/call',
       params: {
         authorization: '1234',
         lang: navigator.language,
