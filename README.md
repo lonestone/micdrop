@@ -55,7 +55,7 @@ This modular approach gives you the flexibility to build voice applications that
   - Voice Activity Detection (VAD) to optimize audio transmission
   - Configurable silence detection
 - 🔊 Advanced audio playback with:
-  - Streaming support via MediaSource
+  - Streaming support
   - Pause/resume capabilities
   - Volume control
   - Device selection

@@ -130,5 +130,4 @@ Fully supported in Chrome, Firefox, Safari and Edge.
 Requires support for:
 
 - Web Audio API
-- MediaSource Extensions (MSE)
 - `HTMLMediaElement.setSinkId()` or `AudioContext.setSinkId()` for device selection

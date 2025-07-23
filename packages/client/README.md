@@ -14,7 +14,7 @@ For server implementation, see [@micdrop/server](../server/README.md) package.
 
 - 🎤 Real-time microphone recording with voice activity detection (VAD)
 - 🔊 Advanced audio playback:
-  - Streaming support via MediaSource
+  - Streaming support
   - Pause/resume functionality
   - Volume control
   - Device selection and testing
@@ -150,7 +150,6 @@ Requires browsers with support for:
 - Web Audio API
 - MediaDevices API
 - MediaRecorder API
-- MediaSource Extensions (MSE)
 
 ## License
 
