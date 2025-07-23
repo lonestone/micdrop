@@ -213,18 +213,16 @@ export class MicdropClient
     this.notifyStateChange()
   }
 
-  startMic = async ({
-    vad,
-    deviceId,
-    record = true,
-  }: {
-    vad?: VADConfig
-    deviceId?: string
-    record?: boolean
-  }) => {
+  startMic = async (
+    options: {
+      vad?: VADConfig
+      deviceId?: string
+      record?: boolean
+    } = {}
+  ) => {
     this.error = undefined
-    if (vad) {
-      this.options.vad = vad
+    if (options.vad) {
+      this.options.vad = options.vad
     }
     try {
       if (!this.micRecorder) {
@@ -269,11 +267,11 @@ export class MicdropClient
       }
 
       // Start microphone
-      const micStream = await Mic.start(deviceId)
+      const micStream = await Mic.start(options.deviceId)
       this.micStream = micStream
 
       // Restart recorder if it was running
-      if (isRecorderStarted || record) {
+      if (isRecorderStarted || options.record) {
         await this.micRecorder.start(micStream)
       }
 
