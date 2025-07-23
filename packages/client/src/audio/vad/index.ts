@@ -1,3 +1,4 @@
+export * from './getVAD'
 export * from './MultipleVAD'
 export * from './SileroVAD'
 export * from './VAD'
