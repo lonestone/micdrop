@@ -51,19 +51,17 @@ This modular approach gives you the flexibility to build voice applications that
 
 ## 🌟 Features
 
-- 🎙️ Microphone handling and audio streaming
-  - Voice Activity Detection (VAD) to optimize audio transmission
-  - Configurable silence detection
+- 🎙️ Microphone handling with:
+  - Streaming support
+  - Voice Activity Detection (VAD)
 - 🔊 Advanced audio playback with:
   - Streaming support
-  - Pause/resume capabilities
-  - Volume control
-  - Device selection
+  - Device selection and control
 - 🌐 WebSocket communication
 - 📦 AI implementations provided for OpenAI, ElevenLabs, Mistral, Gladia, and more
 - 🔌 Bring your own AI components (framework agnostic)
   - Large Language Models (LLM)
-  - Text-to-Speech (TTS) with streaming support
+  - Text-to-Speech (TTS)
   - Speech-to-Text (STT)
 
 ## 🧪 Development
