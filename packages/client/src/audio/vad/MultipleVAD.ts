@@ -10,7 +10,6 @@ export class MultipleVAD extends VAD {
   constructor(vads: Array<VAD | VADConfigName>) {
     super()
     this.vads = vads.map((vad) => getVAD(vad))
-    this.onStatusChange = this.onStatusChange.bind(this)
   }
 
   get isStarted(): boolean {
@@ -27,7 +26,7 @@ export class MultipleVAD extends VAD {
     }
   }
 
-  private onStatusChange() {
+  private onStatusChange = () => {
     const isAllSilence = this.vads.every(
       (vad) => vad.status === VADStatus.Silence
     )

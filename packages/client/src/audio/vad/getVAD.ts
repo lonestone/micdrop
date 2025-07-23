@@ -6,8 +6,10 @@ import { VolumeVAD } from './VolumeVAD'
 export type VADConfigName = 'volume' | 'silero'
 export type VADConfig = VAD | VADConfigName | Array<VAD | VADConfigName>
 
+const DefaultVAD = VolumeVAD
+
 export function getVAD(vad?: VADConfig): VAD {
-  if (!vad) return new VolumeVAD()
+  if (!vad) return new DefaultVAD()
   if (vad === 'volume') return new VolumeVAD()
   if (vad === 'silero') return new SileroVAD()
   if (Array.isArray(vad)) {

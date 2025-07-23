@@ -1,6 +1,12 @@
+# 🖐️🎤 Micdrop: Real-Time Voice Conversations with AI
+
+Micdrop is a set of open source Typescript packages to build real-time voice conversations with AI agents. It handles all the complexities on the browser and server side (microphone, speaker, VAD, network communication, etc) and provides ready-to-use implementations for various AI providers.
+
 # @micdrop/client
 
-A browser library for handling real-time voice conversations with microphone and speaker management.
+The browser implementation of [Micdrop](../../README.md).
+
+It is framework agnostic, you can use it with React, Vue, Angular or any other framework. See [demo-client](../../examples/demo-client/README.md) for a complete example with React.
 
 For server implementation, see [@micdrop/server](../server/README.md) package.
 
@@ -31,58 +37,100 @@ pnpm add @micdrop/client
 
 ## Quick Start
 
+### Start a call
+
+`Micdrop` is a singleton instance of `MicdropClient` that can be used to start, stop and manage a call.
+
 ```typescript
-import { CallClient } from '@micdrop/client'
+import { Micdrop } from '@micdrop/client'
 
-// Create a new call handler instance
-const call = CallClient.getInstance<YourParamsType>({
-  // VAD (see docs)
-  vad: ['volume', 'silero'],
+// Start a call
+await Micdrop.start({
+  url: 'wss://your-server.com/ws',
 })
+```
 
-// Configure the call
-call.url = 'wss://your-server.com/ws'
-call.params = {
-  /* your parameters (to check auth, etc) */
-}
+### Control the call
 
-// Listen for events
-call.on('StateChange', () => {
+```typescript
+// Pause/resume
+Micdrop.pause()
+Micdrop.resume()
+
+// Stop the call
+await Micdrop.stop()
+```
+
+### Listen for events
+
+You can listen for events to get the state of the call and handle errors.
+
+```typescript
+Micdrop.on('StateChange', () => {
   console.log('State changed')
 })
-call.on('EndCall', () => {
+Micdrop.on('EndCall', () => {
   console.log('Call ended by assistant')
 })
-call.on('Error', (error) => {
+Micdrop.on('Error', (error) => {
+  console.error('Error occurred:', error)
+})
+```
+
+### Complete Example
+
+```typescript
+import { Micdrop } from '@micdrop/client'
+
+// Start a call
+await Micdrop.start({
+  // URL of the WebSocket server (using @micdrop/server)
+  url: 'wss://your-server.com/ws',
+  // Parameters (optional) to check auth or provide other data
+  params: {
+    authorization: '1234',
+    lang: navigator.language,
+  },
+  // Voice Activity Detection (see docs)
+  vad: ['volume', 'silero'],
+  // Disable ability for the user to interrupt the assistant when it is speaking
+  disableInterruption: true,
+  // Enable debug logging
+  debugLog: true,
+})
+
+// Listen for events
+Micdrop.on('StateChange', (state) => {
+  console.log('State:', state)
+})
+Micdrop.on('EndCall', () => {
+  console.log('Call ended by assistant')
+})
+Micdrop.on('Error', (error) => {
   console.error('Error occurred:', error)
 })
 
-// Start the call
-await call.start()
-
 // Pause/resume
-call.pause()
-call.resume()
+Micdrop.pause()
+Micdrop.resume()
 
 // Stop the call
-await call.stop()
+await Micdrop.stop()
 ```
 
 ## Demo
 
-Check out the demo implementation in the [@micdrop/demo-client](../demo-client/README.md) package. It shows:
+Check out the demo implementation in the [demo-client example](../../examples/demo-client/README.md) package. It shows:
 
 - Setting up a React application with WebSocket communication
-- Configuring the CallClient with custom parameters
+- Configuring the MicdropClient with custom parameters
 - Managing microphone input and audio playback
 - Handling conversation state and UI updates
 - Error handling patterns
 
-Here's a simplified version from the demo:
-
 ## Documentation
 
-- **[CallClient](./docs/CallClient.md)** - Manages WebSocket connections, audio streaming, and conversation state
+- **[MicdropClient](./docs/MicdropClient.md)** - Manages WebSocket connections, audio streaming, and conversation state
 
 - **[MicRecorder](./docs/MicRecorder.md)** - Records audio from microphone with voice activity detection and speech events
 
@@ -90,14 +138,19 @@ Here's a simplified version from the demo:
 
 - **[Speaker](./docs/Speaker.md)** - Handles audio output devices and playback with analysis capabilities
 
+- **[VAD](./docs/VAD.md)** - Voice Activity Detection, how to use and customize
+
 ## Browser Support
+
+Fully supported in Chrome, Firefox, Safari and Edge.
 
 Requires browsers with support for:
 
 - WebSocket API
-- MediaRecorder API
 - Web Audio API
-- getUserMedia API
+- MediaDevices API
+- MediaRecorder API
+- MediaSource Extensions (MSE)
 
 ## License
 
@@ -105,6 +158,4 @@ MIT
 
 ## Author
 
-Originally developed for [Raconte.ai](https://www.raconte.ai)
-
-by [Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))
+Originally developed for [Raconte.ai](https://www.raconte.ai) and open sourced by [Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))

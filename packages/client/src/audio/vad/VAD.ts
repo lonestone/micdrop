@@ -24,6 +24,7 @@ export enum VADStatus {
  * VAD = Voice Activity Detection
  */
 export abstract class VAD extends EventEmitter<VADEvents> {
+  public readonly name = this.constructor.name
   public status: VADStatus = VADStatus.Silence
 
   // Max delay to detect speech, can be used to record delayed stream

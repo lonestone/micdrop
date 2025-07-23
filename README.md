@@ -1,20 +1,36 @@
-# 🎤 Micdrop
+# 🖐️🎤 Micdrop: Real-Time Voice Conversations with AI
 
-Micdrop is a set of packages that simplify voice conversations with AI systems. It handles all the complexities of microphone input, speaker output, and network communication, allowing developers to focus on their AI implementation.
+Micdrop is a set of open source Typescript packages to build real-time voice conversations with AI agents. It handles all the complexities on the browser and server side (microphone, speaker, VAD, network communication, etc) and provides ready-to-use implementations for various AI providers.
 
 ## 📦 Packages
 
-This monorepo contains the following packages:
-
-### Core Packages
+### Core Packages (start here)
 
 - [`@micdrop/client`](./packages/client/README.md) - Browser library handling microphone input, audio playback, and real-time communication
 - [`@micdrop/server`](./packages/server/README.md) - Server implementation for audio streaming and AI integration orchestration
 
+### AI Implementations
+
+- [`@micdrop/openai`](./packages/openai/README.md) - OpenAI integration providing LLM agent and speech-to-text capabilities
+- [`@micdrop/elevenlabs`](./packages/elevenlabs/README.md) - ElevenLabs text-to-speech integration with streaming support
+- [`@micdrop/cartesia`](./packages/cartesia/README.md) - Cartesia text-to-speech integration for real-time voice synthesis
+- [`@micdrop/mistral`](./packages/mistral/README.md) - Mistral AI agent integration for conversation handling
+- [`@micdrop/gladia`](./packages/gladia/README.md) - Gladia speech-to-text integration for audio transcription
+
+### Utility Packages
+
+- [`@micdrop/react`](./packages/react/README.md) - React hooks for Micdrop
+
 ### Demo Applications
 
-- [`@micdrop/demo-client`](./packages/demo-client/README.md) - Example web application with React.
-- [`@micdrop/demo-server`](./packages/demo-server/README.md) - Example server with fastify.
+- [`demo-client`](./packages/demo-client/README.md) - Example web application with React.
+- [`demo-server`](./packages/demo-server/README.md) - Example server with fastify.
+
+## 🎥 Demo and technical details (video)
+
+See the author [Godefroy de Compreignac](https://www.linkedin.com/in/godefroy) talking about Micdrop and voice AI in [this video](https://www.youtube.com/watch?v=fcqVOvESQ8o):
+
+[![Youtube video](https://img.youtube.com/vi/fcqVOvESQ8o/0.jpg)](https://www.youtube.com/watch?v=fcqVOvESQ8o)
 
 ## 🤔 Why Micdrop?
 
@@ -44,58 +60,11 @@ This modular approach gives you the flexibility to build voice applications that
   - Volume control
   - Device selection
 - 🌐 WebSocket communication
-- 🔌 Framework-agnostic AI integration
-- 🛠️ Bring your own AI components:
+- 📦 AI implementations provided for OpenAI, ElevenLabs, Mistral, Gladia, and more
+- 🔌 Bring your own AI components (framework agnostic)
   - Large Language Models (LLM)
   - Text-to-Speech (TTS) with streaming support
   - Speech-to-Text (STT)
-
-## 🔌 Protocol
-
-Micdrop uses a simple custom protocol over WebSocket for real-time communication between the client and server.
-
-```mermaid
-sequenceDiagram
-  participant W as Webapp
-  participant B as Backend
-  Note left of W: Audio setup
-  W -->> B: Create call
-  B -->> W: First assistant message (text)
-  Note right of B: TTS
-  B -->> W: First assistant message (audio)
-  Note left of W: Play assistant speech
-  loop
-    Note left of W: Wait until user speaks
-    W -->> B: User starts speaking
-    W -->> B: User speech (audio chunk)
-    W -->> B: User speech (audio chunk)
-    Note left of W: Silence
-    W -->> B: User stops speaking
-    Note right of B: STT
-    B -->> W: Transcribed user message (text)
-    Note right of B: LLM
-    B -->> W: Assistant answer (text)
-    Note right of B: TTS
-    B ->> W: Assistant answer (audio)
-    Note left of W: Play assistant speech
-  end
-```
-
-### Why WebSocket?
-
-While WebRTC is a powerful protocol for real-time communication, Micdrop uses a simple custom protocol over WebSocket for several reasons:
-
-- 🎯 **Focused on our use case**: WebRTC is designed for peer-to-peer communication, with features we don't need. Our client-server architecture is simpler.
-
-- 🔇 **Efficient audio transmission**: By using Voice Activity Detection (VAD) on the client side, we only send audio when the user is actually speaking. This reduces bandwidth usage and processing load compared to continuous streaming.
-
-- 💡 **Simple implementation**: WebSocket provides a straightforward, reliable way to send both text and binary data. The protocol is easy to implement and debug on both client and server.
-
-- 🔄 **Bidirectional communication**: WebSocket allows for real-time bidirectional messaging, which is perfect for our text and audio exchange needs.
-
-- 🛠️ **Custom protocol control**: Our simple protocol lets us optimize exactly how and when audio/text messages are sent, without the overhead of WebRTC's full feature set.
-
-This approach gives us the real-time capabilities we need while keeping the implementation lean and efficient.
 
 ## 🧪 Development
 
@@ -107,6 +76,4 @@ MIT License - see the [LICENSE](LICENSE) file for details
 
 ## Author
 
-Originally developed for [Raconte.ai](https://www.raconte.ai)
-
-by [Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))
+Originally developed for [Raconte.ai](https://www.raconte.ai) and open sourced by [Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))

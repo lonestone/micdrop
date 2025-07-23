@@ -1,55 +1,51 @@
-export enum CallClientCommands {
+import type { Agent } from './agent'
+import type { STT } from './stt'
+import type { TTS } from './tts'
+
+export enum MicdropClientCommands {
   StartSpeaking = 'StartSpeaking',
   StopSpeaking = 'StopSpeaking',
   Mute = 'Mute',
 }
 
-export enum CallServerCommands {
+export enum MicdropServerCommands {
   Message = 'Message',
   CancelLastAssistantMessage = 'CancelLastAssistantMessage',
   CancelLastUserMessage = 'CancelLastUserMessage',
   SkipAnswer = 'SkipAnswer',
-  EnableSpeakerStreaming = 'EnableSpeakerStreaming',
   EndCall = 'EndCall',
 }
 
-export interface CallConfig {
-  systemPrompt: string
+export interface MicdropConfig {
   firstMessage?: string
-  debugLog?: boolean
-  debugSaveSpeech?: boolean
-  disableTTS?: boolean
-  generateAnswer(
-    conversation: Conversation
-  ): Promise<string | ConversationMessage>
-  speech2Text(audioBlob: Blob, prevMessage?: string): Promise<string>
-  text2Speech(text: string): Promise<ArrayBuffer | NodeJS.ReadableStream>
-  onMessage?(message: ConversationMessage): void
-  onEnd?(call: CallSummary): void
+  generateFirstMessage?: boolean
+  agent: Agent
+  stt: STT
+  tts: TTS
+  onEnd?(call: MicdropCallSummary): void
 }
 
-export interface CallSummary {
-  conversation: Conversation
+export interface MicdropCallSummary {
+  conversation: MicdropConversation
   duration: number
 }
 
-export type Conversation = ConversationMessage[]
+export type MicdropConversation = MicdropConversationMessage[]
 
-export type AnswerCommands = {
-  endCall?: boolean
-  cancelLastUserMessage?: boolean
-  skipAnswer?: boolean
-}
-
-export type AnswerMetadata = {
+export type MicdropAnswerMetadata = {
   [key: string]: any
 }
 
-export interface ConversationMessage<
-  Data extends AnswerMetadata = AnswerMetadata,
+export interface MicdropConversationMessage<
+  Data extends MicdropAnswerMetadata = MicdropAnswerMetadata,
 > {
   role: 'system' | 'user' | 'assistant'
   content: string
-  commands?: AnswerCommands
   metadata?: Data
 }
+
+export type DeepPartial<T> = T extends object
+  ? {
+      [P in keyof T]?: DeepPartial<T[P]>
+    }
+  : T

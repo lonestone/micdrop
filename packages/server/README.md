@@ -1,20 +1,23 @@
+# 🖐️🎤 Micdrop: Real-Time Voice Conversations with AI
+
+Micdrop is a set of open source Typescript packages to build real-time voice conversations with AI agents. It handles all the complexities on the browser and server side (microphone, speaker, VAD, network communication, etc) and provides ready-to-use implementations for various AI providers.
+
 # @micdrop/server
 
-A Node.js library for handling real-time voice conversations with WebSocket-based audio streaming.
+The Node.js server implementation of [Micdrop](../../README.md).
 
 For browser implementation, see [@micdrop/client](../client/README.md) package.
 
 ## Features
 
-- 🌐 WebSocket server for real-time audio streaming
-- 🔊 Advanced audio processing:
-  - Streaming TTS support
-  - Efficient audio chunk delivery
-  - Interrupt handling
-- 💬 Conversation state management
+- 🤖 AI agents integration
 - 🎙️ Speech-to-text and text-to-speech integration
-- 🤖 AI conversation generation support
-- 💾 Debug mode with optional audio saving
+- 🔊 Advanced audio processing:
+  - Streaming input and output
+  - Audio conversion
+  - Interruptions handling
+- 💬 Conversation state management
+- 🌐 WebSocket-based audio streaming
 
 ## Installation
 
@@ -29,272 +32,271 @@ pnpm add @micdrop/server
 ## Quick Start
 
 ```typescript
+import { ElevenLabsTTS } from '@micdrop/elevenlabs'
+import { GladiaSTT } from '@micdrop/gladia'
+import { OpenaiAgent } from '@micdrop/openai'
+import { MicdropServer } from '@micdrop/server'
 import { WebSocketServer } from 'ws'
-import { CallServer, CallConfig } from '@micdrop/server'
 
-// Create WebSocket server
 const wss = new WebSocketServer({ port: 8080 })
 
-// Define call configuration
-const config: CallConfig = {
-  // Initial system prompt for the conversation
-  systemPrompt: 'You are a helpful assistant',
+wss.on('connection', (socket) => {
+  // Setup agent
+  const agent = new OpenaiAgent({
+    apiKey: process.env.OPENAI_API_KEY || '',
+    systemPrompt: 'You are a helpful assistant',
+  })
 
-  // Optional first message from assistant
-  // Omit to generate the first message
-  firstMessage: 'Hello!',
+  // Setup STT
+  const stt = new GladiaSTT({
+    apiKey: process.env.GLADIA_API_KEY || '',
+  })
 
-  // Function to generate assistant responses
-  async generateAnswer(conversation) {
-    // Implement your LLM or response generation logic
-    return 'Assistant response'
-  },
+  // Setup TTS
+  const tts = new ElevenLabsTTS({
+    apiKey: process.env.ELEVENLABS_API_KEY || '',
+    voiceId: process.env.ELEVENLABS_VOICE_ID || '',
+  })
 
-  // Function to convert speech to text
-  async speech2Text(audioBlob, lastMessagePrompt) {
-    // Implement your STT logic
-    return 'Transcribed text'
-  },
-
-  // Function to convert text to speech
-  // Can return either a complete ArrayBuffer or a ReadableStream for streaming
-  async text2Speech(
-    text: string
-  ): Promise<ArrayBuffer | NodeJS.ReadableStream> {
-    // Implement your TTS logic
-    return new ArrayBuffer(0) // Audio data
-  },
-
-  // Optional callback when a message is added
-  onMessage(message) {
-    console.log('New message:', message)
-  },
-
-  // Optional callback when call ends
-  onEnd(summary) {
-    console.log('Call ended:', summary)
-  },
-}
-
-// Handle new connections
-wss.on('connection', (ws) => {
-  // Create call handler with configuration
-  new CallServer(ws, config)
+  // Handle call
+  new MicdropServer(socket, {
+    firstMessage: 'Hello, how can I help you today?',
+    agent,
+    stt,
+    tts,
+  })
 })
 ```
+
+## Examples
+
+### Authorization and Language Parameters
+
+For production applications, you'll want to handle authorization and language configuration:
+
+```typescript
+import { ElevenLabsTTS } from '@micdrop/elevenlabs'
+import { GladiaSTT } from '@micdrop/gladia'
+import { OpenaiAgent } from '@micdrop/openai'
+import {
+  MicdropServer,
+  waitForParams,
+  MicdropError,
+  MicdropErrorCode,
+  handleError,
+} from '@micdrop/server'
+import { WebSocketServer } from 'ws'
+import { z } from 'zod'
+
+const wss = new WebSocketServer({ port: 8080 })
+
+// Define params schema for authorization and language
+const callParamsSchema = z.object({
+  authorization: z.string(),
+  lang: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/), // e.g., "en", "fr", "en-US"
+})
+
+wss.on('connection', async (socket) => {
+  try {
+    // Wait for client parameters (authorization & language)
+    const params = await waitForParams(socket, callParamsSchema.parse)
+
+    // Validate authorization
+    if (params.authorization !== process.env.AUTHORIZATION_KEY) {
+      throw new MicdropError(
+        MicdropErrorCode.Unauthorized,
+        'Invalid authorization'
+      )
+    }
+
+    // Setup agent with language-specific system prompt
+    const agent = new OpenaiAgent({
+      apiKey: process.env.OPENAI_API_KEY || '',
+      systemPrompt: `You are a helpful assistant. Respond in ${params.lang} language.`,
+    })
+
+    // Setup STT with language configuration
+    const stt = new GladiaSTT({
+      apiKey: process.env.GLADIA_API_KEY || '',
+      language: params.lang,
+    })
+
+    // Setup TTS with language configuration
+    const tts = new ElevenLabsTTS({
+      apiKey: process.env.ELEVENLABS_API_KEY || '',
+      voiceId: process.env.ELEVENLABS_VOICE_ID || '',
+      language: params.lang,
+    })
+
+    // Handle call
+    new MicdropServer(socket, {
+      firstMessage: 'Hello! How can I help you today?',
+      agent,
+      stt,
+      tts,
+    })
+  } catch (error) {
+    handleError(socket, error)
+  }
+})
+```
+
+### With Fastify
+
+Using Fastify for WebSocket handling:
+
+```typescript
+import { ElevenLabsTTS } from '@micdrop/elevenlabs'
+import { GladiaSTT } from '@micdrop/gladia'
+import { OpenaiAgent } from '@micdrop/openai'
+import { MicdropServer } from '@micdrop/server'
+import Fastify from 'fastify'
+
+const fastify = Fastify()
+
+// Register WebSocket support
+await fastify.register(import('@fastify/websocket'))
+
+// WebSocket route for voice calls
+fastify.register(async function (fastify) {
+  fastify.get('/call', { websocket: true }, (socket) => {
+    // Setup agent
+    const agent = new OpenaiAgent({
+      apiKey: process.env.OPENAI_API_KEY || '',
+      systemPrompt: 'You are a helpful voice assistant',
+    })
+
+    // Setup STT
+    const stt = new GladiaSTT({
+      apiKey: process.env.GLADIA_API_KEY || '',
+    })
+
+    // Setup TTS
+    const tts = new ElevenLabsTTS({
+      apiKey: process.env.ELEVENLABS_API_KEY || '',
+      voiceId: process.env.ELEVENLABS_VOICE_ID || '',
+    })
+
+    // Handle call
+    new MicdropServer(socket, {
+      firstMessage: 'Hello, how can I help you today?',
+      agent,
+      stt,
+      tts,
+    })
+  })
+})
+
+// Start server
+fastify
+  .listen({ port: 8080 })
+  .then(() => console.log('Server listening on port 8080'))
+  .catch((err) => fastify.log.error(err))
+```
+
+### With NestJS
+
+Using NestJS for WebSocket handling:
+
+```typescript
+// websocket.gateway.ts
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  OnGatewayConnection,
+} from '@nestjs/websockets'
+import { ElevenLabsTTS } from '@micdrop/elevenlabs'
+import { GladiaSTT } from '@micdrop/gladia'
+import { OpenaiAgent } from '@micdrop/openai'
+import { MicdropServer } from '@micdrop/server'
+import { Server } from 'ws'
+import { Injectable } from '@nestjs/common'
+
+@Injectable()
+@WebSocketGateway(8080)
+export class MicdropGateway implements OnGatewayConnection {
+  @WebSocketServer()
+  server: Server
+
+  handleConnection(socket: Server) {
+    // Setup agent
+    const agent = new OpenaiAgent({
+      apiKey: process.env.OPENAI_API_KEY || '',
+      systemPrompt: 'You are a helpful voice assistant built with NestJS',
+    })
+
+    // Setup STT
+    const stt = new GladiaSTT({
+      apiKey: process.env.GLADIA_API_KEY || '',
+    })
+
+    // Setup TTS
+    const tts = new ElevenLabsTTS({
+      apiKey: process.env.ELEVENLABS_API_KEY || '',
+      voiceId: process.env.ELEVENLABS_VOICE_ID || '',
+    })
+
+    // Handle call
+    new MicdropServer(socket, {
+      firstMessage: 'Hello, how can I help you today?',
+      agent,
+      stt,
+      tts,
+    })
+  }
+}
+```
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common'
+import { MicdropGateway } from './websocket.gateway'
+
+@Module({
+  providers: [MicdropGateway],
+})
+export class AppModule {}
+```
+
+## Agent / STT / TTS
+
+Micdrop server has 3 main components:
+
+- `Agent` - AI agent using LLM
+- `STT` - Speech-to-text
+- `TTS` - Text-to-speech
+
+### Available implementations
+
+Micdrop provides ready-to-use implementations for the following AI providers:
+
+- [@micdrop/openai](../openai/README.md)
+- [@micdrop/elevenlabs](../elevenlabs/README.md)
+- [@micdrop/cartesia](../cartesia/README.md)
+- [@micdrop/mistral](../mistral/README.md)
+- [@micdrop/gladia](../gladia/README.md)
+
+### Custom implementations
+
+You can use provided abstractions to write your own implementation:
+
+- **[Agent](./docs/Agent.md)** - Abstract class for answer generation
+- **[STT](./docs/STT.md)** - Abstract class for speech-to-text
+- **[TTS](./docs/TTS.md)** - Abstract class for text-to-speech
 
 ## Demo
 
-Check out the demo implementation in the [@micdrop/demo-server](../demo-server/README.md) package. It shows:
+Check out the demo implementation in the [@micdrop/demo-server](../../examples/demo-server/README.md) package. It shows:
 
 - Setting up a Fastify server with WebSocket support
-- Configuring the CallServer with custom handlers
+- Configuring the MicdropServer with custom handlers
 - Basic authentication flow
-- Example speech-to-text and text-to-speech implementations
+- Example agent, speech-to-text and text-to-speech implementations
 - Error handling patterns
-
-Here's a simplified version from the demo:
 
 ## Documentation
 
-The server package provides several core components:
-
-- **CallServer** - Main class that handles WebSocket connections, audio streaming, and conversation flow
-- **CallConfig** - Configuration interface for customizing speech processing and conversation behavior
-- **Types** - Common TypeScript types and interfaces for messages and commands
-- **Error Handling** - Standardized error handling with specific error codes
-
-## API Reference
-
-### CallServer
-
-The main class for managing WebSocket connections and audio streaming.
-
-```typescript
-class CallServer {
-  constructor(socket: WebSocket, config: CallConfig)
-
-  // Add assistant message and send to client with audio (TTS)
-  answer(message: string): Promise<void>
-
-  // Reset conversation (including system prompt)
-  resetConversation(conversation: Conversation): void
-}
-```
-
-### CallConfig
-
-Configuration interface for customizing the call behavior.
-
-```typescript
-interface CallConfig {
-  // Initial system prompt for the conversation
-  systemPrompt: string
-
-  // Optional first message from assistant
-  firstMessage?: string
-
-  // Enable debug logging with timestamps
-  debugLog?: boolean
-
-  // Save last speech audio file for debugging (speech.ogg)
-  debugSaveSpeech?: boolean
-
-  // Disable text-to-speech conversion
-  disableTTS?: boolean
-
-  // Generate assistant's response
-  generateAnswer(
-    conversation: Conversation
-  ): Promise<string | ConversationMessage>
-
-  // Convert audio to text
-  speech2Text(audioBlob: Blob, prevMessage?: string): Promise<string>
-
-  // Convert text to audio
-  // Can return either a complete ArrayBuffer or a ReadableStream for streaming
-  text2Speech(text: string): Promise<ArrayBuffer | NodeJS.ReadableStream>
-
-  // Optional callbacks
-  onMessage?(message: ConversationMessage): void
-  onEnd?(summary: CallSummary): void
-}
-```
-
-## WebSocket Protocol
-
-The server implements a specific protocol for client-server communication:
-
-### Client Commands
-
-The client can send the following commands to the server:
-
-- `CallClientCommands.StartSpeaking` - The user starts speaking
-- `CallClientCommands.StopSpeaking` - The user stops speaking
-- `CallClientCommands.Mute` - The user mutes the microphone
-
-### Server Commands
-
-The server can send the following commands to the client:
-
-- `CallServerCommands.Message` - A message from the assistant.
-- `CallServerCommands.CancelLastAssistantMessage` - Cancel the last assistant message.
-- `CallServerCommands.CancelLastUserMessage` - Cancel the last user message.
-- `CallServerCommands.SkipAnswer` - Notify that the last generated answer was ignored, it's listening again.
-- `CallServerCommands.EnableSpeakerStreaming` - Enable speaker streaming.
-- `CallServerCommands.EndCall` - End the call.
-
-### Message Flow
-
-1. Client connects to WebSocket server
-2. Server sends initial assistant message (generated if not provided)
-3. Client sends audio chunks when user speaks
-4. Server processes audio and responds with text+audio
-5. Process continues until call ends
-
-See detailed protocol in [README.md](../README.md).
-
-## Message metadata
-
-You can add metadata to the generated answers, that will be accessible in the conversation on the client and server side.
-
-```typescript
-const metadata: AnswerMetadata = {
-  // ...
-}
-
-const message: ConversationMessage = {
-  role: 'assistant',
-  content: 'Hello!',
-  metadata,
-}
-```
-
-## Ending the call
-
-The call has two ways to end:
-
-- When the client closes the websocket connection.
-- When the generated answer contains the commands `endCall: true`.
-
-Example:
-
-```typescript
-const END_CALL = 'END_CALL'
-const systemPrompt = `
-You are a voice assistant interviewing the user.
-To end the interview, briefly thank the user and say good bye, then say ${END_CALL}.
-`
-
-async function generateAnswer(
-  conversation: ConversationMessage[]
-): Promise<ConversationMessage> {
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: conversation,
-    temperature: 0.5,
-    max_tokens: 250,
-  })
-
-  let text = response.choices[0].message.content
-  if (!text) throw new Error('Empty response')
-
-  // Add metadata
-  const commands: AnswerCommands = {}
-  if (text.includes(END_CALL)) {
-    text = text.replace(END_CALL, '').trim()
-    commands.endCall = true
-  }
-
-  return { role: 'assistant', content: text, commands }
-}
-```
-
-See demo [system prompt](../demo-server/src/call.ts) and [generateAnswer](../demo-server/src/ai/generateAnswer.ts) for a complete example.
-
-## Integration Example
-
-Here's an example using Fastify:
-
-```typescript
-import fastify from 'fastify'
-import fastifyWebsocket from '@fastify/websocket'
-import { CallServer, CallConfig } from '@micdrop/server'
-
-const server = fastify()
-server.register(fastifyWebsocket)
-
-server.get('/call', { websocket: true }, (socket) => {
-  const config: CallConfig = {
-    systemPrompt: 'You are a helpful assistant',
-    // ... other config options
-  }
-  new CallServer(socket, config)
-})
-
-server.listen({ port: 8080 })
-```
-
-See [@micdrop/demo-server](../demo-server/src/call.ts) for a complete example using OpenAI and ElevenLabs.
-
-## Debug Mode
-
-The server includes a debug mode that can:
-
-- Log detailed timing information
-- Save audio files for debugging (optional)
-- Track conversation state
-- Monitor WebSocket events
-
-See `debugLog`, `debugSaveSpeech` and `disableTTS` options in [CallConfig](#callconfig).
-
-## Browser Support
-
-The server is designed to work with any WebSocket client, but is specifically tested with:
-
-- Modern browsers supporting WebSocket API
-- Node.js clients
-- @micdrop/client package
+Learn more about the protocol of Micdrop in [protocol.md](./docs/protocol.md).
 
 ## License
 
@@ -302,6 +304,4 @@ MIT
 
 ## Author
 
-Originally developed for [Raconte.ai](https://www.raconte.ai)
-
-by [Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))
+Originally developed for [Raconte.ai](https://www.raconte.ai) and open sourced by [Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))

@@ -1,0 +1,50 @@
+{
+  "name": "@micdrop/elevenlabs",
+  "version": "1.0.0",
+  "description": "ElevenLabs implementation for @micdrop/server",
+  "author": "Lonestone",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lonestone/micdrop.git",
+    "directory": "packages/elevenlabs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "microphone",
+    "audio",
+    "browser",
+    "voice",
+    "conversation",
+    "elevenlabs",
+    "tts"
+  ],
+  "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.3.0",
+    "ws": "^8.18.2"
+  },
+  "peerDependencies": {
+    "@micdrop/server": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/ws": "^8.18.1",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3"
+  }
+}

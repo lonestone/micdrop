@@ -1,4 +1,4 @@
-import { MicVAD } from '@ricky0123/vad-web/src'
+import { MicVAD } from '@ricky0123/vad-web'
 import { LocalStorageKeys } from '../utils/localStorage'
 import { VAD } from './VAD'
 
@@ -52,6 +52,7 @@ export class SileroVAD extends VAD {
     this.vad = await MicVAD.new({
       stream,
       model: 'v5',
+      submitUserSpeechOnPause: true,
       onSpeechStart: () => this.emit('StartSpeaking'),
       onSpeechRealStart: () => this.emit('ConfirmSpeaking'),
       onVADMisfire: () => this.emit('CancelSpeaking'),

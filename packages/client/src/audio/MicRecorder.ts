@@ -34,9 +34,9 @@ interface AudioInfo {
 
 export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   public state: MicRecorderState
+  public vad: VAD
 
   private audioInfo = this.getAudioInfo()
-  private vad: VAD
   private recorder: MediaRecorder | undefined
   private delayedStream: MediaStream | undefined
   private speakingConfirmed = false
@@ -52,7 +52,7 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     this.vad = getVAD(vadConfig)
   }
 
-  async start(stream: MediaStream) {
+  start = async (stream: MediaStream) => {
     if (this.state.isStarted) {
       throw new Error('MicRecorder is already started')
     }
@@ -79,7 +79,7 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
         mimeType: this.audioInfo.mimeType,
         audioBitsPerSecond: 128000,
       })
-      this.recorder.ondataavailable = this.onDataAvailable.bind(this)
+      this.recorder.ondataavailable = this.onDataAvailable
 
       // Start speaking detection
       await this.startSpeakingDetection(stream)
@@ -94,16 +94,16 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     }
   }
 
-  mute() {
+  mute = () => {
     this.changeState({ isMuted: true, isSpeaking: false })
     this.recorder?.stop()
   }
 
-  unmute() {
+  unmute = () => {
     this.changeState({ isMuted: false })
   }
 
-  stop() {
+  stop = () => {
     this.changeState({
       isStarting: false,
       isStarted: false,
@@ -145,7 +145,7 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     await this.vad.stop()
   }
 
-  private onStartSpeaking = (async () => {
+  private onStartSpeaking = async () => {
     if (!this.recorder || this.state.isMuted) return
     try {
       this.recorder.start(timeSlice)
@@ -153,16 +153,16 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     } catch (error) {
       console.error(error)
     }
-  }).bind(this)
+  }
 
-  private onConfirmSpeaking = (async () => {
+  private onConfirmSpeaking = async () => {
     if (this.state.isMuted) return
     this.emit('StartSpeaking')
     this.changeState({ isSpeaking: true })
     this.speakingConfirmed = true
-  }).bind(this)
+  }
 
-  private onCancelSpeaking = (async () => {
+  private onCancelSpeaking = async () => {
     if (this.state.isMuted) return
     try {
       this.recorder?.stop()
@@ -170,9 +170,9 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       console.error(error)
     }
     this.queuedChunks.length = 0
-  }).bind(this)
+  }
 
-  private onStopSpeaking = (async () => {
+  private onStopSpeaking = async () => {
     if (this.state.isMuted) return
     try {
       this.recorder?.stop()
@@ -182,9 +182,9 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     this.changeState({ isSpeaking: false })
     this.emit('StopSpeaking')
     this.speakingConfirmed = false
-  }).bind(this)
+  }
 
-  private async onDataAvailable(blobEvent: BlobEvent) {
+  private onDataAvailable = async (blobEvent: BlobEvent) => {
     if (this.state.isMuted) return
 
     if (!this.speakingConfirmed) {

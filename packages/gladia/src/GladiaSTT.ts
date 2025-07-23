@@ -1,0 +1,169 @@
+import { convertToPCM, DeepPartial, STT } from '@micdrop/server'
+import { Readable } from 'stream'
+import WebSocket from 'ws'
+import { GladiaLiveSessionPayload } from './types'
+
+/**
+ * Gladia Real-time V2 STT
+ *
+ * @see https://docs.gladia.io/chapters/live-stt/getting-started
+ */
+
+export interface GladiaSTTOptions {
+  apiKey: string
+  settings?: DeepPartial<GladiaLiveSessionPayload>
+}
+
+const SAMPLE_RATE = 16000
+const BIT_DEPTH = 16
+
+export class GladiaSTT extends STT {
+  private socket?: WebSocket
+  private initPromise: Promise<void>
+  private reconnectTimeout?: NodeJS.Timeout
+
+  constructor(private options: GladiaSTTOptions) {
+    super()
+
+    // Setup Websocket connection
+    this.initPromise = this.getURL()
+      .then((url) => this.initWS(url))
+      .catch((error) => {
+        this.log('Connection error:', error)
+      })
+  }
+
+  transcribe(audioStream: Readable) {
+    const pcmStream = convertToPCM(audioStream, SAMPLE_RATE, BIT_DEPTH)
+    let chunksCount = 0
+
+    // Read transformed stream and send to Gladia
+    pcmStream.on('data', async (chunk) => {
+      await this.initPromise
+      this.socket?.send(chunk)
+      this.log(`Sent audio chunk (${chunk.byteLength} bytes)`)
+      chunksCount++
+    })
+
+    // Send silence when the stream ends to force Gladia to transcribe
+    pcmStream.on('end', async () => {
+      if (chunksCount === 0) return
+      await this.initPromise
+      this.sendSilence(1)
+    })
+  }
+
+  destroy() {
+    super.destroy()
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+      this.reconnectTimeout = undefined
+    }
+    this.socket?.removeAllListeners()
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket?.close(1000)
+    }
+    this.socket = undefined
+  }
+
+  // Register real-time transcription to get a WebSocket URL
+  private async getURL() {
+    const response = await fetch('https://api.gladia.io/v2/live', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Gladia-Key': this.options.apiKey,
+      },
+      body: JSON.stringify({
+        encoding: 'wav/pcm',
+        sample_rate: SAMPLE_RATE,
+        bit_depth: BIT_DEPTH,
+        channels: 1,
+        messages_config: {
+          receive_final_transcripts: true,
+          receive_speech_events: false,
+          receive_pre_processing_events: false,
+          receive_realtime_processing_events: false,
+          receive_post_processing_events: false,
+          receive_acknowledgments: false,
+          receive_errors: true,
+          receive_lifecycle_events: false,
+        },
+        ...this.options.settings,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(
+        `${response.status}: ${(await response.text()) || response.statusText}`
+      )
+    }
+
+    const { url } = (await response.json()) as { url: string }
+    return url
+  }
+
+  // Connect to Gladia
+  private async initWS(url: string) {
+    return new Promise<void>((resolve, reject) => {
+      const socket = new WebSocket(url)
+      this.socket = socket
+
+      socket.addEventListener('open', () => {
+        this.log('Connection opened')
+        resolve()
+      })
+
+      socket.addEventListener('error', (error) => {
+        reject(error)
+      })
+
+      socket.addEventListener('close', ({ code, reason }) => {
+        this.socket?.removeAllListeners()
+        this.socket = undefined
+
+        if (code !== 1000) {
+          this.reconnect()
+        } else {
+          this.log('Connection closed', { code, reason })
+        }
+      })
+
+      socket.addEventListener('message', (event) => {
+        const message = JSON.parse(event.data.toString())
+        if (message.type === 'transcript' && message.data.is_final) {
+          const transcript = message.data.utterance.text
+          this.log(`Received transcript: "${transcript}"`)
+          this.emit('Transcript', transcript)
+        }
+      })
+    })
+  }
+
+  private reconnect() {
+    this.initPromise = new Promise((resolve, reject) => {
+      this.log('Reconnecting...')
+      this.reconnectTimeout = setTimeout(() => {
+        this.reconnectTimeout = undefined
+        this.getURL()
+          .then((url) => this.initWS(url))
+          .then(resolve)
+          .catch((error) => {
+            this.log('Reconnection error:', error)
+            reject(error)
+          })
+      }, 1000)
+    })
+  }
+
+  private sendSilence(durationSeconds: number) {
+    if (!this.socket) return
+    const numSamples = Math.round(SAMPLE_RATE * durationSeconds)
+    const bytesPerSample = BIT_DEPTH / 8
+    const silenceBuffer = Buffer.alloc(numSamples * bytesPerSample, 0)
+    this.socket.send(silenceBuffer)
+    this.log(
+      `Sent ${durationSeconds * 1000}ms of silence (${silenceBuffer.byteLength} bytes) after stream end`
+    )
+  }
+}
