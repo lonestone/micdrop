@@ -1,4 +1,5 @@
 export { useMicdropEndCall } from './useMicdropEndCall'
+export { useMicdropError } from './useMicdropError'
 export { useMicdropState } from './useMicdropState'
 export { useMicVolume } from './useMicVolume'
 export { useSpeakerVolume } from './useSpeakerVolume'
