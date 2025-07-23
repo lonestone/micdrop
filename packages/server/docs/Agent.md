@@ -51,7 +51,7 @@ export interface AgentEvents {
 }
 
 export interface AgentAnswerReturn {
-  text: Promise<string>
+  message: Promise<string>
   stream: Readable
 }
 
@@ -94,7 +94,7 @@ Generates a streaming response based on the current conversation history. Must r
 **Return Value:**
 
 - `stream`: A `Readable` stream that emits text chunks in real-time
-- `text`: A `Promise<string>` that resolves with the complete response text
+- `message`: A `Promise<string>` that resolves with the complete response text
 
 **Implementation Requirements:**
 
@@ -269,7 +269,7 @@ class CustomAgent extends Agent<CustomAgentOptions> {
     const stream = new PassThrough()
     const textPromise = this.createTextPromise()
     this.generateAnswer(stream, textPromise)
-    return { text: textPromise.promise, stream }
+    return { message: textPromise.promise, stream }
   }
 
   private async generateAnswer(stream: Writable, textPromise: TextPromise) {
@@ -433,7 +433,7 @@ class EchoAgent extends Agent {
 
     return {
       stream,
-      text: textPromise.promise,
+      message: textPromise.promise,
     }
   }
 
@@ -448,7 +448,7 @@ const echoAgent = new EchoAgent({
 })
 
 echoAgent.addUserMessage('Hello!')
-const { stream, text } = echoAgent.answer()
+const { stream, message } = echoAgent.answer()
 
 stream.on('data', (chunk) => {
   console.log('Chunk:', chunk.toString())
@@ -458,7 +458,7 @@ stream.on('end', async () => {
   console.log('Stream ended')
 })
 
-text.then((text) => {
+message.then((text) => {
   console.log('Text:', text)
   setTimeout(() => {
     echoAgent.destroy()

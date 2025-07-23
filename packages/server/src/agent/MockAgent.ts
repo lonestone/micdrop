@@ -18,7 +18,7 @@ export class MockAgent extends Agent {
     stream.write(message)
     stream.end()
     textPromise.resolve(message)
-    return { text: textPromise.promise, stream }
+    return { message: textPromise.promise, stream }
   }
 
   cancel() {}

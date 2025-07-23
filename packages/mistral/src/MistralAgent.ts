@@ -27,7 +27,7 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
     const stream = new PassThrough()
     const textPromise = this.createTextPromise()
     this.generateAnswer(stream, textPromise)
-    return { text: textPromise.promise, stream }
+    return { message: textPromise.promise, stream }
   }
 
   private async generateAnswer(stream: Writable, textPromise: TextPromise) {

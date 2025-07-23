@@ -69,7 +69,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
       }
     })
 
-    return { text: textPromise.promise, stream }
+    return { message: textPromise.promise, stream }
   }
 
   private async generateAnswer(

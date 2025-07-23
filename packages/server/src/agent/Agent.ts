@@ -16,7 +16,7 @@ export interface AgentEvents {
 }
 
 export interface AgentAnswerReturn {
-  text: Promise<string>
+  message: Promise<string>
   stream: Readable
 }
 

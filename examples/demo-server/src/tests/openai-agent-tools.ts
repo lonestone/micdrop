@@ -56,7 +56,7 @@ agent.addTool({
 
 async function answerTo(message: string) {
   agent.addUserMessage(message)
-  await agent.answer().text
+  await agent.answer().message
 }
 
 async function run() {
