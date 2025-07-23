@@ -28,7 +28,7 @@ export interface TextPromise {
 
 export abstract class Agent<
   Options extends AgentOptions = AgentOptions,
-> extends EventEmitter {
+> extends EventEmitter<AgentEvents> {
   public logger?: Logger
 
   // Conversation history

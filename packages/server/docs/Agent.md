@@ -19,7 +19,9 @@ The `Agent` class is an abstract base class that extends `EventEmitter` (from `e
 - Integration with logging systems
 
 ```typescript
-export abstract class Agent<Options extends AgentOptions = AgentOptions> extends EventEmitter {
+export abstract class Agent<
+  Options extends AgentOptions = AgentOptions,
+> extends EventEmitter<AgentEvents> {
   public logger?: Logger
   public conversation: MicdropConversation
 
