@@ -35,6 +35,8 @@ yarn add @micdrop/client
 pnpm add @micdrop/client
 ```
 
+If you work with React, you can also install [@micdrop/react](../react/README.md) package to get a ready-to-use React hooks.
+
 ## Quick Start
 
 ### Start a call

@@ -68,6 +68,32 @@ wss.on('connection', (socket) => {
 })
 ```
 
+## Agent / STT / TTS
+
+Micdrop server has 3 main components:
+
+- `Agent` - AI agent using LLM
+- `STT` - Speech-to-text
+- `TTS` - Text-to-speech
+
+### Available implementations
+
+Micdrop provides ready-to-use implementations for the following AI providers:
+
+- [@micdrop/openai](../openai/README.md)
+- [@micdrop/elevenlabs](../elevenlabs/README.md)
+- [@micdrop/cartesia](../cartesia/README.md)
+- [@micdrop/mistral](../mistral/README.md)
+- [@micdrop/gladia](../gladia/README.md)
+
+### Custom implementations
+
+You can use provided abstractions to write your own implementation:
+
+- **[Agent](./docs/Agent.md)** - Abstract class for answer generation
+- **[STT](./docs/STT.md)** - Abstract class for speech-to-text
+- **[TTS](./docs/TTS.md)** - Abstract class for text-to-speech
+
 ## Examples
 
 ### Authorization and Language Parameters
@@ -257,32 +283,6 @@ import { MicdropGateway } from './websocket.gateway'
 })
 export class AppModule {}
 ```
-
-## Agent / STT / TTS
-
-Micdrop server has 3 main components:
-
-- `Agent` - AI agent using LLM
-- `STT` - Speech-to-text
-- `TTS` - Text-to-speech
-
-### Available implementations
-
-Micdrop provides ready-to-use implementations for the following AI providers:
-
-- [@micdrop/openai](../openai/README.md)
-- [@micdrop/elevenlabs](../elevenlabs/README.md)
-- [@micdrop/cartesia](../cartesia/README.md)
-- [@micdrop/mistral](../mistral/README.md)
-- [@micdrop/gladia](../gladia/README.md)
-
-### Custom implementations
-
-You can use provided abstractions to write your own implementation:
-
-- **[Agent](./docs/Agent.md)** - Abstract class for answer generation
-- **[STT](./docs/STT.md)** - Abstract class for speech-to-text
-- **[TTS](./docs/TTS.md)** - Abstract class for text-to-speech
 
 ## Demo
 
