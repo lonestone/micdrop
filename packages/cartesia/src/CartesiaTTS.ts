@@ -28,7 +28,7 @@ export class CartesiaTTS extends TTS {
 
     // Setup WebSocket connection
     this.initPromise = this.initWS().catch((error) => {
-      this.log('Connection error:', error)
+      console.error('[CartesiaTTS] Connection error:', error)
     })
   }
 

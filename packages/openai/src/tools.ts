@@ -10,6 +10,7 @@ export interface Tool<Schema extends z.ZodObject = z.ZodObject> {
   description: string
   parameters?: Schema
   callback: (input: z.infer<Schema>) => any | Promise<any>
+  skipAnswer?: boolean
 }
 
 export type ToolCall = Responses.ResponseFunctionToolCall

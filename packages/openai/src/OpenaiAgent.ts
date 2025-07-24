@@ -36,14 +36,15 @@ const DEFAULT_MODEL = 'gpt-4o'
 const DEFAULT_MAX_CALLS = 5
 
 const AUTO_END_CALL_TOOL_NAME = 'end_call'
-const AUTO_END_CALL_PROMPT = 'User asks to end the call'
+const AUTO_END_CALL_PROMPT = 'Call this tool only if user asks to end the call'
 
 const AUTO_SEMANTIC_TURN_TOOL_NAME = 'semantic_turn'
-const AUTO_SEMANTIC_TURN_PROMPT = 'Last user message is an incomplete sentence'
+const AUTO_SEMANTIC_TURN_PROMPT =
+  'Call this tool only if last user message is obviously an incomplete sentence that you need to wait for the end before answering'
 
 const AUTO_IGNORE_USER_NOISE_TOOL_NAME = 'ignore_user_noise'
 const AUTO_IGNORE_USER_NOISE_PROMPT =
-  'Last user message is just an interjection or a sound that expresses emotion, hesitation, or reaction (ex: "Uh", "Ahem", "Hmm", "Ah") but doesn\'t carry any clear meaning like agreeing, refusing, or commanding'
+  'Call this tool only if last user message is just an interjection or a sound that expresses emotion, hesitation, or reaction (ex: "Uh", "Ahem", "Hmm", "Ah") but doesn\'t carry any clear meaning like agreeing, refusing, or commanding'
 
 export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   private openai: OpenAI
@@ -76,11 +77,11 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
     stream: PassThrough,
     textPromise: TextPromise,
     callCount = 0,
-    toolInputs?: OpenAI.Responses.ResponseInputItem[]
+    toolInputs?: Array<ToolCall | ToolCallOutput>
   ): Promise<void> {
     if (callCount >= (this.options.maxCalls || DEFAULT_MAX_CALLS)) {
       console.error('[OpenaiAgent] Max calls reached')
-      textPromise.reject(new Error('Max calls reached'))
+      textPromise.resolve('')
       return
     }
 
@@ -115,7 +116,9 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
         },
         { signal }
       )
-      const toolOutputs: OpenAI.Responses.ResponseInputItem[] = []
+      const toolOutputs: Array<ToolCall | ToolCallOutput> = []
+      let hasAnswer = false
+      let skipAnswer = false
 
       // Handle response events
       for await (const event of response) {
@@ -129,13 +132,16 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
             this.addAssistantMessage(event.text)
             stream.end()
             textPromise.resolve(event.text)
+            hasAnswer = true
             break
 
           case 'response.output_item.done':
             if (event.item.type === 'function_call') {
-              toolOutputs.push(event.item)
-              const toolOutput = await this.executeTool(event.item)
-              toolOutputs.push(toolOutput)
+              const result = await this.executeTool(event.item)
+              toolOutputs.push(result.toolCall, result.toolCallOutput)
+              if (result.skipAnswer) {
+                skipAnswer = true
+              }
             }
             break
 
@@ -145,16 +151,19 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
       }
 
       // Query again in case of tool call
-      if (toolOutputs.length > 0) {
+      if (toolOutputs.length > 0 && !hasAnswer && !skipAnswer) {
         await this.generateAnswer(
           stream,
           textPromise,
           callCount + 1,
           toolOutputs
         )
+      } else {
+        // Ensure promise is resolved (if skipAnswer is true in a tool)
+        textPromise.resolve('')
       }
     } catch (error) {
-      textPromise.reject(error)
+      textPromise.resolve('')
       if (!(error instanceof OpenAI.APIUserAbortError)) {
         console.error('[OpenaiAgent] Error answering:', error)
       }
@@ -167,6 +176,10 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
 
   removeTool(name: string) {
     this.tools = this.tools.filter((tool) => tool.name !== name)
+  }
+
+  getTool(name: string): Tool | undefined {
+    return this.tools.find((tool) => tool.name === name)
   }
 
   private getDefaultTools() {
@@ -188,6 +201,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
           typeof this.options.autoSemanticTurn === 'string'
             ? this.options.autoSemanticTurn
             : AUTO_SEMANTIC_TURN_PROMPT,
+        skipAnswer: true,
         callback: () => this.skipAnswer(),
       })
     }
@@ -198,15 +212,16 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
           typeof this.options.autoIgnoreUserNoise === 'string'
             ? this.options.autoIgnoreUserNoise
             : AUTO_IGNORE_USER_NOISE_PROMPT,
+        skipAnswer: true,
         callback: () => this.cancelLastUserMessage(),
       })
     }
     return tools
   }
 
-  private async executeTool(toolCall: ToolCall): Promise<ToolCallOutput> {
+  private async executeTool(toolCall: ToolCall) {
     try {
-      const tool = this.tools.find((tool) => tool.name === toolCall.name)
+      const tool = this.getTool(toolCall.name)
       if (!tool) {
         throw new Error(`Tool not found "${toolCall.name}"`)
       }
@@ -214,10 +229,20 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
       this.log('Executing tool:', toolCall.name, toolCall.arguments)
       const args = JSON.parse(toolCall.arguments)
       const result = await tool.callback(args)
-      return createToolCallOutput(toolCall, result || {})
+
+      return {
+        toolCall,
+        toolCallOutput: createToolCallOutput(toolCall, result || {}),
+        skipAnswer: tool.skipAnswer,
+      }
     } catch (error: any) {
       console.error('[OpenaiAgent] Error executing tool:', error)
-      return createToolCallOutput(toolCall, { error: error.message })
+      return {
+        toolCall,
+        toolCallOutput: createToolCallOutput(toolCall, {
+          error: error.message,
+        }),
+      }
     }
   }
 

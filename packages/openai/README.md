@@ -106,7 +106,7 @@ The OpenAI Agent supports adding and removing custom tools to extend its capabil
 
 ### Adding Tools
 
-Use `addTool()` to add custom functions that the agent can call during conversations:
+Use `addTool(tool: Tool)` to add custom functions that the agent can call during conversations:
 
 ```typescript
 import { z } from 'zod'
@@ -160,11 +160,20 @@ agent.addTool({
 
 ### Removing Tools
 
-Use `removeTool()` to remove tools by name:
+Use `removeTool(name: string)` to remove tools by name:
 
 ```typescript
 // Remove a specific tool
 agent.removeTool('get_time')
+```
+
+### Getting Tools
+
+Use `getTool(name: string)` to retrieve a tool by name:
+
+```typescript
+// Get a specific tool (undefined if not found)
+const tool = agent.getTool('get_time')
 ```
 
 ## Advanced Features

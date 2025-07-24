@@ -1,4 +1,4 @@
-import { Micdrop } from '@micdrop/client'
+import { Micdrop, Speaker } from '@micdrop/client'
 import { useMicdropEndCall, useMicdropState } from '@micdrop/react'
 import { FaMicrophone, FaPause, FaPlay, FaStop } from 'react-icons/fa'
 import CallStatusCircle from './CallStatusCircle'
@@ -9,7 +9,15 @@ export default function CallControls() {
 
   useMicdropEndCall(() => {
     console.log('Call ended')
-    Micdrop.stop()
+
+    // Stop after last speech end
+    setTimeout(async () => {
+      if (Speaker.isPlaying) {
+        Speaker.on('StopPlaying', Micdrop.stop)
+      } else {
+        Micdrop.stop()
+      }
+    }, 5000)
   })
 
   const handleStart = async () => {

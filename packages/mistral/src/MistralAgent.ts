@@ -69,7 +69,7 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
       textPromise.resolve(fullAnswer)
     } catch (error: any) {
       console.error('[MistralAgent] Error:', error)
-      textPromise.reject(error)
+      textPromise.resolve('')
       stream.emit('error', error)
     } finally {
       if (stream.writable) {

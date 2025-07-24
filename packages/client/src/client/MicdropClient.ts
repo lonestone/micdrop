@@ -409,9 +409,7 @@ export class MicdropClient
       this.addMessage(message)
     } else if (event.data === MicdropServerCommands.EndCall) {
       // Call ended
-      setTimeout(() => {
-        this.emit('EndCall')
-      }, 2000) // Wait to prevent conflict
+      this.emit('EndCall')
     } else if (
       event.data === MicdropServerCommands.CancelLastAssistantMessage
     ) {
