@@ -29,7 +29,7 @@ export class ElevenLabsTTS extends TTS {
     super()
     // Setup WebSocket connection
     this.initPromise = this.initWS().catch((error) => {
-      this.log('Connection error:', error)
+      console.error('[ElevenLabsTTS] Connection error:', error)
     })
   }
 

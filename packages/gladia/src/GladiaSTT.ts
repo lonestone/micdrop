@@ -21,33 +21,33 @@ export class GladiaSTT extends STT {
   private socket?: WebSocket
   private initPromise: Promise<void>
   private reconnectTimeout?: NodeJS.Timeout
+  private audioChunksPending: ArrayBuffer[] = [] // Store audio chunks to send them again if reconnecting
 
   constructor(private options: GladiaSTTOptions) {
     super()
 
     // Setup Websocket connection
     this.initPromise = this.getURL()
-      .then((url) => this.initWS(url))
+      .then(this.initWS)
       .catch((error) => {
-        this.log('Connection error:', error)
+        console.error('[GladiaSTT] Connection error:', error)
       })
   }
 
   transcribe(audioStream: Readable) {
     const pcmStream = convertToPCM(audioStream, SAMPLE_RATE, BIT_DEPTH)
-    let chunksCount = 0
 
     // Read transformed stream and send to Gladia
     pcmStream.on('data', async (chunk) => {
       await this.initPromise
+      this.audioChunksPending.push(chunk)
       this.socket?.send(chunk)
       this.log(`Sent audio chunk (${chunk.byteLength} bytes)`)
-      chunksCount++
     })
 
     // Send silence when the stream ends to force Gladia to transcribe
     pcmStream.on('end', async () => {
-      if (chunksCount === 0) return
+      if (this.audioChunksPending.length === 0) return
       await this.initPromise
       this.sendSilence(1)
     })
@@ -67,7 +67,7 @@ export class GladiaSTT extends STT {
   }
 
   // Register real-time transcription to get a WebSocket URL
-  private async getURL() {
+  private getURL = async () => {
     const response = await fetch('https://api.gladia.io/v2/live', {
       method: 'POST',
       headers: {
@@ -104,7 +104,7 @@ export class GladiaSTT extends STT {
   }
 
   // Connect to Gladia
-  private async initWS(url: string) {
+  private initWS = async (url: string) => {
     return new Promise<void>((resolve, reject) => {
       const socket = new WebSocket(url)
       this.socket = socket
@@ -135,6 +135,8 @@ export class GladiaSTT extends STT {
           const transcript = message.data.utterance.text
           this.log(`Received transcript: "${transcript}"`)
           this.emit('Transcript', transcript)
+          // Reset audio chunks and transcript flag to avoid sending them again if reconnecting
+          this.audioChunksPending.length = 0
         }
       })
     })
@@ -146,7 +148,16 @@ export class GladiaSTT extends STT {
       this.reconnectTimeout = setTimeout(() => {
         this.reconnectTimeout = undefined
         this.getURL()
-          .then((url) => this.initWS(url))
+          .then(this.initWS)
+          .then(() => {
+            // Send audio chunks again if reconnecting during transcription
+            if (this.audioChunksPending.length > 0) {
+              this.log('Sending audio chunks again')
+              this.audioChunksPending.forEach((chunk) =>
+                this.socket?.send(chunk)
+              )
+            }
+          })
           .then(resolve)
           .catch((error) => {
             this.log('Reconnection error:', error)
@@ -162,6 +173,7 @@ export class GladiaSTT extends STT {
     const bytesPerSample = BIT_DEPTH / 8
     const silenceBuffer = Buffer.alloc(numSamples * bytesPerSample, 0)
     this.socket.send(silenceBuffer)
+    this.audioChunksPending.push(silenceBuffer)
     this.log(
       `Sent ${durationSeconds * 1000}ms of silence (${silenceBuffer.byteLength} bytes) after stream end`
     )
