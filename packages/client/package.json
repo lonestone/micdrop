@@ -1,7 +1,7 @@
 {
   "name": "@micdrop/client",
   "version": "2.0.2",
-  "description": "A lib for browser that helps to use the mic and speaker for voice conversation",
+  "description": "🖐️🎤 Micdrop: Real-Time Voice Conversations with AI",
   "author": "Lonestone",
   "license": "MIT",
   "main": "dist/index.js",

@@ -156,10 +156,16 @@ export class MicdropServer {
     if (!this.config) return
     try {
       if (this.config.firstMessage) {
+        // Send first message
         this.config.agent.addAssistantMessage(this.config.firstMessage)
         await this.speak(this.config.firstMessage)
       } else if (this.config.generateFirstMessage) {
+        // Generate first message
         await this.answer()
+      } else {
+        // Skip answer if no first message is provided
+        // to avoid keeping the client in a processing state
+        this.socket?.send(MicdropServerCommands.SkipAnswer)
       }
     } catch (error) {
       console.error('[MicdropServer]', error)
