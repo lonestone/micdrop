@@ -1,7 +1,11 @@
 import EventEmitter from 'eventemitter3'
 import { Readable } from 'stream'
 import { Logger } from '../Logger'
-import { MicdropConversation, MicdropConversationMessage } from '../types'
+import {
+  MicdropAnswerMetadata,
+  MicdropConversation,
+  MicdropConversationMessage,
+} from '../types'
 
 export interface AgentOptions {
   systemPrompt: string
@@ -42,19 +46,24 @@ export abstract class Agent<
   abstract answer(): AgentAnswerReturn
   abstract cancel(): void
 
-  public addUserMessage(text: string) {
-    this.addMessage('user', text)
+  public addUserMessage(text: string, metadata?: MicdropAnswerMetadata) {
+    this.addMessage('user', text, metadata)
   }
 
-  public addAssistantMessage(text: string) {
-    this.addMessage('assistant', text)
+  public addAssistantMessage(text: string, metadata?: MicdropAnswerMetadata) {
+    this.addMessage('assistant', text, metadata)
   }
 
-  protected addMessage(role: 'user' | 'assistant' | 'system', text: string) {
+  protected addMessage(
+    role: 'user' | 'assistant' | 'system',
+    text: string,
+    metadata?: MicdropAnswerMetadata
+  ) {
     this.log(`Adding ${role} message to conversation: ${text}`)
     const message: MicdropConversationMessage = {
       role,
       content: text,
+      metadata,
     }
     this.conversation.push(message)
     this.emit('Message', message)
