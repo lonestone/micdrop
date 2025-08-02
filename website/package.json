@@ -1,0 +1,28 @@
+{
+  "name": "micdrop-website",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve",
+    "deploy": "docusaurus deploy",
+    "clear": "docusaurus clear",
+    "test": "echo \"No tests specified\""
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.1.0",
+    "@docusaurus/preset-classic": "^3.1.0"
+  },
+  "devDependencies": {
+    "@docusaurus/module-type-aliases": "^3.1.0",
+    "@tsconfig/docusaurus": "^2.0.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  },
+  "type": "module",
+  "engines": {
+    "node": "20.x"
+  }
+}
