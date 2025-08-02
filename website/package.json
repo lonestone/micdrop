@@ -1,0 +1,21 @@
+{
+  "name": "micdrop-website",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve",
+    "deploy": "docusaurus deploy",
+    "clear": "docusaurus clear",
+    "test": "echo \"No tests specified\""
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.1.0",
+    "@docusaurus/preset-classic": "^3.1.0"
+  },
+  "type": "module",
+  "engines": {
+    "node": "20.x"
+  }
+}
