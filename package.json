@@ -4,7 +4,8 @@
   "license": "MIT",
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "examples/*",
+    "website"
   ],
   "scripts": {
     "build": "turbo run build --concurrency=12",
@@ -17,6 +18,9 @@
   "devDependencies": {
     "prettier": "^3.0.0",
     "turbo": "latest"
+  },
+  "engines": {
+    "node": "20.x"
   },
   "packageManager": "npm@10.2.4"
 }
