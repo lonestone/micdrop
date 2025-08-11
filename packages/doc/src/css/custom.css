@@ -1,0 +1,213 @@
+/**
+ * Futuristic dark theme for AI developers with yellow accents
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables for theme consistency */
+@layer base {
+  :root {
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --radius: 0.5rem;
+  }
+
+  [data-theme='dark'] {
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+  }
+}
+
+/* Force dark theme as default */
+html {
+  color-scheme: dark;
+}
+
+/* Modern dark theme as default */
+:root {
+  /* Primary colors - Modern emerald green */
+  --ifm-color-primary: #10b981;
+  --ifm-color-primary-dark: #059669;
+  --ifm-color-primary-darker: #047857;
+  --ifm-color-primary-darkest: #065f46;
+  --ifm-color-primary-light: #34d399;
+  --ifm-color-primary-lighter: #6ee7b7;
+  --ifm-color-primary-lightest: #a7f3d0;
+
+  /* Modern dark background colors */
+  --ifm-background-color: #020617;
+  --ifm-background-surface-color: #0f172a;
+  --ifm-color-content: #e2e8f0;
+  --ifm-color-content-secondary: #94a3b8;
+
+  /* Navbar and Footer */
+  --ifm-navbar-background-color: rgba(2, 6, 23, 0.8);
+  --ifm-navbar-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --ifm-footer-background-color: #0f172a;
+
+  /* Sidebar */
+  --ifm-menu-color-background-active: rgba(16, 185, 129, 0.1);
+  --ifm-menu-color-background-hover: rgba(16, 185, 129, 0.05);
+
+  /* Code blocks */
+  --ifm-code-font-size: 95%;
+  --ifm-code-background: #1e293b;
+  --ifm-blockquote-border-left-color: #10b981;
+  --docusaurus-highlighted-code-line-bg: rgba(16, 185, 129, 0.1);
+
+  /* Cards and containers */
+  --ifm-card-background-color: #1e293b;
+  --ifm-hover-overlay: rgba(16, 185, 129, 0.05);
+
+  /* Links */
+  --ifm-link-color: #10b981;
+  --ifm-link-hover-color: #34d399;
+
+  /* Text colors - Modern slate scale */
+  --ifm-color-emphasis-0: #020617;
+  --ifm-color-emphasis-100: #0f172a;
+  --ifm-color-emphasis-200: #1e293b;
+  --ifm-color-emphasis-300: #334155;
+  --ifm-color-emphasis-400: #475569;
+  --ifm-color-emphasis-500: #64748b;
+  --ifm-color-emphasis-600: #94a3b8;
+  --ifm-color-emphasis-700: #cbd5e1;
+  --ifm-color-emphasis-800: #e2e8f0;
+  --ifm-color-emphasis-900: #f1f5f9;
+  --ifm-color-emphasis-1000: #ffffff;
+}
+
+/* Light theme with modern emerald accents */
+[data-theme='light'] {
+  /* Primary colors - Modern emerald for light theme */
+  --ifm-color-primary: #047857;
+  --ifm-color-primary-dark: #065f46;
+  --ifm-color-primary-darker: #064e3b;
+  --ifm-color-primary-darkest: #022c22;
+  --ifm-color-primary-light: #059669;
+  --ifm-color-primary-lighter: #10b981;
+  --ifm-color-primary-lightest: #34d399;
+
+  /* Light backgrounds */
+  --ifm-background-color: #ffffff;
+  --ifm-background-surface-color: #f8fafc;
+  --ifm-card-background-color: #ffffff;
+
+  /* Content colors */
+  --ifm-color-content: #0f172a;
+  --ifm-color-content-secondary: #475569;
+
+  /* Navbar and Footer */
+  --ifm-navbar-background-color: rgba(248, 250, 252, 0.8);
+  --ifm-navbar-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --ifm-footer-background-color: #f1f5f9;
+
+  /* Sidebar */
+  --ifm-menu-color: #334155;
+
+  /* Code blocks */
+  --ifm-code-background: #f1f5f9;
+
+  /* Links */
+  --ifm-link-color: #047857;
+  --ifm-link-hover-color: #065f46;
+}
+
+/* Keep only essential Docusaurus-specific styles that can't be replaced with Tailwind */
+
+/* Enhanced navigation - Docusaurus specific classes */
+.navbar {
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #404040;
+}
+
+.navbar__title {
+  font-weight: 900;
+  color: #10b981 !important;
+  text-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+/* Table of contents - Docusaurus specific */
+.table-of-contents__link--active {
+  color: #10b981;
+  font-weight: 700;
+  border-left: 2px solid #10b981;
+  padding-left: 0.5rem;
+}
+
+/* Sidebar - Docusaurus specific */
+.theme-doc-sidebar-item-link-level-1 > .menu__link {
+  font-weight: 600;
+}
+
+.menu__link--active {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-left: 3px solid #10b981;
+  color: #10b981 !important;
+}
+
+/* Footer - Docusaurus specific */
+.footer {
+  border-top: 1px solid #404040;
+}
+
+.footer__title {
+  color: #10b981;
+  font-weight: 700;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #10b981;
+}
+
+/* Light theme adjustments for Docusaurus elements */
+[data-theme='light'] .navbar__title {
+  color: #047857 !important;
+}
+
+[data-theme='light'] .menu__link--active {
+  background: rgba(4, 120, 87, 0.1) !important;
+  border-left: 3px solid #047857;
+  color: #047857 !important;
+}
+
+[data-theme='light'] .table-of-contents__link--active {
+  color: #047857;
+  border-left: 2px solid #047857;
+}
