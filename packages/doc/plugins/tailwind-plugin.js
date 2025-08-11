@@ -3,6 +3,7 @@ function tailwindPlugin(context, options) {
     name: 'tailwind-plugin',
     configurePostCss(postcssOptions) {
       // Append TailwindCSS and AutoPrefixer
+      postcssOptions.plugins.push(['tailwindcss/nesting', {}])
       postcssOptions.plugins.push(require('tailwindcss'))
       postcssOptions.plugins.push(require('autoprefixer'))
       return postcssOptions

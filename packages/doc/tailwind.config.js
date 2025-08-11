@@ -9,7 +9,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Modern AI theme with better contrast
+        // Modern AI theme
         'ai-accent': {
           50: '#f0f9ff',
           100: '#e0f2fe',
@@ -69,23 +69,37 @@ module.exports = {
         },
       },
       fontFamily: {
-        mono: ['SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', 'monospace'],
+        mono: [
+          'SFMono-Regular',
+          'Consolas',
+          'Liberation Mono',
+          'Menlo',
+          'monospace',
+        ],
       },
       animation: {
-        'glow': 'glow 3s ease-in-out infinite alternate',
-        'float': 'float 4s ease-in-out infinite',
+        'shadow-glow': 'shadow-glow 3s ease-in-out infinite',
+        'border-glow': 'border-glow 2s ease-in-out infinite',
+        'text-glow': 'text-glow 2s ease-in-out infinite',
         'fade-in': 'fadeIn 0.6s ease-out',
         'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
       keyframes: {
-        glow: {
-          '0%': { boxShadow: '0 0 20px rgba(16, 185, 129, 0.15)' },
-          '100%': { boxShadow: '0 0 40px rgba(16, 185, 129, 0.3)' },
+        'shadow-glow': {
+          '0%, 100%': { boxShadow: '0 0 20px rgba(16, 185, 129, 0.15)' },
+          '50%': { boxShadow: '0 0 40px rgba(16, 185, 129, 0.3)' },
         },
-        float: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-8px)' },
+        'border-glow': {
+          '0%, 100%': {
+            border: '2px solid rgba(16, 185, 129, 0.8)',
+          },
+          '50%': {
+            border: '2px solid rgba(16, 185, 129, 0.4)',
+          },
+        },
+        'text-glow': {
+          '0%, 100%': { textShadow: '0 0 30px rgba(16, 185, 129, 0.6)' },
+          '50%': { textShadow: '0 0 20px rgba(16, 185, 129, 0.4)' },
         },
         fadeIn: {
           '0%': { opacity: '0', transform: 'translateY(20px)' },
@@ -104,26 +118,16 @@ module.exports = {
     },
   },
   plugins: [
-    require('tailwindcss/plugin')(function({ addUtilities, addComponents, theme }) {
+    require('tailwindcss/plugin')(function ({ addUtilities, addComponents }) {
       // Add custom utilities for AI theme
       addUtilities({
         '.text-glow': {
-          textShadow: '0 0 30px rgba(16, 185, 129, 0.4), 0 0 60px rgba(16, 185, 129, 0.2)',
-        },
-        '.text-glow-sm': {
-          textShadow: '0 0 15px rgba(16, 185, 129, 0.3)',
+          '@apply animate-text-glow': {},
         },
         '.bg-grid': {
-          backgroundImage: 'linear-gradient(rgba(148, 163, 184, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.03) 1px, transparent 1px)',
+          backgroundImage:
+            'linear-gradient(rgba(148, 163, 184, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.03) 1px, transparent 1px)',
           backgroundSize: '32px 32px',
-        },
-        '.border-glow': {
-          boxShadow: '0 0 0 1px rgba(16, 185, 129, 0.2), 0 4px 12px rgba(16, 185, 129, 0.1)',
-        },
-        '.border-glow-hover': {
-          '&:hover': {
-            boxShadow: '0 0 0 1px rgba(16, 185, 129, 0.4), 0 8px 32px rgba(16, 185, 129, 0.15)',
-          },
         },
         '.glass': {
           backgroundColor: 'rgba(148, 163, 184, 0.05)',
@@ -135,52 +139,82 @@ module.exports = {
       // Add reusable component classes
       addComponents({
         '.ai-card': {
-          '@apply p-8 rounded-2xl bg-gradient-to-br from-ai-surface-800/50 to-ai-surface-900/50 backdrop-blur-sm border border-ai-surface-700/50 transition-all duration-500 hover:border-ai-primary-500/30 animate-slide-up': {},
-          '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(16, 185, 129, 0.1)',
-          },
+          '@apply p-8 rounded-2xl backdrop-blur-sm border animate-slide-up bg-gradient-to-br from-ai-surface-50 to-ai-surface-100 border-ai-surface-200 dark:from-ai-surface-800/50 dark:to-ai-surface-900/50 dark:border-ai-surface-700/50':
+            {},
+          /**
+             * 
+             * background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-color: #e2e8f0 !important;
+             */
         },
         '.ai-badge-core': {
-          '@apply inline-flex items-center px-4 py-2 bg-gradient-to-r from-ai-primary-500 to-ai-primary-400 text-white rounded-full text-sm font-semibold uppercase tracking-wider shadow-lg transition-all duration-300': {},
+          '@apply inline-flex items-center px-4 py-2 bg-gradient-to-r from-ai-primary-500 to-ai-primary-400 dark:from-ai-primary-900 dark:to-ai-primary-800 text-white rounded-full text-sm font-semibold shadow-lg transition-all duration-300 no-underline':
+            {},
           '&:hover': {
             boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)',
             transform: 'translateY(-2px) scale(1.02)',
+            textDecoration: 'none',
+            color: 'white',
           },
         },
         '.ai-badge-ai': {
-          '@apply inline-flex items-center px-4 py-2 bg-gradient-to-r from-ai-accent-500 to-ai-accent-400 text-white rounded-full text-sm font-semibold uppercase tracking-wider shadow-lg transition-all duration-300': {},
+          '@apply inline-flex items-center px-4 py-2 bg-gradient-to-r from-ai-accent-500 to-ai-accent-400 dark:from-ai-accent-900 dark:to-ai-accent-800 text-white rounded-full text-sm font-semibold shadow-lg transition-all duration-300 no-underline':
+            {},
           '&:hover': {
             boxShadow: '0 8px 25px rgba(14, 165, 233, 0.3)',
             transform: 'translateY(-2px) scale(1.02)',
+            textDecoration: 'none',
+            color: 'white',
           },
         },
         '.ai-badge-utility': {
-          '@apply inline-flex items-center px-4 py-2 bg-gradient-to-r from-ai-surface-600 to-ai-surface-500 text-white rounded-full text-sm font-semibold uppercase tracking-wider shadow-lg transition-all duration-300': {},
+          '@apply inline-flex items-center px-4 py-2 bg-gradient-to-r from-ai-surface-600 to-ai-surface-500 dark:from-ai-surface-800 dark:to-ai-surface-700 text-white rounded-full text-sm font-semibold shadow-lg transition-all duration-300 no-underline':
+            {},
           '&:hover': {
             boxShadow: '0 8px 25px rgba(100, 116, 139, 0.3)',
             transform: 'translateY(-2px) scale(1.02)',
+            textDecoration: 'none',
+            color: 'white',
           },
         },
         '.ai-button': {
-          '@apply inline-flex items-center px-8 py-4 bg-gradient-to-r from-ai-primary-500 to-ai-primary-400 text-white rounded-xl font-semibold uppercase tracking-wider shadow-xl transition-all duration-300': {},
+          '@apply inline-flex items-center px-8 py-4 bg-gradient-to-r from-ai-primary-500 to-ai-primary-400 text-white rounded-xl font-semibold shadow-xl transition-all duration-300 no-underline':
+            {},
           '&:hover': {
             transform: 'translateY(-3px) scale(1.02)',
             boxShadow: '0 12px 30px rgba(16, 185, 129, 0.4)',
-            backgroundImage: 'linear-gradient(to right, #059669, #10b981)',
+            backgroundImage: 'linear-gradient(to right, #34d399, #6ee7b7)',
+            textDecoration: 'none',
+            color: 'white',
           },
         },
         '.ai-button-secondary': {
-          '@apply inline-flex items-center px-8 py-4 bg-transparent border-2 border-ai-primary-500 text-ai-primary-400 rounded-xl font-semibold uppercase tracking-wider transition-all duration-300': {},
+          '@apply inline-flex items-center px-8 py-4 bg-transparent border-2 border-ai-primary-500 text-ai-primary-400 rounded-xl font-semibold transition-all duration-300 no-underline':
+            {},
           '&:hover': {
             backgroundColor: 'rgba(16, 185, 129, 0.1)',
             borderColor: 'rgb(16 185 129)',
             color: 'rgb(16 185 129)',
             transform: 'translateY(-2px)',
+            textDecoration: 'none',
           },
         },
+        '.tab-content': {
+          '@apply border-2 border-transparent animate-border-glow': {},
+          borderTop: 'none !important',
+        },
+        '.tab-inactive': {
+          '@apply border-2 border-transparent animate-border-glow': {},
+          borderTop: 'none !important',
+          borderLeft: 'none !important',
+          borderRight: 'none !important',
+        },
+        '.tab-active': {
+          '@apply border-2 border-transparent animate-border-glow': {},
+          borderBottom: 'none !important',
+        },
       })
-    })
+    }),
   ],
   corePlugins: {
     // Disable preflight to avoid conflicts with Docusaurus

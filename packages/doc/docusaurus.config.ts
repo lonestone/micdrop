@@ -4,7 +4,7 @@ import { themes as prismThemes } from 'prism-react-renderer'
 
 const config: Config = {
   title: 'Micdrop',
-  tagline: 'Library for real-time voice conversations with AI in the browser',
+  tagline: 'Real-time voice conversations with AI in the browser',
   favicon: 'img/favicon.svg',
 
   url: 'https://micdrop.dev',

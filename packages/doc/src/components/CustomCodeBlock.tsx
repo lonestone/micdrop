@@ -34,9 +34,7 @@ export function CustomCodeBlock({
   }
 
   return (
-    <div
-      className={`relative border-b border-ai-surface-700/30 last:border-b-0 hover:bg-ai-primary-500/2 transition-colors duration-200`}
-    >
+    <div className="relative">
       {title && (
         <div className="absolute top-2 right-4 text-xs text-ai-surface-400 uppercase font-mono font-semibold z-10">
           {title}
@@ -45,7 +43,7 @@ export function CustomCodeBlock({
       <div
         className={`${getBorderColor(language)} ${getBackgroundGradient(language)} border-l-4`}
       >
-        <div className="[&_.prism-code]:!bg-transparent [&_.prism-code]:!p-6 [&_.prism-code]:!m-0 [&_.prism-code]:text-sm [&_.prism-code]:text-left [&_pre]:text-left [&_.prism-code]:whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_code]:whitespace-pre-wrap">
+        <div className="[&_.prism-code]:!bg-transparent [&_.prism-code]:!p-2 [&_.prism-code]:!m-0 [&_.prism-code]:text-sm [&_.prism-code]:text-left [&_pre]:text-left [&_.prism-code]:whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_code]:whitespace-pre-wrap [&_.theme-code-block]:mb-0">
           <CodeBlock language={language}>{code}</CodeBlock>
         </div>
       </div>

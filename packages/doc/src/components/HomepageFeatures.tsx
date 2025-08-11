@@ -1,7 +1,7 @@
 import Heading from '@theme/Heading'
 import { BiCodeBlock } from 'react-icons/bi'
+import { FaRobot } from 'react-icons/fa'
 import { HiMicrophone } from 'react-icons/hi2'
-import { RiAiGenerate } from 'react-icons/ri'
 import { Feature } from './Feature'
 
 type FeatureItem = {
@@ -24,7 +24,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'AI Provider Agnostic',
-    Icon: RiAiGenerate,
+    Icon: FaRobot,
     description: (
       <>
         Choose the best AI providers for your use case. Mix and match OpenAI,
@@ -49,7 +49,7 @@ const FeatureList: FeatureItem[] = [
 export function HomepageFeatures() {
   return (
     <section className="flex items-center py-8 w-full">
-      <div className="container mx-auto px-4">
+      <div className="container flex flex-col gap-24 my-24 mx-auto px-4">
         {/* Features Section */}
         <div className="flex flex-wrap gap-8 justify-center">
           {FeatureList.map((props, idx) => (
@@ -58,15 +58,12 @@ export function HomepageFeatures() {
         </div>
 
         {/* Packages Section */}
-        <div className="mt-16 pt-12 border-t border-ai-surface-700/30">
+        <div className="pt-12 border-t border-ai-surface-700/30">
           <div className="text-center mb-8">
-            <Heading
-              as="h2"
-              className="text-3xl font-bold text-ai-primary-400 mb-4"
-            >
+            <Heading as="h2" className="text-3xl font-bold mb-4">
               📦 Packages
             </Heading>
-            <p className="text-ai-surface-300 text-lg">
+            <p className="text-ai-surface-700 dark:text-ai-surface-300 text-lg">
               Modular architecture with specialized packages for different use
               cases
             </p>
@@ -86,7 +83,7 @@ export function HomepageFeatures() {
                   @micdrop/server
                 </a>
               </div>
-              <p className="text-ai-surface-300">
+              <p className="text-ai-surface-700 dark:text-ai-surface-300">
                 Essential packages for browser and server-side implementation
               </p>
             </div>
@@ -113,7 +110,7 @@ export function HomepageFeatures() {
                   @micdrop/gladia
                 </a>
               </div>
-              <p className="text-ai-surface-300">
+              <p className="text-ai-surface-700 dark:text-ai-surface-300">
                 Ready-to-use integrations with popular AI providers
               </p>
             </div>
@@ -128,7 +125,7 @@ export function HomepageFeatures() {
                   @micdrop/react
                 </a>
               </div>
-              <p className="text-ai-surface-300">
+              <p className="text-ai-surface-700 dark:text-ai-surface-300">
                 React hooks and utilities for seamless frontend integration
               </p>
             </div>
@@ -136,14 +133,11 @@ export function HomepageFeatures() {
         </div>
 
         {/* Demo Section */}
-        <div className="mt-12 p-8 bg-gradient-to-r from-ai-surface-800/30 to-ai-surface-900/30 rounded-xl text-center border border-ai-surface-700/30 glass">
-          <Heading
-            as="h2"
-            className="text-2xl font-bold text-ai-primary-400 mb-4"
-          >
+        <div className="ai-card text-center">
+          <Heading as="h2" className="text-2xl font-bold mb-4">
             🎥 See it in Action
           </Heading>
-          <p className="text-ai-surface-300 mb-6 text-lg">
+          <p className="text-ai-surface-700 dark:text-ai-surface-300 mb-6 text-lg">
             Watch the creator explain Micdrop and voice AI technology
           </p>
           <a

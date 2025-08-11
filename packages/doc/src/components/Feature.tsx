@@ -11,7 +11,7 @@ export function Feature({ title, Icon, description }: FeatureProps) {
     <div className="flex-1 min-w-[300px]">
       <div className="text-center mb-6">
         <Icon
-          className="w-32 h-32 mx-auto text-ai-primary-400 mb-4 animate-float"
+          className="w-32 h-32 mx-auto text-ai-primary-400 mb-4"
           role="img"
         />
       </div>
@@ -19,7 +19,9 @@ export function Feature({ title, Icon, description }: FeatureProps) {
         <Heading as="h3" className="text-ai-primary-300 mb-4 font-bold text-xl">
           {title}
         </Heading>
-        <p className="text-ai-surface-300 leading-relaxed">{description}</p>
+        <p className="text-ai-surface-700 dark:text-ai-surface-300 leading-relaxed">
+          {description}
+        </p>
       </div>
     </div>
   )

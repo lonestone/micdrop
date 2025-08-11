@@ -1,52 +1,50 @@
 import { useState } from 'react'
 import { CustomCodeBlock } from './CustomCodeBlock'
 
+function getTabStyle(active: boolean) {
+  return active
+    ? 'tab-active bg-ai-surface-100 dark:bg-ai-surface-950 text-ai-primary-800 dark:text-ai-primary-200'
+    : 'tab-inactive bg-ai-surface-50 dark:bg-ai-surface-800 text-ai-surface-700 dark:text-ai-surface-400'
+}
+
 export function HomepageCodeBlock() {
   const [activeTab, setActiveTab] = useState('client')
 
   return (
-    <div className="relative h-[600px]">
-      <div className="bg-ai-surface-950 rounded-xl overflow-hidden shadow-2xl border border-ai-surface-700/50 border-glow-hover animate-fade-in h-full flex flex-col">
-        {/* Top Tabs */}
-        <div className="bg-ai-surface-900/50 border-b border-ai-surface-700/50 px-6 py-4">
-          <div className="flex space-x-1">
-            <button
-              onClick={() => setActiveTab('client')}
-              className={`px-6 py-3 font-mono text-sm font-medium transition-colors ${
-                activeTab === 'client'
-                  ? 'bg-ai-primary-500/20 text-ai-primary-200'
-                  : 'text-ai-surface-400'
-              }`}
-            >
-              Client (browser)
-            </button>
-            <button
-              onClick={() => setActiveTab('server')}
-              className={`px-6 py-3 font-mono text-sm font-medium transition-colors ${
-                activeTab === 'server'
-                  ? 'bg-ai-accent-500/20 text-ai-accent-200'
-                  : 'text-ai-surface-400'
-              }`}
-            >
-              Server (Node.js)
-            </button>
-          </div>
-        </div>
+    <div className="bg-ai-surface-100 dark:bg-ai-surface-950 light:bg-ai-surface-100 rounded-xl animate-fade-in h-full flex flex-col glow-shadow">
+      {/* Top Tabs */}
+      <div className="flex">
+        <button
+          onClick={() => setActiveTab('client')}
+          className={`flex-1 px-6 py-3 border-0 font-mono text-sm font-medium transition-colors rounded-tl-xl cursor-pointer ${getTabStyle(
+            activeTab === 'client'
+          )}`}
+        >
+          Client (browser)
+        </button>
+        <button
+          onClick={() => setActiveTab('server')}
+          className={`flex-1 px-6 py-3 border-0 font-mono text-sm font-medium transition-colors rounded-tr-xl cursor-pointer ${getTabStyle(
+            activeTab === 'server'
+          )}`}
+        >
+          Server (Node.js)
+        </button>
+      </div>
 
-        {/* Code Content */}
-        <div className="flex-1 bg-ai-surface-950 overflow-hidden">
-          <div className="h-full overflow-y-auto p-6">
-            {activeTab === 'client' && (
-              <>
-                <CustomCodeBlock
-                  language="bash"
-                  title="bash"
-                  code={`npm install @micdrop/client`}
-                />
-                <CustomCodeBlock
-                  language="typescript"
-                  title="typescript"
-                  code={`import { Micdrop } from '@micdrop/client'
+      {/* Code Content */}
+      <div className="flex-1 flex flex-col gap-6 rounded-b-xl p-6 tab-content">
+        {activeTab === 'client' && (
+          <>
+            <CustomCodeBlock
+              language="bash"
+              title="bash"
+              code={`npm install @micdrop/client`}
+            />
+            <CustomCodeBlock
+              language="typescript"
+              title="typescript"
+              code={`import { Micdrop } from '@micdrop/client'
 
 // Start a voice conversation
 await Micdrop.start({
@@ -55,30 +53,31 @@ await Micdrop.start({
 
 // Listen for events
 Micdrop.on('StateChange', (state) => {
-  console.log('State:', state)
+  console.log('Conversation:', state.conversation)
+  console.log('isAssistantSpeaking:', state.isAssistantSpeaking)
 })
 
 Micdrop.on('EndCall', () => {
   console.log('Call ended by assistant')
 })`}
-                />
-              </>
-            )}
+            />
+          </>
+        )}
 
-            {activeTab === 'server' && (
-              <>
-                <CustomCodeBlock
-                  language="bash"
-                  title="bash"
-                  code={`npm install @micdrop/server \\
+        {activeTab === 'server' && (
+          <>
+            <CustomCodeBlock
+              language="bash"
+              title="bash"
+              code={`npm install @micdrop/server \\
   @micdrop/openai \\
   @micdrop/gladia \\
   @micdrop/elevenlabs`}
-                />
-                <CustomCodeBlock
-                  language="typescript"
-                  title="typescript"
-                  code={`import { MicdropServer } from '@micdrop/server'
+            />
+            <CustomCodeBlock
+              language="typescript"
+              title="typescript"
+              code={`import { MicdropServer } from '@micdrop/server'
 import { OpenaiAgent } from '@micdrop/openai'
 import { GladiaSTT } from '@micdrop/gladia'
 import { ElevenLabsTTS } from '@micdrop/elevenlabs'
@@ -92,17 +91,17 @@ wss.on('connection', (socket) => {
     apiKey: process.env.OPENAI_API_KEY,
     systemPrompt: 'You are a helpful assistant'
   })
-  
+
   const stt = new GladiaSTT({
     apiKey: process.env.GLADIA_API_KEY
   })
-  
+
   const tts = new ElevenLabsTTS({
     apiKey: process.env.ELEVENLABS_API_KEY,
     voiceId: process.env.ELEVENLABS_VOICE_ID
   })
 
-  // Handle voice conversations
+  // Handle voice conversation
   new MicdropServer(socket, {
     firstMessage: 'Hello! How can I help you today?',
     agent,
@@ -110,11 +109,9 @@ wss.on('connection', (socket) => {
     tts,
   })
 })`}
-                />
-              </>
-            )}
-          </div>
-        </div>
+            />
+          </>
+        )}
       </div>
     </div>
   )
