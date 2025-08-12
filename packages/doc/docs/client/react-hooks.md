@@ -16,11 +16,7 @@ import { useMicdropState, useMicdropError } from '@micdrop/react'
 
 function VoiceChat() {
   const state = useMicdropState()
-  
-  useMicdropError((error) => {
-    console.error('Voice error:', error.message)
-  })
-  
+
   return (
     <div>
       {state.isListening && <p>🎤 Listening...</p>}
@@ -42,24 +38,24 @@ import { useMicdropState } from '@micdrop/react'
 
 function CallStatus() {
   const state = useMicdropState()
-  
+
   return (
     <div className="call-status">
       <div className="status-row">
         <span>Started:</span>
         <span>{state.isStarted ? '✅' : '❌'}</span>
       </div>
-      
+
       <div className="status-row">
         <span>Listening:</span>
         <span>{state.isListening ? '🎤' : '🔇'}</span>
       </div>
-      
+
       <div className="status-row">
         <span>Processing:</span>
         <span>{state.isProcessing ? '🤔' : '⏳'}</span>
       </div>
-      
+
       <div className="status-row">
         <span>Assistant Speaking:</span>
         <span>{state.isAssistantSpeaking ? '🔊' : '🔇'}</span>
@@ -93,7 +89,7 @@ function VoiceApp() {
         toast.error(`Error: ${error.message}`)
     }
   })
-  
+
   return <div>Your voice app content...</div>
 }
 ```
@@ -108,17 +104,14 @@ import { useRouter } from 'next/router'
 
 function CallContainer() {
   const router = useRouter()
-  
+
   useMicdropEndCall(() => {
     console.log('Call ended by assistant')
-    
+
     // Navigate to end screen
     router.push('/call-ended')
-    
-    // Or show feedback form
-    showFeedbackModal()
   })
-  
+
   return <div>Call in progress...</div>
 }
 ```
@@ -132,23 +125,20 @@ import { useMicVolume } from '@micdrop/react'
 
 function MicVolumeIndicator() {
   const { micVolume, maxMicVolume } = useMicVolume()
-  
+
   // Convert dB to 0-100 range
   const normalizedVolume = Math.max(0, micVolume + 100)
   const normalizedMax = Math.max(0, maxMicVolume + 100)
-  
+
   return (
     <div className="volume-indicator">
       <div className="volume-label">Microphone</div>
       <div className="volume-bar">
-        <div 
+        <div
           className="volume-fill"
           style={{ width: `${normalizedVolume}%` }}
         />
-        <div 
-          className="volume-max"
-          style={{ left: `${normalizedMax}%` }}
-        />
+        <div className="volume-max" style={{ left: `${normalizedMax}%` }} />
       </div>
       <div className="volume-value">{Math.round(normalizedVolume)}</div>
     </div>
@@ -165,15 +155,15 @@ import { useSpeakerVolume } from '@micdrop/react'
 
 function SpeakerVolumeIndicator() {
   const { speakerVolume, maxSpeakerVolume } = useSpeakerVolume()
-  
+
   const normalizedVolume = Math.max(0, speakerVolume + 100)
   const normalizedMax = Math.max(0, maxSpeakerVolume + 100)
-  
+
   return (
     <div className="volume-indicator">
       <div className="volume-label">Speaker</div>
       <div className="volume-bar">
-        <div 
+        <div
           className="volume-fill speaker"
           style={{ width: `${normalizedVolume}%` }}
         />
@@ -191,41 +181,41 @@ function SpeakerVolumeIndicator() {
 ```tsx
 import { useState } from 'react'
 import { Micdrop } from '@micdrop/client'
-import { 
-  useMicdropState, 
-  useMicdropError, 
+import {
+  useMicdropState,
+  useMicdropError,
   useMicdropEndCall,
-  useMicVolume 
+  useMicVolume,
 } from '@micdrop/react'
 
 function VoiceCallComponent() {
-  const [serverUrl] = useState('ws://localhost:8080')
+  const [serverUrl] = useState('ws://localhost:8081')
   const state = useMicdropState()
   const { micVolume } = useMicVolume()
-  
+
   useMicdropError((error) => {
     alert(`Error: ${error.message}`)
   })
-  
+
   useMicdropEndCall(() => {
     alert('Call ended by assistant')
   })
-  
+
   const startCall = async () => {
     try {
       await Micdrop.start({
         url: serverUrl,
-        vad: ['volume', 'silero']
+        vad: ['volume', 'silero'],
       })
     } catch (error) {
       console.error('Failed to start call:', error)
     }
   }
-  
+
   const stopCall = async () => {
     await Micdrop.stop()
   }
-  
+
   const togglePause = () => {
     if (state.isPaused) {
       Micdrop.resume()
@@ -233,7 +223,7 @@ function VoiceCallComponent() {
       Micdrop.pause()
     }
   }
-  
+
   const getStatusMessage = () => {
     if (state.isStarting) return 'Starting call...'
     if (state.isPaused) return '⏸️ Call paused'
@@ -243,15 +233,13 @@ function VoiceCallComponent() {
     if (state.isStarted) return '✅ Call connected'
     return 'Ready to start call'
   }
-  
+
   return (
     <div className="voice-call">
       <h2>Voice Assistant</h2>
-      
-      <div className="status">
-        {getStatusMessage()}
-      </div>
-      
+
+      <div className="status">{getStatusMessage()}</div>
+
       <div className="controls">
         {!state.isStarted ? (
           <button onClick={startCall} disabled={state.isStarting}>
@@ -262,19 +250,17 @@ function VoiceCallComponent() {
             <button onClick={togglePause}>
               {state.isPaused ? 'Resume' : 'Pause'}
             </button>
-            <button onClick={stopCall}>
-              Stop Call
-            </button>
+            <button onClick={stopCall}>Stop Call</button>
           </>
         )}
       </div>
-      
+
       {state.isMicStarted && (
         <div className="volume">
           Mic Volume: {Math.max(0, micVolume + 100).toFixed(0)}
         </div>
       )}
-      
+
       {state.conversation.length > 0 && (
         <div className="conversation">
           <h3>Conversation:</h3>
@@ -299,32 +285,32 @@ import { Micdrop } from '@micdrop/client'
 
 function DeviceSettings() {
   const state = useMicdropState()
-  
+
   return (
     <div className="device-settings">
       <div className="device-group">
         <label htmlFor="mic-select">Microphone:</label>
-        <select 
+        <select
           id="mic-select"
           value={state.micDeviceId || ''}
           onChange={(e) => Micdrop.changeMicDevice(e.target.value)}
         >
-          {state.micDevices.map(device => (
+          {state.micDevices.map((device) => (
             <option key={device.deviceId} value={device.deviceId}>
               {device.label || 'Unknown Device'}
             </option>
           ))}
         </select>
       </div>
-      
+
       <div className="device-group">
         <label htmlFor="speaker-select">Speaker:</label>
-        <select 
+        <select
           id="speaker-select"
           value={state.speakerDeviceId || ''}
           onChange={(e) => Micdrop.changeSpeakerDevice(e.target.value)}
         >
-          {state.speakerDevices.map(device => (
+          {state.speakerDevices.map((device) => (
             <option key={device.deviceId} value={device.deviceId}>
               {device.label || 'Unknown Device'}
             </option>
@@ -343,35 +329,46 @@ import { useMicdropState } from '@micdrop/react'
 
 function CallStatusIndicator() {
   const state = useMicdropState()
-  
-  const getStatusClass = () => {
-    if (state.error) return 'status-error'
-    if (state.isListening) return 'status-listening'
-    if (state.isProcessing) return 'status-processing'
-    if (state.isAssistantSpeaking) return 'status-speaking'
-    if (state.isStarted) return 'status-connected'
-    return 'status-disconnected'
+
+  const getStatus = () => {
+    if (state.error) {
+      return { icon: '❌', className: 'status-error', text: 'Error' }
+    }
+    if (state.isPaused) {
+      return { icon: '⏸️', className: 'status-paused', text: 'Paused' }
+    }
+    if (state.isUserSpeaking) {
+      return {
+        icon: '🗣️',
+        className: 'status-user-speaking',
+        text: 'User Speaking',
+      }
+    }
+    if (state.isListening) {
+      return { icon: '🎤', className: 'status-listening', text: 'Listening' }
+    }
+    if (state.isProcessing) {
+      return { icon: '🤔', className: 'status-processing', text: 'Processing' }
+    }
+    if (state.isAssistantSpeaking) {
+      return { icon: '🔊', className: 'status-speaking', text: 'Speaking' }
+    }
+    if (state.isStarted) {
+      return { icon: '✅', className: 'status-connected', text: 'Connected' }
+    }
+    return {
+      icon: '⭕',
+      className: 'status-disconnected',
+      text: 'Disconnected',
+    }
   }
-  
-  const getStatusIcon = () => {
-    if (state.error) return '❌'
-    if (state.isListening) return '🎤'
-    if (state.isProcessing) return '🤔'
-    if (state.isAssistantSpeaking) return '🔊'
-    if (state.isStarted) return '✅'
-    return '⭕'
-  }
-  
+
+  const status = getStatus()
+
   return (
-    <div className={`status-indicator ${getStatusClass()}`}>
-      <span className="status-icon">{getStatusIcon()}</span>
-      <span className="status-text">
-        {state.error ? 'Error' :
-         state.isListening ? 'Listening' :
-         state.isProcessing ? 'Processing' :
-         state.isAssistantSpeaking ? 'Speaking' :
-         state.isStarted ? 'Connected' : 'Disconnected'}
-      </span>
+    <div className={`status-indicator ${status.className}`}>
+      <span className="status-icon">{status.icon}</span>
+      <span className="status-text">{status.text}</span>
     </div>
   )
 }
@@ -391,74 +388,46 @@ import { useEffect, useState } from 'react'
 function useCallDuration() {
   const state = useMicdropState()
   const [duration, setDuration] = useState(0)
-  
+
   useEffect(() => {
     if (!state.isStarted) {
       setDuration(0)
       return
     }
-    
+
     const interval = setInterval(() => {
-      setDuration(d => d + 1)
+      setDuration((d) => d + 1)
     }, 1000)
-    
+
     return () => clearInterval(interval)
   }, [state.isStarted])
-  
+
   return duration
 }
 
 // Custom hook for conversation stats
 function useConversationStats() {
   const state = useMicdropState()
-  
+
   const stats = useMemo(() => {
-    const userMessages = state.conversation.filter(m => m.role === 'user')
-    const assistantMessages = state.conversation.filter(m => m.role === 'assistant')
-    
+    const userMessages = state.conversation.filter((m) => m.role === 'user')
+    const assistantMessages = state.conversation.filter(
+      (m) => m.role === 'assistant'
+    )
+
     return {
       totalMessages: state.conversation.length,
       userMessages: userMessages.length,
       assistantMessages: assistantMessages.length,
-      averageUserLength: userMessages.reduce((sum, m) => sum + m.content.length, 0) / userMessages.length || 0,
-      averageAssistantLength: assistantMessages.reduce((sum, m) => sum + m.content.length, 0) / assistantMessages.length || 0
+      averageUserLength:
+        userMessages.reduce((sum, m) => sum + m.content.length, 0) /
+          userMessages.length || 0,
+      averageAssistantLength:
+        assistantMessages.reduce((sum, m) => sum + m.content.length, 0) /
+          assistantMessages.length || 0,
     }
   }, [state.conversation])
-  
+
   return stats
 }
 ```
-
-## TypeScript Integration
-
-Full TypeScript support with proper types:
-
-```tsx
-import { Micdrop, MicdropState, MicdropClientError } from '@micdrop/client'
-import { useMicdropState, useMicdropError } from '@micdrop/react'
-
-interface VoiceAppProps {
-  serverUrl: string
-  onCallEnd?: () => void
-}
-
-function VoiceApp({ serverUrl, onCallEnd }: VoiceAppProps) {
-  const state: MicdropState = useMicdropState()
-  
-  useMicdropError((error: MicdropClientError) => {
-    console.error(`Error ${error.code}:`, error.message)
-  })
-  
-  return (
-    <div>
-      Status: {state.isStarted ? 'Connected' : 'Disconnected'}
-    </div>
-  )
-}
-```
-
-## Next Steps
-
-- [**Utility Classes**](./utility-classes) - Direct access to underlying Micdrop classes
-- [**Client Examples**](../../examples) - Complete React application examples
-- [**Error Handling**](./error-handling) - Advanced error management patterns

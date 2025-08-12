@@ -26,7 +26,7 @@ await Micdrop.changeSpeakerDevice('speaker-device-id')
 // Access microphone devices
 const micDevices = Micdrop.micDevices
 
-micDevices.forEach(device => {
+micDevices.forEach((device) => {
   console.log('Mic:', device.label || 'Unknown Device')
   console.log('ID:', device.deviceId)
   console.log('Group:', device.groupId)
@@ -39,10 +39,10 @@ console.log('Current mic:', Micdrop.micDeviceId)
 ### Get Available Speakers
 
 ```typescript
-// Access speaker devices  
+// Access speaker devices
 const speakerDevices = Micdrop.speakerDevices
 
-speakerDevices.forEach(device => {
+speakerDevices.forEach((device) => {
   console.log('Speaker:', device.label || 'Unknown Device')
   console.log('ID:', device.deviceId)
   console.log('Group:', device.groupId)
@@ -71,7 +71,7 @@ console.log('Microphone changed to:', newMicId)
 Switch to a different speaker/headphone device:
 
 ```typescript
-// Change speaker by device ID  
+// Change speaker by device ID
 const newSpeakerId = Micdrop.speakerDevices[1].deviceId
 await Micdrop.changeSpeakerDevice(newSpeakerId)
 
@@ -89,30 +89,30 @@ Create device selection interface:
 function createDeviceSelector() {
   const micSelect = document.getElementById('micSelect')
   const speakerSelect = document.getElementById('speakerSelect')
-  
+
   // Populate microphone options
-  Micdrop.micDevices.forEach(device => {
+  Micdrop.micDevices.forEach((device) => {
     const option = document.createElement('option')
     option.value = device.deviceId
     option.textContent = device.label || 'Unknown Microphone'
     option.selected = device.deviceId === Micdrop.micDeviceId
     micSelect.appendChild(option)
   })
-  
+
   // Populate speaker options
-  Micdrop.speakerDevices.forEach(device => {
+  Micdrop.speakerDevices.forEach((device) => {
     const option = document.createElement('option')
-    option.value = device.deviceId  
+    option.value = device.deviceId
     option.textContent = device.label || 'Unknown Speaker'
     option.selected = device.deviceId === Micdrop.speakerDeviceId
     speakerSelect.appendChild(option)
   })
-  
+
   // Handle changes
   micSelect.addEventListener('change', async (e) => {
     await Micdrop.changeMicDevice(e.target.value)
   })
-  
+
   speakerSelect.addEventListener('change', async (e) => {
     await Micdrop.changeSpeakerDevice(e.target.value)
   })
@@ -129,7 +129,7 @@ import { useMicdropState } from '@micdrop/react'
 function DeviceSettings() {
   const state = useMicdropState()
   const [changing, setChanging] = useState(false)
-  
+
   const changeMic = async (deviceId: string) => {
     setChanging(true)
     try {
@@ -138,7 +138,7 @@ function DeviceSettings() {
       setChanging(false)
     }
   }
-  
+
   const changeSpeaker = async (deviceId: string) => {
     setChanging(true)
     try {
@@ -147,32 +147,32 @@ function DeviceSettings() {
       setChanging(false)
     }
   }
-  
+
   return (
     <div className="device-settings">
       <div className="device-group">
         <label>Microphone:</label>
-        <select 
-          value={state.micDeviceId || ''} 
+        <select
+          value={state.micDeviceId || ''}
           onChange={(e) => changeMic(e.target.value)}
           disabled={changing}
         >
-          {state.micDevices.map(device => (
+          {state.micDevices.map((device) => (
             <option key={device.deviceId} value={device.deviceId}>
               {device.label || 'Unknown Microphone'}
             </option>
           ))}
         </select>
       </div>
-      
+
       <div className="device-group">
         <label>Speaker:</label>
-        <select 
-          value={state.speakerDeviceId || ''} 
+        <select
+          value={state.speakerDeviceId || ''}
           onChange={(e) => changeSpeaker(e.target.value)}
           disabled={changing}
         >
-          {state.speakerDevices.map(device => (
+          {state.speakerDevices.map((device) => (
             <option key={device.deviceId} value={device.deviceId}>
               {device.label || 'Unknown Speaker'}
             </option>
@@ -197,21 +197,21 @@ function testMicrophone() {
     console.log('Please start microphone first')
     return
   }
-  
+
   // Listen for volume changes
   const volumeListener = (volume) => {
     const normalizedVolume = Math.max(0, volume + 100)
     console.log('Mic volume:', normalizedVolume)
-    
+
     if (normalizedVolume > 10) {
       console.log('✅ Microphone is working!')
       // Stop listening after successful test
       Micdrop.micRecorder.analyser.off('volume', volumeListener)
     }
   }
-  
+
   Micdrop.micRecorder.analyser.on('volume', volumeListener)
-  
+
   // Stop test after 5 seconds
   setTimeout(() => {
     Micdrop.micRecorder.analyser.off('volume', volumeListener)
@@ -232,14 +232,14 @@ async function testSpeaker() {
     const audioContext = new AudioContext()
     const oscillator = audioContext.createOscillator()
     const gainNode = audioContext.createGain()
-    
+
     oscillator.connect(gainNode)
     gainNode.connect(audioContext.destination)
-    
+
     // Configure test tone
     oscillator.frequency.value = 440 // A note
     gainNode.gain.value = 0.1 // Low volume
-    
+
     // Play for 1 second
     oscillator.start()
     setTimeout(() => {
@@ -247,9 +247,8 @@ async function testSpeaker() {
       audioContext.close()
       console.log('✅ Speaker test completed')
     }, 1000)
-    
+
     console.log('🔊 Playing test tone...')
-    
   } catch (error) {
     console.error('Speaker test failed:', error)
   }
@@ -266,10 +265,10 @@ Detect when devices are added/removed:
 // Listen for device changes
 navigator.mediaDevices.addEventListener('devicechange', async () => {
   console.log('Devices changed, refreshing list...')
-  
+
   // Refresh device list
   await navigator.mediaDevices.enumerateDevices()
-  
+
   // Update UI if needed
   updateDeviceSelectors()
 })
@@ -277,16 +276,20 @@ navigator.mediaDevices.addEventListener('devicechange', async () => {
 // Monitor state changes for device updates
 Micdrop.on('StateChange', (state) => {
   // Check if selected devices are still available
-  const currentMic = state.micDevices.find(d => d.deviceId === state.micDeviceId)
-  const currentSpeaker = state.speakerDevices.find(d => d.deviceId === state.speakerDeviceId)
-  
+  const currentMic = state.micDevices.find(
+    (d) => d.deviceId === state.micDeviceId
+  )
+  const currentSpeaker = state.speakerDevices.find(
+    (d) => d.deviceId === state.speakerDeviceId
+  )
+
   if (!currentMic) {
     console.warn('Selected microphone no longer available')
     showDeviceWarning('microphone')
   }
-  
+
   if (!currentSpeaker) {
-    console.warn('Selected speaker no longer available')  
+    console.warn('Selected speaker no longer available')
     showDeviceWarning('speaker')
   }
 })
@@ -302,15 +305,15 @@ Ensure proper device access:
 // Request microphone permission
 async function requestMicPermission() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-      audio: true 
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
     })
-    
+
     console.log('✅ Microphone permission granted')
-    
+
     // Stop the test stream
-    stream.getTracks().forEach(track => track.stop())
-    
+    stream.getTracks().forEach((track) => track.stop())
+
     return true
   } catch (error) {
     console.error('❌ Microphone permission denied:', error)
@@ -323,11 +326,11 @@ async function checkPermissions() {
   try {
     const result = await navigator.permissions.query({ name: 'microphone' })
     console.log('Microphone permission:', result.state)
-    
+
     result.addEventListener('change', () => {
       console.log('Permission changed:', result.state)
     })
-    
+
     return result.state === 'granted'
   } catch (error) {
     console.log('Permissions API not supported')
@@ -347,7 +350,7 @@ await Micdrop.changeSpeakerDevice('preferred-speaker-id')
 
 // On next session, preferences are restored
 await Micdrop.start({
-  url: 'ws://localhost:8080'
+  url: 'ws://localhost:8081',
 }) // Will use saved device preferences
 ```
 
@@ -364,12 +367,11 @@ async function safeChangeDevice(deviceId, type) {
     } else {
       await Micdrop.changeSpeakerDevice(deviceId)
     }
-    
+
     console.log(`✅ ${type} changed successfully`)
-    
   } catch (error) {
     console.error(`❌ Failed to change ${type}:`, error.message)
-    
+
     if (error.name === 'NotFoundError') {
       showError('Device not found. Please check connections.')
     } else if (error.name === 'NotAllowedError') {
@@ -390,18 +392,22 @@ async function safeChangeDevice(deviceId, type) {
 function selectOptimalDevices() {
   const micDevices = Micdrop.micDevices
   const speakerDevices = Micdrop.speakerDevices
-  
+
   // Prefer non-default devices (often better quality)
-  const preferredMic = micDevices.find(d => 
-    !d.label.toLowerCase().includes('default') &&
-    !d.label.toLowerCase().includes('communications')
-  ) || micDevices[0]
-  
-  const preferredSpeaker = speakerDevices.find(d => 
-    !d.label.toLowerCase().includes('default') &&
-    !d.label.toLowerCase().includes('communications')
-  ) || speakerDevices[0]
-  
+  const preferredMic =
+    micDevices.find(
+      (d) =>
+        !d.label.toLowerCase().includes('default') &&
+        !d.label.toLowerCase().includes('communications')
+    ) || micDevices[0]
+
+  const preferredSpeaker =
+    speakerDevices.find(
+      (d) =>
+        !d.label.toLowerCase().includes('default') &&
+        !d.label.toLowerCase().includes('communications')
+    ) || speakerDevices[0]
+
   return { preferredMic, preferredSpeaker }
 }
 ```
@@ -414,19 +420,19 @@ function formatDeviceLabel(device) {
   if (!device.label) {
     return `${device.kind} (${device.deviceId.slice(0, 8)}...)`
   }
-  
+
   // Remove common prefixes/suffixes
   let label = device.label
     .replace(/^Default - /, '')
     .replace(/ - Default$/, '')
     .replace(/\s*\([^)]*\)$/, '') // Remove parenthetical info
-  
+
   return label
 }
 ```
 
 ## Next Steps
 
-- [**Error Handling**](./error-handling) - Handle device-related errors  
+- [**Error Handling**](./error-handling) - Handle device-related errors
 - [**React Hooks**](./react-hooks) - Device management in React apps
 - [**Utility Classes**](./utility-classes) - Direct access to Mic and Speaker APIs

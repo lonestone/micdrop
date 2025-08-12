@@ -77,14 +77,6 @@ const config: Config = {
               label: 'Getting Started',
               to: '/docs/getting-started',
             },
-            {
-              label: 'Packages',
-              to: '/docs/packages',
-            },
-            {
-              label: 'Examples',
-              to: '/docs/examples',
-            },
           ],
         },
         {
@@ -92,15 +84,15 @@ const config: Config = {
           items: [
             {
               label: 'Client',
-              to: '/docs/packages/client',
+              to: '/docs/client',
             },
             {
               label: 'Server',
-              to: '/docs/packages/server',
+              to: '/docs/server',
             },
             {
               label: 'React Hooks',
-              to: '/docs/packages/react',
+              to: '/docs/react-hooks',
             },
           ],
         },
@@ -109,19 +101,23 @@ const config: Config = {
           items: [
             {
               label: 'OpenAI',
-              to: '/docs/packages/openai',
+              to: '/docs/ai-integration/provided-integrations/openai',
             },
             {
               label: 'ElevenLabs',
-              to: '/docs/packages/elevenlabs',
+              to: '/docs/ai-integration/provided-integrations/elevenlabs',
+            },
+            {
+              label: 'Gladia',
+              to: '/docs/ai-integration/provided-integrations/gladia',
             },
             {
               label: 'Cartesia',
-              to: '/docs/packages/cartesia',
+              to: '/docs/ai-integration/provided-integrations/cartesia',
             },
             {
               label: 'Mistral',
-              to: '/docs/packages/mistral',
+              to: '/docs/ai-integration/provided-integrations/mistral',
             },
           ],
         },

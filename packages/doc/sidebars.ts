@@ -1,30 +1,24 @@
-import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
+import type { SidebarsConfig } from '@docusaurus/plugin-content-docs'
 
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
-    'intro',
-    {
-      type: 'category',
-      label: 'Getting Started',
-      items: [
-        'getting-started/index',
-        'getting-started/installation',
-        'getting-started/quick-start',
-      ],
-    },
+    'getting-started',
     {
       type: 'category',
       label: 'Client (Browser)',
+      link: {
+        type: 'doc',
+        id: 'client/index',
+      },
       items: [
-        'client/index',
         'client/installation',
+        'client/react-hooks',
         'client/start-call',
         'client/pause-resume-call',
         'client/stop-call',
         'client/vad',
         'client/devices-management',
         'client/error-handling',
-        'client/react-hooks',
         {
           type: 'category',
           label: 'Utility Classes',
@@ -41,8 +35,11 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Server (Node.js)',
+      link: {
+        type: 'doc',
+        id: 'server/index',
+      },
       items: [
-        'server/index',
         'server/installation',
         'server/with-fastify',
         'server/with-nestjs',
@@ -54,9 +51,12 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'AI Integration',
+      label: 'AI Integrations',
+      link: {
+        type: 'doc',
+        id: 'ai-integration/index',
+      },
       items: [
-        'ai-integration/index',
         {
           type: 'category',
           label: 'Provided Integrations',
@@ -80,6 +80,6 @@ const sidebars: SidebarsConfig = {
       ],
     },
   ],
-};
+}
 
-export default sidebars;
+export default sidebars

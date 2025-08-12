@@ -3,15 +3,15 @@ import { CustomCodeBlock } from './CustomCodeBlock'
 
 function getTabStyle(active: boolean) {
   return active
-    ? 'tab-active bg-ai-surface-100 dark:bg-ai-surface-950 text-ai-primary-800 dark:text-ai-primary-200'
-    : 'tab-inactive bg-ai-surface-50 dark:bg-ai-surface-800 text-ai-surface-700 dark:text-ai-surface-400'
+    ? 'tab-active text-ai-primary-800 dark:text-ai-primary-200 bg-ai-surface-50 dark:bg-ai-surface-800'
+    : 'tab-inactive text-ai-surface-700 dark:text-ai-surface-400 bg-ai-surface-200 dark:bg-ai-surface-700'
 }
 
 export function HomepageCodeBlock() {
   const [activeTab, setActiveTab] = useState('client')
 
   return (
-    <div className="bg-ai-surface-100 dark:bg-ai-surface-950 light:bg-ai-surface-100 rounded-xl animate-fade-in h-full flex flex-col glow-shadow">
+    <div className="bg-ai-surface-50 dark:bg-ai-surface-800 light:bg-ai-surface-100 rounded-xl animate-fade-in h-full flex flex-col glow-shadow">
       {/* Top Tabs */}
       <div className="flex">
         <button
@@ -45,8 +45,8 @@ export function HomepageCodeBlock() {
               code={`import { Micdrop } from '@micdrop/client'
 
 // Start a voice conversation
-await Micdrop.start({
-  url: 'wss://your-server.com/call'
+Micdrop.start({
+  url: 'wss://your-server.com/'
 })
 
 // Listen for events
@@ -79,30 +79,26 @@ import { GladiaSTT } from '@micdrop/gladia'
 import { ElevenLabsTTS } from '@micdrop/elevenlabs'
 import { WebSocketServer } from 'ws'
 
-const wss = new WebSocketServer({ port: 8080 })
+const wss = new WebSocketServer({ port: 443 })
 
 wss.on('connection', (socket) => {
-  // Setup AI components
-  const agent = new OpenaiAgent({
-    apiKey: process.env.OPENAI_API_KEY,
-    systemPrompt: 'You are a helpful assistant'
-  })
-
-  const stt = new GladiaSTT({
-    apiKey: process.env.GLADIA_API_KEY
-  })
-
-  const tts = new ElevenLabsTTS({
-    apiKey: process.env.ELEVENLABS_API_KEY,
-    voiceId: process.env.ELEVENLABS_VOICE_ID
-  })
-
   // Handle voice conversation
   new MicdropServer(socket, {
-    firstMessage: 'Hello! How can I help you today?',
-    agent,
-    stt,
-    tts,
+    firstMessage: 'How can I help you today?',
+
+    agent: new OpenaiAgent({
+      apiKey: process.env.OPENAI_API_KEY,
+      systemPrompt: 'You are a helpful assistant'
+    }),
+
+    stt: new GladiaSTT({
+      apiKey: process.env.GLADIA_API_KEY
+    }),
+
+    tts: new ElevenLabsTTS({
+      apiKey: process.env.ELEVENLABS_API_KEY,
+      voiceId: process.env.ELEVENLABS_VOICE_ID
+    })
   })
 })`}
             />

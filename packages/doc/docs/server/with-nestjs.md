@@ -38,21 +38,20 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Setup AI components
       const agent = new OpenaiAgent({
         apiKey: process.env.OPENAI_API_KEY || '',
-        systemPrompt: 'You are a helpful voice assistant built with NestJS'
+        systemPrompt: 'You are a helpful voice assistant built with NestJS',
       })
 
       const tts = new ElevenLabsTTS({
         apiKey: process.env.ELEVENLABS_API_KEY || '',
-        voiceId: process.env.ELEVENLABS_VOICE_ID || ''
+        voiceId: process.env.ELEVENLABS_VOICE_ID || '',
       })
 
       // Handle voice conversation
       new MicdropServer(client, {
         firstMessage: 'Hello from NestJS! How can I help you today?',
         agent,
-        tts
+        tts,
       })
-
     } catch (error) {
       this.logger.error('Failed to setup voice conversation:', error)
       client.close(1011, 'Server error')
@@ -94,20 +93,23 @@ export class VoiceService {
       // Setup STT
       const stt = new GladiaSTT({
         apiKey: this.configService.get<string>('GLADIA_API_KEY') || '',
-        language: config.language || 'en'
+        language: config.language || 'en',
       })
 
       // Setup AI Agent
       const agent = new OpenaiAgent({
         apiKey: this.configService.get<string>('OPENAI_API_KEY') || '',
         model: config.model || 'gpt-4-turbo-preview',
-        systemPrompt: this.getSystemPrompt(config.language)
+        systemPrompt: this.getSystemPrompt(config.language),
       })
 
       // Setup TTS
       const tts = new ElevenLabsTTS({
         apiKey: this.configService.get<string>('ELEVENLABS_API_KEY') || '',
-        voiceId: config.voiceId || this.configService.get<string>('ELEVENLABS_VOICE_ID') || ''
+        voiceId:
+          config.voiceId ||
+          this.configService.get<string>('ELEVENLABS_VOICE_ID') ||
+          '',
       })
 
       // Create voice handler
@@ -115,7 +117,7 @@ export class VoiceService {
         firstMessage: this.getWelcomeMessage(config.language),
         agent,
         stt,
-        tts
+        tts,
       })
 
       // Log messages for analytics
@@ -124,10 +126,12 @@ export class VoiceService {
       })
 
       return micdropServer
-
     } catch (error) {
       this.logger.error('Failed to create voice handler:', error)
-      throw new MicdropError(MicdropErrorCode.InternalServer, 'Voice setup failed')
+      throw new MicdropError(
+        MicdropErrorCode.InternalServer,
+        'Voice setup failed'
+      )
     }
   }
 
@@ -135,7 +139,7 @@ export class VoiceService {
     const prompts = {
       en: 'You are a helpful voice assistant. Keep responses concise and conversational.',
       fr: 'Tu es un assistant vocal utile. Garde les réponses concises et conversationnelles.',
-      es: 'Eres un asistente de voz útil. Mantén las respuestas concisas y conversacionales.'
+      es: 'Eres un asistente de voz útil. Mantén las respuestas concisas y conversacionales.',
     }
     return prompts[language] || prompts.en
   }
@@ -143,19 +147,22 @@ export class VoiceService {
   private getWelcomeMessage(language = 'en'): string {
     const messages = {
       en: 'Hello! How can I help you today?',
-      fr: 'Bonjour ! Comment puis-je vous aider aujourd\'hui ?',
-      es: '¡Hola! ¿Cómo puedo ayudarte hoy?'
+      fr: "Bonjour ! Comment puis-je vous aider aujourd'hui ?",
+      es: '¡Hola! ¿Cómo puedo ayudarte hoy?',
     }
     return messages[language] || messages.en
   }
 
   private logConversationMessage(userId: string | undefined, message: any) {
-    this.logger.log({
-      userId,
-      role: message.role,
-      contentLength: message.content.length,
-      timestamp: new Date().toISOString()
-    }, 'Conversation message')
+    this.logger.log(
+      {
+        userId,
+        role: message.role,
+        contentLength: message.content.length,
+        timestamp: new Date().toISOString(),
+      },
+      'Conversation message'
+    )
   }
 }
 ```
@@ -169,14 +176,16 @@ import { ConfigService } from '@nestjs/config'
 export class AuthService {
   constructor(private configService: ConfigService) {}
 
-  async validateToken(token: string): Promise<{ userId: string; language?: string }> {
+  async validateToken(
+    token: string
+  ): Promise<{ userId: string; language?: string }> {
     // Implement your JWT validation logic
     if (!token || !token.startsWith('Bearer ')) {
       throw new UnauthorizedException('Invalid token format')
     }
 
     const jwt = token.replace('Bearer ', '')
-    
+
     // Mock validation - replace with your JWT verification
     if (jwt === this.configService.get<string>('AUTH_TOKEN')) {
       return { userId: 'test-user', language: 'en' }
@@ -205,7 +214,7 @@ import { z } from 'zod'
 const callParamsSchema = z.object({
   authorization: z.string(),
   language: z.string().optional(),
-  voiceId: z.string().optional()
+  voiceId: z.string().optional(),
 })
 
 @WebSocketGateway({ path: '/call' })
@@ -237,14 +246,13 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const config: VoiceCallConfig = {
         userId: user.userId,
         language: params.language || user.language,
-        voiceId: params.voiceId
+        voiceId: params.voiceId,
       }
 
       // Create voice handler
       await this.voiceService.createVoiceHandler(client, config)
 
       this.logger.log(`Voice conversation started for user ${user.userId}`)
-
     } catch (error) {
       this.logger.error('Voice connection failed:', error.message)
       client.close(1008, error.message)
@@ -270,7 +278,7 @@ import { AuthService } from './auth.service'
 @Module({
   imports: [ConfigModule],
   providers: [VoiceGateway, VoiceService, AuthService],
-  exports: [VoiceService]
+  exports: [VoiceService],
 })
 export class VoiceModule {}
 ```
@@ -285,10 +293,10 @@ import { VoiceModule } from './voice/voice.module'
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env'
+      envFilePath: '.env',
     }),
-    VoiceModule
-  ]
+    VoiceModule,
+  ],
 })
 export class AppModule {}
 ```
@@ -300,12 +308,18 @@ export class AppModule {}
 import { SetMetadata } from '@nestjs/common'
 
 export const VOICE_CONFIG_KEY = 'voice_config'
-export const VoiceConfig = (config: any) => SetMetadata(VOICE_CONFIG_KEY, config)
+export const VoiceConfig = (config: any) =>
+  SetMetadata(VOICE_CONFIG_KEY, config)
 ```
 
 ```typescript
 // guards/voice-auth.guard.ts
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common'
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common'
 import { AuthService } from '../auth.service'
 
 @Injectable()
@@ -345,14 +359,14 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @VoiceConfig({
     systemPrompt: 'You are a customer service assistant',
-    firstMessage: 'Hello! How can I help you with your account?'
+    firstMessage: 'Hello! How can I help you with your account?',
   })
   async handleConnection(client: any, request: any) {
     const user = client.user // Set by VoiceAuthGuard
-    
+
     await this.voiceService.createVoiceHandler(client, {
       userId: user.userId,
-      language: user.language
+      language: user.language,
     })
 
     this.logger.log(`Voice conversation started for user ${user.userId}`)
@@ -371,7 +385,8 @@ export class CustomerSupportGateway implements OnGatewayConnection {
   async handleConnection(client: any) {
     await this.voiceService.createVoiceHandler(client, {
       model: 'gpt-4-turbo-preview',
-      systemPrompt: 'You are a customer support specialist. Be patient and thorough.'
+      systemPrompt:
+        'You are a customer support specialist. Be patient and thorough.',
     })
   }
 }
@@ -384,7 +399,8 @@ export class SalesGateway implements OnGatewayConnection {
   async handleConnection(client: any) {
     await this.voiceService.createVoiceHandler(client, {
       model: 'gpt-4-turbo-preview',
-      systemPrompt: 'You are a friendly sales assistant. Help customers find products.'
+      systemPrompt:
+        'You are a friendly sales assistant. Help customers find products.',
     })
   }
 }
@@ -395,7 +411,11 @@ export class SalesGateway implements OnGatewayConnection {
 ```typescript
 // health/voice.health.ts
 import { Injectable } from '@nestjs/common'
-import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus'
+import {
+  HealthIndicator,
+  HealthIndicatorResult,
+  HealthCheckError,
+} from '@nestjs/terminus'
 import { ConfigService } from '@nestjs/config'
 
 @Injectable()
@@ -408,17 +428,17 @@ export class VoiceHealthIndicator extends HealthIndicator {
     const requiredEnvVars = [
       'OPENAI_API_KEY',
       'ELEVENLABS_API_KEY',
-      'ELEVENLABS_VOICE_ID'
+      'ELEVENLABS_VOICE_ID',
     ]
 
     const missingVars = requiredEnvVars.filter(
-      varName => !this.configService.get(varName)
+      (varName) => !this.configService.get(varName)
     )
 
     const isHealthy = missingVars.length === 0
 
     const result = this.getStatus(key, isHealthy, {
-      missingEnvVars: missingVars
+      missingEnvVars: missingVars,
     })
 
     if (isHealthy) {
@@ -446,7 +466,7 @@ export class HealthController {
   @HealthCheck()
   check() {
     return this.health.check([
-      () => this.voiceHealthIndicator.isHealthy('voice')
+      () => this.voiceHealthIndicator.isHealthy('voice'),
     ])
   }
 }
@@ -463,7 +483,7 @@ import { AppModule } from './app.module'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: ['log', 'error', 'warn']
+    logger: ['log', 'error', 'warn'],
   })
 
   // Use WebSocket adapter
@@ -472,10 +492,10 @@ async function bootstrap() {
   // Enable CORS for production
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',') || true,
-    credentials: true
+    credentials: true,
   })
 
-  const port = process.env.PORT || 8080
+  const port = process.env.PORT || 8081
   await app.listen(port, '0.0.0.0')
 
   Logger.log(`🎤 NestJS + Micdrop server running on port ${port}`, 'Bootstrap')
@@ -504,22 +524,22 @@ describe('VoiceGateway', () => {
         {
           provide: VoiceService,
           useValue: {
-            createVoiceHandler: jest.fn()
-          }
+            createVoiceHandler: jest.fn(),
+          },
         },
         {
           provide: AuthService,
           useValue: {
-            validateToken: jest.fn()
-          }
+            validateToken: jest.fn(),
+          },
         },
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn()
-          }
-        }
-      ]
+            get: jest.fn(),
+          },
+        },
+      ],
     }).compile()
 
     gateway = module.get<VoiceGateway>(VoiceGateway)

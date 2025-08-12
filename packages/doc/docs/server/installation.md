@@ -1,6 +1,6 @@
 # Installation
 
-Set up the Micdrop server with WebSocket support for real-time voice conversations.
+Set up Micdrop server with WebSocket support for real-time voice conversations.
 
 ## Package Installation
 
@@ -26,11 +26,11 @@ import { OpenaiAgent } from '@micdrop/openai'
 import { ElevenLabsTTS } from '@micdrop/elevenlabs'
 import { WebSocketServer } from 'ws'
 
-const wss = new WebSocketServer({ port: 8080 })
+const wss = new WebSocketServer({ port: 8081 })
 
 wss.on('connection', (socket) => {
   console.log('New client connected')
-  
+
   // Setup AI components
   const agent = new OpenaiAgent({
     apiKey: process.env.OPENAI_API_KEY || '',
@@ -50,7 +50,7 @@ wss.on('connection', (socket) => {
   })
 })
 
-console.log('🎤 Micdrop server running on ws://localhost:8080')
+console.log('🎤 Micdrop server running on ws://localhost:8081')
 ```
 
 ### 3. Environment Setup
@@ -96,7 +96,7 @@ import { ElevenLabsTTS } from '@micdrop/elevenlabs'
 import { GladiaSTT } from '@micdrop/gladia'
 import { WebSocketServer } from 'ws'
 
-const wss = new WebSocketServer({ port: 8080 })
+const wss = new WebSocketServer({ port: 8081 })
 
 wss.on('connection', (socket, request) => {
   const clientIP = request.socket.remoteAddress
@@ -129,7 +129,8 @@ wss.on('connection', (socket, request) => {
 
     // Create conversation handler
     const micdropServer = new MicdropServer(socket, {
-      firstMessage: 'Hello! I\'m your voice assistant. How can I help you today?',
+      firstMessage:
+        "Hello! I'm your voice assistant. How can I help you today?",
       agent,
       stt,
       tts,
@@ -141,7 +142,6 @@ wss.on('connection', (socket, request) => {
       console.log('Conversation message:', message)
       // Save to database, log, etc.
     })
-
   } catch (error) {
     console.error('Error setting up client connection:', error)
     socket.close(1011, 'Server error during setup')
@@ -162,7 +162,7 @@ process.on('SIGINT', () => {
   })
 })
 
-console.log('🎤 Micdrop server running on ws://localhost:8080')
+console.log('🎤 Micdrop server running on ws://localhost:8081')
 ```
 
 ## Directory Structure
@@ -191,21 +191,21 @@ my-voice-server/
 // src/config/env.ts
 export const config = {
   server: {
-    port: parseInt(process.env.PORT || '8080'),
+    port: parseInt(process.env.PORT || '8081'),
     host: process.env.HOST || 'localhost',
   },
-  
+
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
     model: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
   },
-  
+
   elevenlabs: {
     apiKey: process.env.ELEVENLABS_API_KEY || '',
     voiceId: process.env.ELEVENLABS_VOICE_ID || '',
     model: process.env.ELEVENLABS_MODEL || 'eleven_turbo_v2',
   },
-  
+
   gladia: {
     apiKey: process.env.GLADIA_API_KEY || '',
     language: process.env.GLADIA_LANGUAGE || 'en',
@@ -215,8 +215,8 @@ export const config = {
 // Validate required environment variables
 const requiredVars = [
   'OPENAI_API_KEY',
-  'ELEVENLABS_API_KEY', 
-  'ELEVENLABS_VOICE_ID'
+  'ELEVENLABS_API_KEY',
+  'ELEVENLABS_VOICE_ID',
 ]
 
 for (const envVar of requiredVars) {
@@ -234,20 +234,20 @@ export const logger = {
   info: (message: string, ...args: any[]) => {
     console.log(`[INFO] ${new Date().toISOString()} - ${message}`, ...args)
   },
-  
+
   error: (message: string, error?: any) => {
     console.error(`[ERROR] ${new Date().toISOString()} - ${message}`, error)
   },
-  
+
   warn: (message: string, ...args: any[]) => {
     console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, ...args)
   },
-  
+
   debug: (message: string, ...args: any[]) => {
     if (process.env.NODE_ENV === 'development') {
       console.debug(`[DEBUG] ${new Date().toISOString()} - ${message}`, ...args)
     }
-  }
+  },
 }
 ```
 
@@ -312,7 +312,7 @@ RUN npm ci --only=production
 COPY dist/ ./dist/
 
 # Expose port
-EXPOSE 8080
+EXPOSE 8081
 
 # Start server
 CMD ["node", "dist/server.js"]
@@ -325,7 +325,7 @@ services:
   voice-server:
     build: .
     ports:
-      - "8080:8080"
+      - '8081:8081'
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
@@ -340,34 +340,38 @@ Test the server with a simple client:
 ```html
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>Test Micdrop Server</title>
-</head>
-<body>
+  </head>
+  <body>
     <button id="startBtn">Start Voice Chat</button>
     <div id="status">Click start to begin</div>
-    
+
     <script type="module">
-        import { Micdrop } from 'https://unpkg.com/@micdrop/client@latest/dist/index.js'
-        
-        document.getElementById('startBtn').addEventListener('click', async () => {
-            try {
-                await Micdrop.start({
-                    url: 'ws://localhost:8080',
-                    debugLog: true
-                })
-                document.getElementById('status').textContent = 'Connected! Start speaking...'
-            } catch (error) {
-                document.getElementById('status').textContent = 'Error: ' + error.message
-            }
+      import { Micdrop } from 'https://unpkg.com/@micdrop/client@latest/dist/index.js'
+
+      document
+        .getElementById('startBtn')
+        .addEventListener('click', async () => {
+          try {
+            await Micdrop.start({
+              url: 'ws://localhost:8081',
+              debugLog: true,
+            })
+            document.getElementById('status').textContent =
+              'Connected! Start speaking...'
+          } catch (error) {
+            document.getElementById('status').textContent =
+              'Error: ' + error.message
+          }
         })
     </script>
-</body>
+  </body>
 </html>
 ```
 
 ## Next Steps
 
 - **[With Fastify](./with-fastify)** - Integrate with Fastify framework
-- **[With NestJS](./with-nestjs)** - Integrate with NestJS framework  
+- **[With NestJS](./with-nestjs)** - Integrate with NestJS framework
 - **[Auth and Parameters](./auth-and-parameters)** - Add authentication and user parameters

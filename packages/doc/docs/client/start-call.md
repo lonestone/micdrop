@@ -10,7 +10,7 @@ Start a call with minimal configuration:
 import { Micdrop } from '@micdrop/client'
 
 await Micdrop.start({
-  url: 'ws://localhost:8080'
+  url: 'ws://localhost:8081',
 })
 ```
 
@@ -21,23 +21,23 @@ Configure the call with various options:
 ```typescript
 await Micdrop.start({
   // Required: WebSocket server URL
-  url: 'ws://your-server.com/ws',
-  
+  url: 'ws://localhost:8081/',
+
   // Optional: Authentication and parameters
   params: {
-    authorization: 'your-auth-token',
+    // You can put anything you want here and validate it on the server side
     language: 'en-US',
-    userId: '123'
+    userId: '123',
   },
-  
+
   // Optional: Voice Activity Detection configuration
   vad: ['volume', 'silero'],
-  
+
   // Optional: Disable interruption when assistant speaks
   disableInterruption: false,
-  
+
   // Optional: Enable debug logging
-  debugLog: true
+  debugLog: true,
 })
 ```
 
@@ -46,16 +46,14 @@ await Micdrop.start({
 You can start the microphone before the call to ensure permissions and test audio:
 
 ```typescript
-// Start microphone first (optional but recommended)
+// Start microphone first
 await Micdrop.startMic({
   vad: ['volume', 'silero'],
-  deviceId: 'specific-mic-device-id', // optional
-  record: true // optional, default: true
 })
 
-// Then start the call
+// Then start the call when you want
 await Micdrop.start({
-  url: 'ws://localhost:8080'
+  url: 'ws://localhost:8081',
 })
 ```
 
@@ -67,38 +65,16 @@ Pass authentication parameters to your server:
 
 ```typescript
 await Micdrop.start({
-  url: 'ws://localhost:8080',
+  url: 'ws://localhost:8081',
   params: {
     authorization: 'Bearer your-jwt-token',
-    userId: 'user-123',
-    sessionId: 'session-456'
-  }
+  },
 })
 ```
 
 The server receives these parameters and can validate them before accepting the connection.
 
-## Error Handling
-
-Handle connection and startup errors:
-
-```typescript
-try {
-  await Micdrop.start({
-    url: 'ws://localhost:8080'
-  })
-  console.log('Call started successfully!')
-} catch (error) {
-  console.error('Failed to start call:', error.message)
-  
-  // Handle specific error types
-  if (error.code === 'UNAUTHORIZED') {
-    // Show login dialog
-  } else if (error.code === 'MIC_PERMISSION_DENIED') {
-    // Show microphone permission help
-  }
-}
-```
+Learn more about [Auth and parameters](../server/auth-and-parameters) on the server side.
 
 ## State Monitoring
 
@@ -109,47 +85,33 @@ Micdrop.on('StateChange', (state) => {
   if (state.isStarting) {
     console.log('Starting call...')
   }
-  
+
   if (state.isStarted) {
     console.log('Call started! Ready for conversation.')
   }
-  
-  if (state.isListening) {
-    console.log('🎤 Listening for your voice...')
-  }
-})
-
-await Micdrop.start({
-  url: 'ws://localhost:8080'
 })
 ```
 
-## Advanced Configuration
+## Error Handling
 
-Customize VAD settings and behavior:
+Handle connection and startup errors:
 
 ```typescript
-await Micdrop.start({
-  url: 'ws://localhost:8080',
-  
-  // Multiple VAD algorithms for better accuracy
-  vad: ['volume', 'silero'],
-  
-  // Prevent user from interrupting assistant
-  disableInterruption: true,
-  
-  // Custom parameters sent to server
-  params: {
-    model: 'gpt-4',
-    voice: 'alloy',
-    language: navigator.language,
-    temperature: 0.7
+try {
+  await Micdrop.start({
+    url: 'ws://localhost:8081',
+  })
+  console.log('Call started successfully!')
+} catch (error) {
+  console.error('Failed to start call:', error.code, error.message)
+
+  // Handle specific error types
+  if (error.code === MicdropClientErrorCode.Unauthorized) {
+    // Show login dialog
+  } else if (error.code === MicdropClientErrorCode.Mic) {
+    // Show microphone permission help
   }
-})
+}
 ```
 
-## Next Steps
-
-- [**Pause/Resume Call**](./pause-resume-call) - Control conversation flow
-- [**Voice Activity Detection**](./vad) - Configure speech detection
-- [**Device Management**](./devices-management) - Select microphone/speaker
+Learn more about [Error Handling](./error-handling).

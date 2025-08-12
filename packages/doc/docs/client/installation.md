@@ -1,6 +1,6 @@
 # Installation
 
-Install the Micdrop client package for browser-based voice conversations.
+Install Micdrop client package for browser-based voice conversations.
 
 ## Package Installation
 
@@ -18,7 +18,7 @@ That's it! No additional configuration or dependencies needed.
 import { Micdrop } from '@micdrop/client'
 
 await Micdrop.start({
-  url: 'ws://your-server.com/ws'
+  url: 'ws://localhost:8081/',
 })
 ```
 
@@ -36,9 +36,13 @@ import { useMicdropState } from '@micdrop/react'
 
 function VoiceChat() {
   const state = useMicdropState()
-  
+  const handleStart = () => Micdrop.start({ url: 'ws://localhost:8081/' })
+  const handleStop = () => Micdrop.stop()
+
   return (
     <div>
+      <button onClick={handleStart}>Start</button>
+      <button onClick={handleStop}>Stop</button>
       {state.isListening && <p>🎤 Listening...</p>}
       {state.isProcessing && <p>🤔 Processing...</p>}
       {state.isAssistantSpeaking && <p>🔊 Assistant speaking...</p>}
@@ -47,9 +51,11 @@ function VoiceChat() {
 }
 ```
 
+Learn more about [Micdrop React hooks](./react-hooks).
+
 ### Vue.js
 
-```vue
+```html
 <template>
   <div>
     <button @click="startCall">Start Call</button>
@@ -58,20 +64,20 @@ function VoiceChat() {
 </template>
 
 <script>
-import { Micdrop } from '@micdrop/client'
+  import { Micdrop } from '@micdrop/client'
 
-export default {
-  methods: {
-    async startCall() {
-      await Micdrop.start({
-        url: 'ws://your-server.com/ws'
-      })
+  export default {
+    methods: {
+      async startCall() {
+        await Micdrop.start({
+          url: 'ws://localhost:8081/',
+        })
+      },
+      async stopCall() {
+        await Micdrop.stop()
+      },
     },
-    async stopCall() {
-      await Micdrop.stop()
-    }
   }
-}
 </script>
 ```
 
@@ -86,15 +92,15 @@ import { Micdrop } from '@micdrop/client'
   template: `
     <button (click)="startCall()">Start Call</button>
     <button (click)="stopCall()">Stop Call</button>
-  `
+  `,
 })
 export class VoiceChatComponent {
   async startCall() {
     await Micdrop.start({
-      url: 'ws://your-server.com/ws'
+      url: 'ws://localhost:8081/',
     })
   }
-  
+
   async stopCall() {
     await Micdrop.stop()
   }
@@ -108,9 +114,9 @@ For quick prototyping or simple HTML pages:
 ```html
 <script type="module">
   import { Micdrop } from 'https://unpkg.com/@micdrop/client@latest/dist/index.js'
-  
+
   await Micdrop.start({
-    url: 'ws://your-server.com/ws'
+    url: 'ws://localhost:8081/',
   })
 </script>
 ```
@@ -120,7 +126,7 @@ For quick prototyping or simple HTML pages:
 Ensure your target browsers support:
 
 - **WebSocket API** - For real-time communication
-- **Web Audio API** - For audio processing and playback  
+- **Web Audio API** - For audio processing and playback
 - **MediaDevices API** - For microphone access
 - **MediaRecorder API** - For audio recording
 

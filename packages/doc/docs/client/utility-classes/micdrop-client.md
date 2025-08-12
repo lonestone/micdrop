@@ -22,9 +22,9 @@ import { MicdropClient } from '@micdrop/client'
 
 // Create client instance
 const client = new MicdropClient({
-  url: 'ws://localhost:8080',
+  url: 'ws://localhost:8081',
   vad: ['volume', 'silero'],
-  debugLog: true
+  debugLog: true,
 })
 
 // Start conversation
@@ -47,30 +47,30 @@ Configure the client with various options:
 interface MicdropOptions {
   // Required: WebSocket server URL
   url: string
-  
+
   // Optional: Parameters sent to server
   params?: Record<string, any>
-  
+
   // Optional: Voice Activity Detection configuration
   vad?: VADConfig
-  
+
   // Optional: Disable interruption when assistant speaks
   disableInterruption?: boolean
-  
+
   // Optional: Enable debug logging
   debugLog?: boolean
 }
 
 const client = new MicdropClient({
-  url: 'wss://your-server.com/ws',
+  url: 'ws://localhost:8081/',
   params: {
     authorization: 'Bearer token',
     language: 'en-US',
-    model: 'gpt-4'
+    model: 'gpt-4',
   },
   vad: ['volume', 'silero'],
   disableInterruption: false,
-  debugLog: process.env.NODE_ENV === 'development'
+  debugLog: process.env.NODE_ENV === 'development',
 })
 ```
 
@@ -81,31 +81,31 @@ Access the complete conversation state:
 ```typescript
 interface MicdropState {
   // Connection and startup state
-  isStarting: boolean           // True if WebSocket or microphone are starting
-  isStarted: boolean           // True if both WebSocket and microphone are active
-  
-  // Conversation flow state  
-  isPaused: boolean            // True if microphone is paused by user
-  isListening: boolean         // True if actively listening for speech
-  isProcessing: boolean        // True if processing user message
-  isUserSpeaking: boolean      // True if user is currently speaking
+  isStarting: boolean // True if WebSocket or microphone are starting
+  isStarted: boolean // True if both WebSocket and microphone are active
+
+  // Conversation flow state
+  isPaused: boolean // True if microphone is paused by user
+  isListening: boolean // True if actively listening for speech
+  isProcessing: boolean // True if processing user message
+  isUserSpeaking: boolean // True if user is currently speaking
   isAssistantSpeaking: boolean // True if assistant is currently speaking
-  
+
   // Microphone state
-  isMicStarted: boolean        // True if microphone stream is active
-  isMicMuted: boolean          // True if microphone is muted
+  isMicStarted: boolean // True if microphone stream is active
+  isMicMuted: boolean // True if microphone is muted
   micDeviceId: string | undefined
-  
+
   // Speaker state
   speakerDeviceId: string | undefined
-  
+
   // Device lists
   micDevices: MediaDeviceInfo[]
   speakerDevices: MediaDeviceInfo[]
-  
+
   // Conversation data
   conversation: MicdropConversation
-  
+
   // Error state
   error: MicdropClientError | undefined
 }
@@ -148,7 +148,7 @@ client.on('Error', (error: MicdropClientError) => {
 // Start the conversation
 await client.start(options?: MicdropOptions): Promise<void>
 
-// Stop the conversation  
+// Stop the conversation
 await client.stop(): Promise<void>
 
 // Pause conversation (mute microphone)
@@ -187,19 +187,16 @@ Create multiple client instances for advanced scenarios:
 // Different conversations with different servers
 const client1 = new MicdropClient({
   url: 'ws://server1.com/ws',
-  params: { language: 'en' }
+  params: { language: 'en' },
 })
 
 const client2 = new MicdropClient({
-  url: 'ws://server2.com/ws', 
-  params: { language: 'fr' }
+  url: 'ws://server2.com/ws',
+  params: { language: 'fr' },
 })
 
 // Start both conversations
-await Promise.all([
-  client1.start(),
-  client2.start()
-])
+await Promise.all([client1.start(), client2.start()])
 ```
 
 ## Custom Event Handling
@@ -209,31 +206,31 @@ Advanced event handling patterns:
 ```typescript
 class ConversationManager {
   private client: MicdropClient
-  private conversationHistory: Array<{timestamp: Date, message: any}> = []
-  
+  private conversationHistory: Array<{ timestamp: Date; message: any }> = []
+
   constructor(serverUrl: string) {
     this.client = new MicdropClient({ url: serverUrl })
     this.setupEventHandlers()
   }
-  
+
   private setupEventHandlers() {
     // Log all state changes
     this.client.on('StateChange', (state) => {
       this.logStateChange(state)
       this.handleStateChange(state)
     })
-    
+
     // Handle errors with retry logic
     this.client.on('Error', (error) => {
       this.handleError(error)
     })
-    
+
     // Track conversation end
     this.client.on('EndCall', () => {
       this.saveConversation()
     })
   }
-  
+
   private logStateChange(state: MicdropState) {
     this.conversationHistory.push({
       timestamp: new Date(),
@@ -241,11 +238,11 @@ class ConversationManager {
         type: 'state_change',
         isListening: state.isListening,
         isProcessing: state.isProcessing,
-        isAssistantSpeaking: state.isAssistantSpeaking
-      }
+        isAssistantSpeaking: state.isAssistantSpeaking,
+      },
     })
   }
-  
+
   private handleStateChange(state: MicdropState) {
     // Update UI based on state
     if (state.isListening) {
@@ -256,10 +253,10 @@ class ConversationManager {
       this.showSpeakingIndicator()
     }
   }
-  
+
   private async handleError(error: MicdropClientError) {
     console.error('Conversation error:', error)
-    
+
     // Implement retry logic for recoverable errors
     if (error.code === 'Connection' && this.retryCount < 3) {
       await this.retryConnection()
@@ -267,19 +264,22 @@ class ConversationManager {
       this.showErrorDialog(error)
     }
   }
-  
+
   async start() {
     await this.client.start()
   }
-  
+
   async stop() {
     await this.client.stop()
     this.saveConversation()
   }
-  
+
   private saveConversation() {
     // Save conversation history
-    localStorage.setItem('conversation_history', JSON.stringify(this.conversationHistory))
+    localStorage.setItem(
+      'conversation_history',
+      JSON.stringify(this.conversationHistory)
+    )
   }
 }
 ```
@@ -292,15 +292,15 @@ Integrate MicdropClient with custom UI components:
 class VoiceCallWidget {
   private client: MicdropClient
   private container: HTMLElement
-  
+
   constructor(containerId: string, serverUrl: string) {
     this.container = document.getElementById(containerId)
     this.client = new MicdropClient({ url: serverUrl })
-    
+
     this.createUI()
     this.setupEventHandlers()
   }
-  
+
   private createUI() {
     this.container.innerHTML = `
       <div class="voice-call-widget">
@@ -323,33 +323,33 @@ class VoiceCallWidget {
       </div>
     `
   }
-  
+
   private setupEventHandlers() {
     // Button handlers
     document.getElementById('startBtn').addEventListener('click', () => {
       this.start()
     })
-    
+
     document.getElementById('pauseBtn').addEventListener('click', () => {
       this.togglePause()
     })
-    
+
     document.getElementById('stopBtn').addEventListener('click', () => {
       this.stop()
     })
-    
+
     // Client event handlers
     this.client.on('StateChange', (state) => {
       this.updateUI(state)
     })
   }
-  
+
   private updateUI(state: MicdropState) {
     const statusElement = document.getElementById('status')
     const startBtn = document.getElementById('startBtn') as HTMLButtonElement
     const pauseBtn = document.getElementById('pauseBtn') as HTMLButtonElement
     const stopBtn = document.getElementById('stopBtn') as HTMLButtonElement
-    
+
     if (state.isListening) {
       statusElement.textContent = '🎤 Listening...'
     } else if (state.isProcessing) {
@@ -359,15 +359,15 @@ class VoiceCallWidget {
     } else if (state.isStarted) {
       statusElement.textContent = '✅ Connected'
     }
-    
+
     // Update button states
     startBtn.disabled = state.isStarted || state.isStarting
     pauseBtn.disabled = !state.isStarted
     stopBtn.disabled = !state.isStarted
-    
+
     pauseBtn.textContent = state.isPaused ? 'Resume' : 'Pause'
   }
-  
+
   async start() {
     try {
       await this.client.start()
@@ -375,7 +375,7 @@ class VoiceCallWidget {
       console.error('Failed to start call:', error)
     }
   }
-  
+
   togglePause() {
     if (this.client.isPaused) {
       this.client.resume()
@@ -383,14 +383,14 @@ class VoiceCallWidget {
       this.client.pause()
     }
   }
-  
+
   async stop() {
     await this.client.stop()
   }
 }
 
 // Usage
-const widget = new VoiceCallWidget('voice-widget', 'ws://localhost:8080')
+const widget = new VoiceCallWidget('voice-widget', 'ws://localhost:8081')
 ```
 
 ## Error Handling
@@ -404,22 +404,22 @@ client.on('Error', (error: MicdropClientError) => {
       console.error('Server URL is required')
       showConfigurationError()
       break
-      
+
     case 'Connection':
       console.error('Failed to connect to server')
       attemptReconnection()
       break
-      
+
     case 'Mic':
       console.error('Microphone error:', error.message)
       handleMicrophoneError(error)
       break
-      
+
     case 'Unauthorized':
       console.error('Authentication failed')
       redirectToLogin()
       break
-      
+
     default:
       console.error('Unknown error:', error.message)
       showGenericError(error)
@@ -434,8 +434,8 @@ Optimize client performance:
 ```typescript
 // Lazy load VAD for better startup performance
 const client = new MicdropClient({
-  url: 'ws://localhost:8080',
-  vad: 'volume' // Start with lightweight VAD
+  url: 'ws://localhost:8081',
+  vad: 'volume', // Start with lightweight VAD
 })
 
 // Upgrade to AI VAD after connection

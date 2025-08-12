@@ -11,20 +11,20 @@ import { Micdrop } from '@micdrop/client'
 
 // Use volume-based detection (default)
 await Micdrop.start({
-  url: 'ws://localhost:8080',
-  vad: 'volume'
+  url: 'ws://localhost:8081',
+  vad: 'volume',
 })
 
 // Use AI-based detection for better accuracy
 await Micdrop.start({
-  url: 'ws://localhost:8080',
-  vad: 'silero'
+  url: 'ws://localhost:8081',
+  vad: 'silero',
 })
 
 // Combine multiple VADs for best results
 await Micdrop.start({
-  url: 'ws://localhost:8080',
-  vad: ['volume', 'silero']
+  url: 'ws://localhost:8081',
+  vad: ['volume', 'silero'],
 })
 ```
 
@@ -33,29 +33,32 @@ await Micdrop.start({
 Volume-based speech detection using audio amplitude analysis.
 
 ### Basic Usage
+
 ```typescript
 await Micdrop.start({
-  vad: 'volume'
+  vad: 'volume',
 })
 ```
 
 ### Custom Configuration
+
 ```typescript
 import { VolumeVAD } from '@micdrop/client'
 
 const volumeVad = new VolumeVAD({
-  history: 5,     // Number of frames to consider (default: 5)
-  threshold: -55  // Volume threshold in decibels (default: -55)
+  history: 5, // Number of frames to consider (default: 5)
+  threshold: -55, // Volume threshold in decibels (default: -55)
 })
 
 await Micdrop.start({
-  vad: volumeVad
+  vad: volumeVad,
 })
 ```
 
 **When to use Volume VAD:**
+
 - ✅ Low latency requirements
-- ✅ Quiet environments  
+- ✅ Quiet environments
 - ✅ Clear speech patterns
 - ❌ Noisy environments
 - ❌ Soft-spoken users
@@ -65,29 +68,32 @@ await Micdrop.start({
 AI-powered speech detection using machine learning models.
 
 ### Basic Usage
+
 ```typescript
 await Micdrop.start({
-  vad: 'silero'
+  vad: 'silero',
 })
 ```
 
 ### Custom Configuration
+
 ```typescript
 import { SileroVAD } from '@micdrop/client'
 
 const sileroVad = new SileroVAD({
   positiveSpeechThreshold: 0.18, // Threshold for detecting speech (default: 0.18)
-  negativeSpeechThreshold: 0.11, // Threshold for detecting silence (default: 0.11) 
-  minSpeechFrames: 8,            // Min frames to confirm speech (default: 8)
-  redemptionFrames: 20           // Frames to wait before confirming silence (default: 20)
+  negativeSpeechThreshold: 0.11, // Threshold for detecting silence (default: 0.11)
+  minSpeechFrames: 8, // Min frames to confirm speech (default: 8)
+  redemptionFrames: 20, // Frames to wait before confirming silence (default: 20)
 })
 
 await Micdrop.start({
-  vad: sileroVad
+  vad: sileroVad,
 })
 ```
 
 **When to use Silero VAD:**
+
 - ✅ Noisy environments
 - ✅ Soft-spoken users
 - ✅ Multiple speakers
@@ -101,12 +107,12 @@ Combine multiple VAD algorithms for optimal accuracy:
 ```typescript
 // Use both volume and AI detection
 await Micdrop.start({
-  vad: ['volume', 'silero']
+  vad: ['volume', 'silero'],
 })
 
 // Mix string names and instances
 await Micdrop.start({
-  vad: ['volume', new SileroVAD({ positiveSpeechThreshold: 0.15 })]
+  vad: ['volume', new SileroVAD({ positiveSpeechThreshold: 0.15 })],
 })
 ```
 
@@ -114,9 +120,9 @@ await Micdrop.start({
 
 When using multiple VADs:
 
-1. **StartSpeaking** - Triggered when *any* VAD detects possible speech
-2. **ConfirmSpeaking** - Triggered when *all* VADs confirm speech  
-3. **StopSpeaking** - Triggered when *all* VADs detect silence
+1. **StartSpeaking** - Triggered when _any_ VAD detects possible speech
+2. **ConfirmSpeaking** - Triggered when _all_ VADs confirm speech
+3. **StopSpeaking** - Triggered when _all_ VADs detect silence
 4. **CancelSpeaking** - Triggered if all VADs agree speech was false positive
 
 This approach reduces false positives while maintaining quick response times.
@@ -162,21 +168,21 @@ class CustomVAD extends VAD {
   private started = false
   private audioContext: AudioContext
   private analyzer: AnalyserNode
-  
+
   get isStarted(): boolean {
     return this.started
   }
 
   async start(stream: MediaStream) {
     this.started = true
-    
+
     // Set up audio analysis
     this.audioContext = new AudioContext()
     this.analyzer = this.audioContext.createAnalyser()
-    
+
     const source = this.audioContext.createMediaStreamSource(stream)
     source.connect(this.analyzer)
-    
+
     // Start your detection logic
     this.detectSpeech()
   }
@@ -185,32 +191,32 @@ class CustomVAD extends VAD {
     this.started = false
     this.audioContext?.close()
   }
-  
+
   private detectSpeech() {
     // Implement your speech detection logic
     const dataArray = new Uint8Array(this.analyzer.frequencyBinCount)
-    
+
     const analyze = () => {
       if (!this.started) return
-      
+
       this.analyzer.getByteFrequencyData(dataArray)
-      
+
       // Your custom detection algorithm
       const isSpeaking = this.customDetection(dataArray)
-      
+
       if (isSpeaking) {
         this.emit('StartSpeaking')
         this.emit('ConfirmSpeaking')
       } else {
         this.emit('StopSpeaking')
       }
-      
+
       requestAnimationFrame(analyze)
     }
-    
+
     analyze()
   }
-  
+
   private customDetection(audioData: Uint8Array): boolean {
     // Your custom speech detection logic here
     // Return true if speech is detected, false otherwise
@@ -220,7 +226,7 @@ class CustomVAD extends VAD {
 
 // Use your custom VAD
 await Micdrop.start({
-  vad: new CustomVAD()
+  vad: new CustomVAD(),
 })
 ```
 
@@ -234,13 +240,13 @@ Adjust sensitivity based on environment:
 // Quiet environment - more sensitive
 const quietVad = new VolumeVAD({
   threshold: -65, // Lower threshold for quiet voices
-  history: 3      // Faster response
+  history: 3, // Faster response
 })
 
-// Noisy environment - less sensitive  
+// Noisy environment - less sensitive
 const noisyVad = new VolumeVAD({
   threshold: -45, // Higher threshold to ignore noise
-  history: 8      // More frames for stability
+  history: 8, // More frames for stability
 })
 ```
 
@@ -252,14 +258,14 @@ Fine-tune AI detection:
 // More sensitive - catches quiet speech
 const sensitiveVad = new SileroVAD({
   positiveSpeechThreshold: 0.15, // Lower threshold
-  minSpeechFrames: 6             // Faster confirmation
+  minSpeechFrames: 6, // Faster confirmation
 })
 
 // More conservative - reduces false positives
 const conservativeVad = new SileroVAD({
-  positiveSpeechThreshold: 0.22, // Higher threshold  
-  minSpeechFrames: 12,           // More confirmation needed
-  redemptionFrames: 30           // Longer silence confirmation
+  positiveSpeechThreshold: 0.22, // Higher threshold
+  minSpeechFrames: 12, // More confirmation needed
+  redemptionFrames: 30, // Longer silence confirmation
 })
 ```
 
@@ -270,24 +276,25 @@ VAD settings are automatically saved to localStorage and restored:
 ```typescript
 // Settings are saved automatically
 await Micdrop.start({
-  vad: new VolumeVAD({ threshold: -50 })
+  vad: new VolumeVAD({ threshold: -50 }),
 })
 
 // On next session, settings are restored
 await Micdrop.start({
-  vad: 'volume' // Will use saved threshold of -50
+  vad: 'volume', // Will use saved threshold of -50
 })
 ```
 
 ## Best Practices
 
 ### Environment Adaptation
+
 ```typescript
 // Detect environment and choose appropriate VAD
 function getOptimalVAD() {
   const isQuietEnvironment = measureAmbientNoise() < -70
   const hasGoodMicrophone = checkMicrophoneQuality()
-  
+
   if (isQuietEnvironment && hasGoodMicrophone) {
     return 'volume' // Fast and accurate
   } else {
@@ -296,16 +303,17 @@ function getOptimalVAD() {
 }
 
 await Micdrop.start({
-  vad: getOptimalVAD()
+  vad: getOptimalVAD(),
 })
 ```
 
 ### User Calibration
+
 ```typescript
 // Let users test and adjust VAD settings
 function calibrateVAD() {
   const vad = new VolumeVAD({ threshold: -55 })
-  
+
   // Show calibration UI
   showCalibrationDialog({
     onThresholdChange: (newThreshold) => {
@@ -313,9 +321,9 @@ function calibrateVAD() {
     },
     onTest: () => {
       return vad.detectSpeech() // Test current settings
-    }
+    },
   })
-  
+
   return vad
 }
 ```
@@ -325,26 +333,29 @@ function calibrateVAD() {
 ### Common Issues
 
 **VAD too sensitive (false positives):**
+
 ```typescript
 // Increase thresholds or use multiple VADs
 await Micdrop.start({
-  vad: new VolumeVAD({ threshold: -40 }) // Less sensitive
+  vad: new VolumeVAD({ threshold: -40 }), // Less sensitive
 })
 ```
 
 **VAD not sensitive enough (missed speech):**
+
 ```typescript
 // Decrease thresholds or use Silero VAD
 await Micdrop.start({
-  vad: new SileroVAD({ positiveSpeechThreshold: 0.12 }) // More sensitive
+  vad: new SileroVAD({ positiveSpeechThreshold: 0.12 }), // More sensitive
 })
 ```
 
 **Inconsistent detection:**
+
 ```typescript
 // Use multiple VADs for stability
 await Micdrop.start({
-  vad: ['volume', 'silero'] // Best of both algorithms
+  vad: ['volume', 'silero'], // Best of both algorithms
 })
 ```
 
