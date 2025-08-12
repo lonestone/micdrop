@@ -232,10 +232,8 @@ import { GladiaSTT } from '@micdrop/gladia'
 import { OpenaiAgent } from '@micdrop/openai'
 import { MicdropServer } from '@micdrop/server'
 import { Server } from 'ws'
-import { Injectable } from '@nestjs/common'
 
-@Injectable()
-@WebSocketGateway(8080)
+@WebSocketGateway({ path: '/call' })
 export class MicdropGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server
@@ -343,7 +341,7 @@ wss.on('connection', async (socket) => {
     const user = verifyJWT(data.jwt)
     return { user, lang: data.lang }
   })
-  
+
   // Use authenticated user data
   console.log('User:', params.user)
 })

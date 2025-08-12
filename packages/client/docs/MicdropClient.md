@@ -234,7 +234,7 @@ The handler uses `MicdropClientError` for error management. Each error instance 
 Example handling different error types:
 
 ```typescript
-handler.on('Error', (error) => {
+Micdrop.on('Error', (error) => {
   switch (error.code) {
     case MicdropClientErrorCode.Mic:
       console.error('Microphone error - check permissions or hardware')

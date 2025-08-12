@@ -48,7 +48,7 @@ import { Micdrop } from '@micdrop/client'
 
 // Start a call
 await Micdrop.start({
-  url: 'wss://your-server.com/ws',
+  url: 'wss://your-server.com/call',
 })
 ```
 

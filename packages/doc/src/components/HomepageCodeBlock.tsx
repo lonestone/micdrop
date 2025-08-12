@@ -38,12 +38,10 @@ export function HomepageCodeBlock() {
           <>
             <CustomCodeBlock
               language="bash"
-              title="bash"
               code={`npm install @micdrop/client`}
             />
             <CustomCodeBlock
               language="typescript"
-              title="typescript"
               code={`import { Micdrop } from '@micdrop/client'
 
 // Start a voice conversation
@@ -68,7 +66,6 @@ Micdrop.on('EndCall', () => {
           <>
             <CustomCodeBlock
               language="bash"
-              title="bash"
               code={`npm install @micdrop/server \\
   @micdrop/openai \\
   @micdrop/gladia \\
@@ -76,7 +73,6 @@ Micdrop.on('EndCall', () => {
             />
             <CustomCodeBlock
               language="typescript"
-              title="typescript"
               code={`import { MicdropServer } from '@micdrop/server'
 import { OpenaiAgent } from '@micdrop/openai'
 import { GladiaSTT } from '@micdrop/gladia'

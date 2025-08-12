@@ -44,7 +44,7 @@ import { Micdrop } from '@micdrop/client'
 
 // Start a call
 await Micdrop.start({
-  url: 'wss://your-server.com/ws',
+  url: 'wss://your-server.com/call',
 })
 ```
 
@@ -83,7 +83,7 @@ import { Micdrop } from '@micdrop/client'
 // Start a call
 await Micdrop.start({
   // URL of the WebSocket server (using @micdrop/server)
-  url: 'wss://your-server.com/ws',
+  url: 'wss://your-server.com/call',
   // Parameters (optional) to check auth or provide other data
   params: {
     authorization: '1234',
@@ -169,7 +169,7 @@ await Micdrop.start({
     type: ['volume', 'silero'],
     volumeThreshold: 0.01,
     silenceTimeMs: 1000,
-  }
+  },
 })
 ```
 

@@ -24,9 +24,9 @@ function HomepageHeader() {
               {siteConfig.tagline}
             </p>
             <p className="text-lg leading-relaxed text-ai-surface-700 dark:text-ai-surface-200 mb-8">
-              Build real-time voice conversations with AI agents using
-              TypeScript. Micdrop handles all the complexities of microphone
-              input, audio playbook, streaming, and AI integration.
+              Integrate a powerful voice mode in your webapp with a few lines of
+              code using Micdrop. Use provided AI integrations (agents, STT,
+              TTS) or build your own. Build the best UX with our SDK.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link

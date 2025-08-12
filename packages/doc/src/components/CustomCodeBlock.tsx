@@ -3,14 +3,9 @@ import CodeBlock from '@theme/CodeBlock'
 interface CustomCodeBlockProps {
   language: string
   code: string
-  title?: string
 }
 
-export function CustomCodeBlock({
-  language,
-  code,
-  title,
-}: CustomCodeBlockProps) {
+export function CustomCodeBlock({ language, code }: CustomCodeBlockProps) {
   const getBorderColor = (lang: string) => {
     switch (lang) {
       case 'bash':
@@ -34,18 +29,11 @@ export function CustomCodeBlock({
   }
 
   return (
-    <div className="relative">
-      {title && (
-        <div className="absolute top-2 right-4 text-xs text-ai-surface-400 uppercase font-mono font-semibold z-10">
-          {title}
-        </div>
-      )}
-      <div
-        className={`${getBorderColor(language)} ${getBackgroundGradient(language)} border-l-4`}
-      >
-        <div className="[&_.prism-code]:!bg-transparent [&_.prism-code]:!p-2 [&_.prism-code]:!m-0 [&_.prism-code]:text-sm [&_.prism-code]:text-left [&_pre]:text-left [&_.prism-code]:whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_code]:whitespace-pre-wrap [&_.theme-code-block]:mb-0">
-          <CodeBlock language={language}>{code}</CodeBlock>
-        </div>
+    <div
+      className={`${getBorderColor(language)} ${getBackgroundGradient(language)} border-l-4`}
+    >
+      <div className="[&_.prism-code]:!bg-transparent [&_.prism-code]:!p-2 [&_.prism-code]:!m-0 [&_.prism-code]:text-sm [&_.prism-code]:text-left [&_pre]:text-left [&_.prism-code]:whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_code]:whitespace-pre-wrap [&_.theme-code-block]:mb-0">
+        <CodeBlock language={language}>{code}</CodeBlock>
       </div>
     </div>
   )

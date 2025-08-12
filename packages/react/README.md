@@ -45,6 +45,22 @@ function MyComponent() {
 }
 ```
 
+### useMicdropError
+
+Hook to handle Error events.
+
+```tsx
+import { useMicdropError } from '@micdrop/react'
+
+function MyComponent() {
+  useMicdropError((error) => {
+    console.error('Micdrop error:', error.message)
+  })
+
+  return <div>...</div>
+}
+```
+
 ### useMicVolume
 
 Hook to get microphone volume data.

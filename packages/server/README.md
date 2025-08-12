@@ -236,10 +236,8 @@ import { GladiaSTT } from '@micdrop/gladia'
 import { OpenaiAgent } from '@micdrop/openai'
 import { MicdropServer } from '@micdrop/server'
 import { Server } from 'ws'
-import { Injectable } from '@nestjs/common'
 
-@Injectable()
-@WebSocketGateway(8080)
+@WebSocketGateway({ path: '/call' })
 export class MicdropGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server
