@@ -62,8 +62,6 @@ Switch to a different microphone device:
 // Change microphone by device ID
 const newMicId = Micdrop.micDevices[1].deviceId
 await Micdrop.changeMicDevice(newMicId)
-
-console.log('Microphone changed to:', newMicId)
 ```
 
 ### Change Speaker
@@ -74,52 +72,13 @@ Switch to a different speaker/headphone device:
 // Change speaker by device ID
 const newSpeakerId = Micdrop.speakerDevices[1].deviceId
 await Micdrop.changeSpeakerDevice(newSpeakerId)
-
-console.log('Speaker changed to:', newSpeakerId)
 ```
 
-## Device Selection UI
+### Device Persistence
 
-### Device Dropdown Component
+Selected devices are automatically persisted in localStorage.
 
-Create device selection interface:
-
-```typescript
-// Vanilla JavaScript device selector
-function createDeviceSelector() {
-  const micSelect = document.getElementById('micSelect')
-  const speakerSelect = document.getElementById('speakerSelect')
-
-  // Populate microphone options
-  Micdrop.micDevices.forEach((device) => {
-    const option = document.createElement('option')
-    option.value = device.deviceId
-    option.textContent = device.label || 'Unknown Microphone'
-    option.selected = device.deviceId === Micdrop.micDeviceId
-    micSelect.appendChild(option)
-  })
-
-  // Populate speaker options
-  Micdrop.speakerDevices.forEach((device) => {
-    const option = document.createElement('option')
-    option.value = device.deviceId
-    option.textContent = device.label || 'Unknown Speaker'
-    option.selected = device.deviceId === Micdrop.speakerDeviceId
-    speakerSelect.appendChild(option)
-  })
-
-  // Handle changes
-  micSelect.addEventListener('change', async (e) => {
-    await Micdrop.changeMicDevice(e.target.value)
-  })
-
-  speakerSelect.addEventListener('change', async (e) => {
-    await Micdrop.changeSpeakerDevice(e.target.value)
-  })
-}
-```
-
-### React Device Component
+## React Device Component
 
 ```tsx
 import { useState } from 'react'
@@ -188,251 +147,124 @@ function DeviceSettings() {
 
 ### Test Microphone
 
-Check if microphone is working:
+Monitor microphone input levels to verify the selected device is working correctly.
+
+#### Using Mic Analyzer (Vanilla JavaScript)
 
 ```typescript
-// Test microphone input
-function testMicrophone() {
-  if (!Micdrop.isMicStarted) {
-    console.log('Please start microphone first')
-    return
-  }
+import { Mic } from '@micdrop/client'
 
-  // Listen for volume changes
-  const volumeListener = (volume) => {
-    const normalizedVolume = Math.max(0, volume + 100)
-    console.log('Mic volume:', normalizedVolume)
+// Listen to microphone volume changes
+const onMicVolumeChange = (volume: number) => {
+  console.log('Microphone volume:', volume, 'dB')
+  // Update your UI with the volume level
+  updateMicVolumeIndicator(volume)
+}
 
-    if (normalizedVolume > 10) {
-      console.log('✅ Microphone is working!')
-      // Stop listening after successful test
-      Micdrop.micRecorder.analyser.off('volume', volumeListener)
-    }
-  }
+// Start listening to volume events
+Mic.analyser.on('volume', onMicVolumeChange)
 
-  Micdrop.micRecorder.analyser.on('volume', volumeListener)
+// Stop listening (cleanup)
+Mic.analyser.off('volume', onMicVolumeChange)
+```
 
-  // Stop test after 5 seconds
-  setTimeout(() => {
-    Micdrop.micRecorder.analyser.off('volume', volumeListener)
-    console.log('Microphone test ended')
-  }, 5000)
+#### Using React Hook
+
+```typescript
+import { useMicVolume } from '@micdrop/react'
+
+function MicVolumeIndicator() {
+  const { micVolume } = useMicVolume()
+  const volume = Math.max(0, micVolume + 100) // Convert dB to percentage
+
+  return (
+    <div className="mic-volume-container">
+      <label>Microphone Level:</label>
+      <div
+        className="volume-bar"
+        style={{
+          background: `linear-gradient(
+            to right,
+            #00bb00,
+            #00bb00 ${volume}%,
+            #ccc ${volume}%,
+            #ccc 100%
+          )`,
+          width: '100%',
+          height: '16px',
+          borderRadius: '8px',
+          transition: 'all 0.1s',
+        }}
+      />
+      <span>{micVolume.toFixed(1)} dB</span>
+    </div>
+  )
 }
 ```
+
+This provides real-time visual feedback of microphone input levels, helping users verify their microphone is working and adjust VAD thresholds appropriately.
+
+**Example:** [MicVolume component](https://github.com/lonestone/micdrop/blob/main/examples/demo-client/src/components/MicVolume.tsx)
+
+**Learn more:** [Mic utility class](./utility-classes/mic.md)
 
 ### Test Speaker
 
-Check if speaker is working:
+Monitor speaker output levels and test audio playback to verify the selected device is working correctly.
+
+#### Using Speaker Analyzer (Vanilla JavaScript)
 
 ```typescript
-// Test speaker output with a test sound
-async function testSpeaker() {
-  try {
-    // Generate test tone
-    const audioContext = new AudioContext()
-    const oscillator = audioContext.createOscillator()
-    const gainNode = audioContext.createGain()
+import { Speaker } from '@micdrop/client'
 
-    oscillator.connect(gainNode)
-    gainNode.connect(audioContext.destination)
-
-    // Configure test tone
-    oscillator.frequency.value = 440 // A note
-    gainNode.gain.value = 0.1 // Low volume
-
-    // Play for 1 second
-    oscillator.start()
-    setTimeout(() => {
-      oscillator.stop()
-      audioContext.close()
-      console.log('✅ Speaker test completed')
-    }, 1000)
-
-    console.log('🔊 Playing test tone...')
-  } catch (error) {
-    console.error('Speaker test failed:', error)
-  }
+// Listen to speaker volume changes
+const onSpeakerVolumeChange = (volume: number) => {
+  console.log('Speaker volume:', volume, 'dB')
+  // Update your UI with the volume level
+  updateSpeakerVolumeIndicator(volume)
 }
+
+// Start listening to volume events
+Speaker.analyser.on('volume', onSpeakerVolumeChange)
+
+// Stop listening (cleanup)
+Speaker.analyser.off('volume', onSpeakerVolumeChange)
 ```
 
-## Device Monitoring
-
-### Monitor Device Changes
-
-Detect when devices are added/removed:
+#### Using React Hook
 
 ```typescript
-// Listen for device changes
-navigator.mediaDevices.addEventListener('devicechange', async () => {
-  console.log('Devices changed, refreshing list...')
+import { useSpeakerVolume } from '@micdrop/react'
 
-  // Refresh device list
-  await navigator.mediaDevices.enumerateDevices()
+function SpeakerVolumeIndicator() {
+  const { speakerVolume } = useSpeakerVolume()
+  const volume = Math.max(0, speakerVolume + 100) // Convert dB to percentage
 
-  // Update UI if needed
-  updateDeviceSelectors()
-})
-
-// Monitor state changes for device updates
-Micdrop.on('StateChange', (state) => {
-  // Check if selected devices are still available
-  const currentMic = state.micDevices.find(
-    (d) => d.deviceId === state.micDeviceId
+  return (
+    <div className="speaker-volume-container">
+      <label>Speaker Level:</label>
+      <div
+        className="volume-bar"
+        style={{
+          background: `linear-gradient(
+            to right,
+            #0066cc,
+            #0066cc ${volume}%,
+            #ccc ${volume}%,
+            #ccc 100%
+          )`,
+          width: '100%',
+          height: '16px',
+          borderRadius: '8px',
+          transition: 'all 0.1s',
+        }}
+      />
+      <span>{speakerVolume.toFixed(1)} dB</span>
+    </div>
   )
-  const currentSpeaker = state.speakerDevices.find(
-    (d) => d.deviceId === state.speakerDeviceId
-  )
-
-  if (!currentMic) {
-    console.warn('Selected microphone no longer available')
-    showDeviceWarning('microphone')
-  }
-
-  if (!currentSpeaker) {
-    console.warn('Selected speaker no longer available')
-    showDeviceWarning('speaker')
-  }
-})
-```
-
-## Device Permissions
-
-### Request Permissions
-
-Ensure proper device access:
-
-```typescript
-// Request microphone permission
-async function requestMicPermission() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-    })
-
-    console.log('✅ Microphone permission granted')
-
-    // Stop the test stream
-    stream.getTracks().forEach((track) => track.stop())
-
-    return true
-  } catch (error) {
-    console.error('❌ Microphone permission denied:', error)
-    return false
-  }
-}
-
-// Check current permissions
-async function checkPermissions() {
-  try {
-    const result = await navigator.permissions.query({ name: 'microphone' })
-    console.log('Microphone permission:', result.state)
-
-    result.addEventListener('change', () => {
-      console.log('Permission changed:', result.state)
-    })
-
-    return result.state === 'granted'
-  } catch (error) {
-    console.log('Permissions API not supported')
-    return null
-  }
 }
 ```
 
-## Device Storage
+**Example:** [SpeakerTestButton component](https://github.com/lonestone/micdrop/blob/main/examples/demo-client/src/components/SpeakerTestButton.tsx)
 
-Device preferences are automatically persisted:
-
-```typescript
-// Device selection is automatically saved
-await Micdrop.changeMicDevice('preferred-mic-id')
-await Micdrop.changeSpeakerDevice('preferred-speaker-id')
-
-// On next session, preferences are restored
-await Micdrop.start({
-  url: 'ws://localhost:8081',
-}) // Will use saved device preferences
-```
-
-## Error Handling
-
-### Handle Device Errors
-
-```typescript
-// Handle device change errors
-async function safeChangeDevice(deviceId, type) {
-  try {
-    if (type === 'microphone') {
-      await Micdrop.changeMicDevice(deviceId)
-    } else {
-      await Micdrop.changeSpeakerDevice(deviceId)
-    }
-
-    console.log(`✅ ${type} changed successfully`)
-  } catch (error) {
-    console.error(`❌ Failed to change ${type}:`, error.message)
-
-    if (error.name === 'NotFoundError') {
-      showError('Device not found. Please check connections.')
-    } else if (error.name === 'NotAllowedError') {
-      showError('Permission denied. Please allow device access.')
-    } else {
-      showError(`Failed to change ${type}. Please try again.`)
-    }
-  }
-}
-```
-
-## Best Practices
-
-### Default Device Selection
-
-```typescript
-// Choose best available devices automatically
-function selectOptimalDevices() {
-  const micDevices = Micdrop.micDevices
-  const speakerDevices = Micdrop.speakerDevices
-
-  // Prefer non-default devices (often better quality)
-  const preferredMic =
-    micDevices.find(
-      (d) =>
-        !d.label.toLowerCase().includes('default') &&
-        !d.label.toLowerCase().includes('communications')
-    ) || micDevices[0]
-
-  const preferredSpeaker =
-    speakerDevices.find(
-      (d) =>
-        !d.label.toLowerCase().includes('default') &&
-        !d.label.toLowerCase().includes('communications')
-    ) || speakerDevices[0]
-
-  return { preferredMic, preferredSpeaker }
-}
-```
-
-### Device Labels
-
-```typescript
-// Clean up device labels for display
-function formatDeviceLabel(device) {
-  if (!device.label) {
-    return `${device.kind} (${device.deviceId.slice(0, 8)}...)`
-  }
-
-  // Remove common prefixes/suffixes
-  let label = device.label
-    .replace(/^Default - /, '')
-    .replace(/ - Default$/, '')
-    .replace(/\s*\([^)]*\)$/, '') // Remove parenthetical info
-
-  return label
-}
-```
-
-## Next Steps
-
-- [**Error Handling**](./error-handling) - Handle device-related errors
-- [**React Hooks**](./react-hooks) - Device management in React apps
-- [**Utility Classes**](./utility-classes) - Direct access to Mic and Speaker APIs
+**Learn more:** [Speaker utility class](../utility-classes/speaker.md)

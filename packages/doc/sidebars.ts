@@ -13,17 +13,15 @@ const sidebars: SidebarsConfig = {
       items: [
         'client/installation',
         'client/react-hooks',
-        'client/start-call',
+        'client/start-stop-call',
         'client/pause-resume-call',
-        'client/stop-call',
-        'client/vad',
         'client/devices-management',
+        'client/vad',
         'client/error-handling',
         {
           type: 'category',
           label: 'Utility Classes',
           items: [
-            'client/utility-classes/index',
             'client/utility-classes/mic',
             'client/utility-classes/micdrop-client',
             'client/utility-classes/mic-recorder',

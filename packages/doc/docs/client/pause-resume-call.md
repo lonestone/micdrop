@@ -78,6 +78,8 @@ function togglePause() {
 ```
 
 ```typescript
+import { useMicdropState } from '@micdrop/react'
+
 // React component example
 function CallControls() {
   const state = useMicdropState()

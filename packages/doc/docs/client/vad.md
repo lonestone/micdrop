@@ -1,6 +1,17 @@
-# VAD (Voice Activity Detection)
+# Voice Activity Detection (VAD)
 
-Voice Activity Detection determines when you're speaking to optimize audio streaming and conversation flow. Micdrop supports multiple VAD algorithms for accurate speech detection.
+Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and send chunks of audio to the server only when speech is detected.
+
+## Supported VAD Types
+
+Micdrop supports the following VADs by name:
+
+- `'volume'`: Volume-based VAD (default)
+- `'silero'`: AI-based VAD using Silero
+
+You can also pass instances of these VADs, or combine them in an array. See below for details.
+
+> **Note:** Only `'volume'` and `'silero'` are supported as string names. Custom VADs must be passed as instances.
 
 ## Quick Start
 
@@ -28,32 +39,40 @@ await Micdrop.start({
 })
 ```
 
-## Volume VAD
-
-Volume-based speech detection using audio amplitude analysis.
-
-### Basic Usage
+Or when starting the microphone (before starting the call):
 
 ```typescript
-await Micdrop.start({
-  vad: 'volume',
-})
+Micdrop.startMic({ vad: 'volume' })
 ```
 
-### Custom Configuration
+## Volume VAD: Speech detection based on volume
+
+By default, `MicdropClient` uses `VolumeVAD` for speech detection. You can use it explicitly when starting Micdrop:
 
 ```typescript
-import { VolumeVAD } from '@micdrop/client'
-
-const volumeVad = new VolumeVAD({
-  history: 5, // Number of frames to consider (default: 5)
-  threshold: -55, // Volume threshold in decibels (default: -55)
-})
-
-await Micdrop.start({
-  vad: volumeVad,
-})
+Micdrop.start({ vad: 'volume' })
 ```
+
+or when starting the microphone (before starting the call):
+
+```typescript
+Micdrop.startMic({ vad: 'volume' })
+```
+
+It is inspired by [hark](https://github.com/otalk/hark) and triggers speech detection events based on volume changes.
+
+You can also pass an instance of `VolumeVAD` to `MicdropClient`:
+
+```typescript
+const vad = new VolumeVAD({
+  history: 5, // Number of frames to consider for volume calculation
+  threshold: -55, // Threshold in decibels for speech detection
+})
+Micdrop.start({ vad })
+```
+
+- **Default options:** `{ history: 5, threshold: -55 }`
+- **Persistence:** Options are saved to `localStorage` and restored automatically.
 
 **When to use Volume VAD:**
 
@@ -63,34 +82,32 @@ await Micdrop.start({
 - ❌ Noisy environments
 - ❌ Soft-spoken users
 
-## Silero VAD
+## Silero VAD: Human speech detection with AI
 
-AI-powered speech detection using machine learning models.
-
-### Basic Usage
+To use `SileroVAD` for speech detection:
 
 ```typescript
-await Micdrop.start({
-  vad: 'silero',
-})
+Micdrop.start({ vad: 'silero' })
 ```
 
-### Custom Configuration
+It is based on [@ricky0123/vad-web](https://github.com/ricky0123/vad) which runs a [Silero VAD](https://github.com/snakers4/silero-vad) model in the browser using [ONNX Runtime Web](https://github.com/microsoft/onnxruntime/tree/main/js/web).
+
+It is more accurate than `VolumeVAD` and works better with low voice.
+
+You can also pass an instance of `SileroVAD` to `MicdropClient`:
 
 ```typescript
-import { SileroVAD } from '@micdrop/client'
-
-const sileroVad = new SileroVAD({
-  positiveSpeechThreshold: 0.18, // Threshold for detecting speech (default: 0.18)
-  negativeSpeechThreshold: 0.11, // Threshold for detecting silence (default: 0.11)
-  minSpeechFrames: 8, // Min frames to confirm speech (default: 8)
-  redemptionFrames: 20, // Frames to wait before confirming silence (default: 20)
+const vad = new SileroVAD({
+  positiveSpeechThreshold: 0.18, // Threshold for positive speech detection
+  negativeSpeechThreshold: 0.11, // Threshold for negative speech detection
+  minSpeechFrames: 8, // Minimum number of frames to consider for speech detection
+  redemptionFrames: 20, // Number of frames to consider for silence detection
 })
-
-await Micdrop.start({
-  vad: sileroVad,
-})
+Micdrop.start({ vad })
 ```
+
+- **Default options:** `{ positiveSpeechThreshold: 0.18, negativeSpeechThreshold: 0.11, minSpeechFrames: 8, redemptionFrames: 20 }`
+- **Persistence:** Options are saved to `localStorage` and restored automatically.
 
 **When to use Silero VAD:**
 
@@ -100,34 +117,52 @@ await Micdrop.start({
 - ✅ Background music/TV
 - ❌ Extremely low latency needs (adds ~50ms processing)
 
-## Multiple VAD
+## Multiple VAD: Combine multiple VADs
 
-Combine multiple VAD algorithms for optimal accuracy:
+Combining multiple VADs is useful to get more accurate speech detection:
+
+- Volume to ignore low voice
+- Silero to detect human speech
+
+You can combine multiple VADs by passing an array of VAD names:
 
 ```typescript
-// Use both volume and AI detection
-await Micdrop.start({
-  vad: ['volume', 'silero'],
-})
+Micdrop.start({ vad: ['volume', 'silero'] })
+```
 
-// Mix string names and instances
+Or with instances:
+
+```typescript
+const vad = [new VolumeVAD(), new SileroVAD()]
+Micdrop.start({ vad })
+```
+
+Or mix names and instances:
+
+```typescript
 await Micdrop.start({
   vad: ['volume', new SileroVAD({ positiveSpeechThreshold: 0.15 })],
 })
 ```
 
-### How Multiple VADs Work
+**How it works:**
 
-When using multiple VADs:
-
-1. **StartSpeaking** - Triggered when _any_ VAD detects possible speech
-2. **ConfirmSpeaking** - Triggered when _all_ VADs confirm speech
-3. **StopSpeaking** - Triggered when _all_ VADs detect silence
-4. **CancelSpeaking** - Triggered if all VADs agree speech was false positive
+- `StartSpeaking` is emitted when any VAD detects possible speech.
+- `ConfirmSpeaking` is emitted only when _all_ VADs confirm speech.
+- `StopSpeaking` is emitted when _all_ VADs detect silence.
+- `CancelSpeaking` is emitted if all VADs agree speech was a false positive.
 
 This approach reduces false positives while maintaining quick response times.
 
 ## VAD Events
+
+VADs emit the following events:
+
+- `StartSpeaking`: Possible speech detected (not yet confirmed)
+- `ConfirmSpeaking`: Speech confirmed
+- `CancelSpeaking`: Speech start was a false positive (noise, etc.)
+- `StopSpeaking`: Speech ended
+- `ChangeStatus`: Status changed (`Silence`, `MaybeSpeaking`, `Speaking`)
 
 Monitor VAD activity in your application:
 
@@ -159,7 +194,49 @@ Micdrop.vad.on('ChangeStatus', (status) => {
 
 ## Custom VAD
 
-Create your own VAD implementation:
+You can also pass your own VAD implementation:
+
+```typescript
+Micdrop.start({ vad: new MyVAD() })
+```
+
+Your VAD implementation should extend the `VAD` class:
+
+```typescript
+import { VAD } from '@micdrop/client'
+
+class MyVAD extends VAD {
+  private started = false
+
+  get isStarted(): boolean {
+    return this.started
+  }
+
+  async start(stream: MediaStream) {
+    this.started = true
+
+    // When speech is detected, emit StartSpeaking event
+    this.emit('StartSpeaking')
+
+    // When speech is confirmed, emit ConfirmSpeaking event
+    this.emit('ConfirmSpeaking')
+
+    // When speech is cancelled, emit CancelSpeaking event
+    this.emit('CancelSpeaking')
+
+    // When speech stops, emit StopSpeaking event
+    this.emit('StopSpeaking')
+  }
+
+  async stop() {
+    this.started = false
+  }
+}
+```
+
+> **Tip:** See the codebase for [`HarkVAD`](https://github.com/lonestone/micdrop/blob/main/packages/client/src/audio/vad/HarkVAD.ts) as another example of a custom VAD. It is not exported by default, as `VolumeVAD` is the recommended and supported option inspired by Hark.
+
+For a more complex example with audio analysis:
 
 ```typescript
 import { VAD } from '@micdrop/client'
@@ -230,6 +307,10 @@ await Micdrop.start({
 })
 ```
 
+## VAD Delay
+
+All VADs have a `delay` property (default: 100ms) that controls the interval for speech detection checks. You can adjust this in custom VADs if needed.
+
 ## Tuning VAD Performance
 
 ### Volume VAD Tuning
@@ -269,98 +350,28 @@ const conservativeVad = new SileroVAD({
 })
 ```
 
+## Dynamic VAD Configuration
+
+You can update VAD settings in real-time without restarting:
+
+```typescript
+// Update Volume VAD settings
+const volumeVad = Micdrop.vad as VolumeVAD
+volumeVad.setOptions({ threshold: -45 })
+
+// Update Silero VAD settings
+const sileroVad = Micdrop.vad as SileroVAD
+sileroVad.setOptions({ positiveSpeechThreshold: 0.15 })
+
+// Reset to default options
+volumeVad.resetOptions()
+sileroVad.resetOptions()
+```
+
 ## Persistent Settings
 
-VAD settings are automatically saved to localStorage and restored:
+Both VolumeVAD and SileroVAD settings are automatically saved to localStorage and restored when loading with their names (`'volume'` or `'silero'`) and not instances.
 
-```typescript
-// Settings are saved automatically
-await Micdrop.start({
-  vad: new VolumeVAD({ threshold: -50 }),
-})
+## React VAD Settings UI
 
-// On next session, settings are restored
-await Micdrop.start({
-  vad: 'volume', // Will use saved threshold of -50
-})
-```
-
-## Best Practices
-
-### Environment Adaptation
-
-```typescript
-// Detect environment and choose appropriate VAD
-function getOptimalVAD() {
-  const isQuietEnvironment = measureAmbientNoise() < -70
-  const hasGoodMicrophone = checkMicrophoneQuality()
-
-  if (isQuietEnvironment && hasGoodMicrophone) {
-    return 'volume' // Fast and accurate
-  } else {
-    return ['volume', 'silero'] // Robust combination
-  }
-}
-
-await Micdrop.start({
-  vad: getOptimalVAD(),
-})
-```
-
-### User Calibration
-
-```typescript
-// Let users test and adjust VAD settings
-function calibrateVAD() {
-  const vad = new VolumeVAD({ threshold: -55 })
-
-  // Show calibration UI
-  showCalibrationDialog({
-    onThresholdChange: (newThreshold) => {
-      vad.threshold = newThreshold
-    },
-    onTest: () => {
-      return vad.detectSpeech() // Test current settings
-    },
-  })
-
-  return vad
-}
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**VAD too sensitive (false positives):**
-
-```typescript
-// Increase thresholds or use multiple VADs
-await Micdrop.start({
-  vad: new VolumeVAD({ threshold: -40 }), // Less sensitive
-})
-```
-
-**VAD not sensitive enough (missed speech):**
-
-```typescript
-// Decrease thresholds or use Silero VAD
-await Micdrop.start({
-  vad: new SileroVAD({ positiveSpeechThreshold: 0.12 }), // More sensitive
-})
-```
-
-**Inconsistent detection:**
-
-```typescript
-// Use multiple VADs for stability
-await Micdrop.start({
-  vad: ['volume', 'silero'], // Best of both algorithms
-})
-```
-
-## Next Steps
-
-- [**Device Management**](./devices-management) - Select optimal microphone for VAD
-- [**Error Handling**](./error-handling) - Handle VAD-related errors
-- [**React Hooks**](./react-hooks) - VAD integration in React apps
+See a complete React component for VAD configuration based on the demo client: [VADSettings](https://github.com/lonestone/micdrop/blob/main/examples/demo-client/src/components/VADSettings.tsx)

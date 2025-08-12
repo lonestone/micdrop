@@ -1,454 +1,265 @@
 # MicdropClient
 
-Core client class for managing real-time audio communication, WebSocket connections, and voice conversation state.
+The `MicdropClient` class manages real-time audio communication between a client and server, handling microphone input, WebSocket connections, and audio playback. It's designed to facilitate interactive voice conversations with support for bi-directional audio streaming.
 
-## Overview
+For server implementation, see [@micdrop/server](../../server/README.md) package.
 
-`MicdropClient` is the main class that orchestrates voice conversations by combining microphone recording, WebSocket communication, and audio playback. While most users interact with the `Micdrop` singleton, you can create custom instances for advanced scenarios.
+## Usage Example
 
-## Features
-
-- 🌐 **WebSocket Communication** - Real-time audio streaming to server
-- 🎤 **Microphone Management** - Voice activity detection and audio recording
-- 🔊 **Audio Playback** - Streaming audio playback from server
-- 📊 **State Management** - Complete conversation state tracking
-- 🎛️ **Device Control** - Microphone and speaker device selection
-- 🛡️ **Error Handling** - Comprehensive error management
-
-## Basic Usage
+⚠️ In most cases, you should not use the constructor directly, but use the `Micdrop.start()` method instead (see [README](../README.md)). An instance is already created and available as `Micdrop` object.
 
 ```typescript
 import { MicdropClient } from '@micdrop/client'
 
-// Create client instance
-const client = new MicdropClient({
-  url: 'ws://localhost:8081',
+// Start a call
+const micdrop = new MicdropClient({
+  // URL of the WebSocket server (using @micdrop/server)
+  url: 'wss://your-server.com/ws',
+  // Parameters (optional) to check auth or provide other data
+  params: {
+    authorization: '1234',
+    lang: navigator.language,
+  },
+  // Voice Activity Detection (see docs)
   vad: ['volume', 'silero'],
+  // Disable ability for the user to interrupt the assistant when it is speaking
+  disableInterruption: true,
+  // Enable debug logging
   debugLog: true,
 })
 
-// Start conversation
-await client.start()
+// Start the call
+// You can also pass options instead or in addition to the constructor
+await micdrop.start()
+
+// Pause/resume
+micdrop.pause()
+micdrop.resume()
+
+// Stop the call
+await micdrop.stop()
 
 // Listen for state changes
-client.on('StateChange', (state) => {
-  console.log('Conversation state:', state)
+micdrop.on('StateChange', (state) => {
+  console.log('State:', state) // See below for state properties
 })
 
-// Stop conversation
-await client.stop()
-```
+// Listen for end of call
+// Can be triggered via prompting (see server docs)
+micdrop.on('EndCall', () => {
+  console.log('Call ended by assistant')
+})
 
-## Constructor Options
-
-Configure the client with various options:
-
-```typescript
-interface MicdropOptions {
-  // Required: WebSocket server URL
-  url: string
-
-  // Optional: Parameters sent to server
-  params?: Record<string, any>
-
-  // Optional: Voice Activity Detection configuration
-  vad?: VADConfig
-
-  // Optional: Disable interruption when assistant speaks
-  disableInterruption?: boolean
-
-  // Optional: Enable debug logging
-  debugLog?: boolean
-}
-
-const client = new MicdropClient({
-  url: 'ws://localhost:8081/',
-  params: {
-    authorization: 'Bearer token',
-    language: 'en-US',
-    model: 'gpt-4',
-  },
-  vad: ['volume', 'silero'],
-  disableInterruption: false,
-  debugLog: process.env.NODE_ENV === 'development',
+// Listen for errors
+micdrop.on('Error', (error) => {
+  console.error('Error occurred:', error)
 })
 ```
 
-## State Management
+## Options
 
-Access the complete conversation state:
+You can pass options to `MicdropClient` constructor or to the `start` method:
 
-```typescript
-interface MicdropState {
-  // Connection and startup state
-  isStarting: boolean // True if WebSocket or microphone are starting
-  isStarted: boolean // True if both WebSocket and microphone are active
-
-  // Conversation flow state
-  isPaused: boolean // True if microphone is paused by user
-  isListening: boolean // True if actively listening for speech
-  isProcessing: boolean // True if processing user message
-  isUserSpeaking: boolean // True if user is currently speaking
-  isAssistantSpeaking: boolean // True if assistant is currently speaking
-
-  // Microphone state
-  isMicStarted: boolean // True if microphone stream is active
-  isMicMuted: boolean // True if microphone is muted
-  micDeviceId: string | undefined
-
-  // Speaker state
-  speakerDeviceId: string | undefined
-
-  // Device lists
-  micDevices: MediaDeviceInfo[]
-  speakerDevices: MediaDeviceInfo[]
-
-  // Conversation data
-  conversation: MicdropConversation
-
-  // Error state
-  error: MicdropClientError | undefined
-}
-
-// Access state
-console.log('Current state:', client.state)
-console.log('Is listening:', client.isListening)
-console.log('Is started:', client.isStarted)
-```
+- `url`: URL of the WebSocket server (using @micdrop/server)
+- `params`: Parameters (optional) to check auth or provide other data
+- `vad`: VAD configuration (see [VAD](./VAD.md) section)
+- `disableInterruption`: If true, disables automatic mic muting when the assistant is speaking (default: false)
+- `debugLog`: Boolean flag to enable/disable debug logging
 
 ## Events
 
-Listen for client events:
+The `MicdropClient` emits the following events:
+
+- `EndCall`: Emitted when the call ends
+- `Error`: Emitted when an error occurs, provides a `MicdropClientError` object
+- `StateChange`: Emitted when any state change occurs in the handler, provides a `MicdropState` object
+
+## Properties
+
+Accessible properties that must not be changed:
+
+- `vad`: The VAD instance in use
+- `micRecorder`: Instance of `MicRecorder` for handling microphone input
+- `micDevices`: Array of available microphone devices
+- `speakerDevices`: Array of available speaker devices
+
+## State
+
+You can get state in multiple ways:
 
 ```typescript
-// State changes
-client.on('StateChange', (state: MicdropState) => {
-  console.log('State updated:', state)
-  updateUI(state)
-})
+// Get a specific state property
+console.log('Is started', Micdrop.isStarted)
 
-// Call ended by assistant
-client.on('EndCall', () => {
-  console.log('Call ended by assistant')
-  showEndCallDialog()
-})
+// Get the whole state
+console.log('State', Micdrop.state)
+console.log('Is started', Micdrop.state.isStarted)
 
-// Error handling
-client.on('Error', (error: MicdropClientError) => {
-  console.error('Client error:', error.code, error.message)
-  handleError(error)
+// Listen to state changes
+Micdrop.on('StateChange', (state) => {
+  console.log('State:', state)
 })
+```
+
+### State Properties
+
+```typescript
+interface MicdropState {
+  // True if either WebSocket or microphone are in starting state
+  isStarting: boolean
+
+  // True if both WebSocket and microphone recording are active
+  isStarted: boolean
+
+  // True if the microphone is paused (muted by user)
+  isPaused: boolean
+
+  // True if the client is actively listening for user speech (not paused, not processing, not muted, not speaking)
+  isListening: boolean
+
+  // True if the call is processing (i.e. waiting for answer and audio generation)
+  isProcessing: boolean
+
+  // True if the user is currently speaking
+  isUserSpeaking: boolean
+
+  // True if the assistant is currently speaking
+  isAssistantSpeaking: boolean
+
+  // True if microphone stream is active
+  isMicStarted: boolean
+
+  // True if the microphone is muted
+  isMicMuted: boolean
+
+  // The ID of the microphone device in use
+  micDeviceId: string | undefined
+
+  // The ID of the speaker device in use
+  speakerDeviceId: string | undefined
+
+  // Array of available microphone devices
+  micDevices: MediaDeviceInfo[]
+
+  // Array of available speaker devices
+  speakerDevices: MediaDeviceInfo[]
+
+  // Array storing the conversation history
+  conversation: MicdropConversation
+
+  // The error object if an error occurred
+  error: MicdropClientError | undefined
+}
 ```
 
 ## Methods
 
 ### Core Methods
 
+Start the call (starts the microphone and WebSocket connection):
+
 ```typescript
-// Start the conversation
-await client.start(options?: MicdropOptions): Promise<void>
+async start(options?: MicdropOptions): Promise<void>
+```
 
-// Stop the conversation
-await client.stop(): Promise<void>
+Stop the call (stops the microphone and WebSocket connection):
 
-// Pause conversation (mute microphone)
-client.pause(): void
+```typescript
+async stop(): Promise<void>
+```
 
-// Resume conversation (unmute microphone)
-client.resume(): void
+Pause the call (pauses the microphone and speaker):
+
+```typescript
+pause(): void
+```
+
+Resume the call (resumes the microphone):
+
+```typescript
+resume(): void
 ```
 
 ### Microphone Control
 
 ```typescript
-// Start microphone with options
-await client.startMic({
-  vad: ['volume', 'silero'],
-  deviceId: 'specific-device-id',
-  record: true
+async startMic(params: {
+  vad?: VADConfig
+  deviceId?: string
+  record?: boolean
 }): Promise<void>
-
-// Change microphone device
-await client.changeMicDevice(deviceId: string): Promise<void>
 ```
 
-### Speaker Control
+Starts the microphone with optional device selection and recording control.
+
+It can by usefull if you want to start the microphone before the call starts.
+
+- `vad`: VAD configuration (see [VAD](./VAD.md) section)
+- `deviceId`: Device ID to use for the microphone
+- `record`: Boolean flag to enable/disable recording
+
+### Devices Control
+
+Select microphone device:
 
 ```typescript
-// Change speaker device
-await client.changeSpeakerDevice(deviceId: string): Promise<void>
+async changeMicDevice(deviceId: string): Promise<void>
 ```
 
-## Multiple Instances
-
-Create multiple client instances for advanced scenarios:
+Select speaker device:
 
 ```typescript
-// Different conversations with different servers
-const client1 = new MicdropClient({
-  url: 'ws://server1.com/ws',
-  params: { language: 'en' },
-})
-
-const client2 = new MicdropClient({
-  url: 'ws://server2.com/ws',
-  params: { language: 'fr' },
-})
-
-// Start both conversations
-await Promise.all([client1.start(), client2.start()])
+async changeSpeakerDevice(deviceId: string): Promise<void>
 ```
 
-## Custom Event Handling
-
-Advanced event handling patterns:
+Example:
 
 ```typescript
-class ConversationManager {
-  private client: MicdropClient
-  private conversationHistory: Array<{ timestamp: Date; message: any }> = []
-
-  constructor(serverUrl: string) {
-    this.client = new MicdropClient({ url: serverUrl })
-    this.setupEventHandlers()
-  }
-
-  private setupEventHandlers() {
-    // Log all state changes
-    this.client.on('StateChange', (state) => {
-      this.logStateChange(state)
-      this.handleStateChange(state)
-    })
-
-    // Handle errors with retry logic
-    this.client.on('Error', (error) => {
-      this.handleError(error)
-    })
-
-    // Track conversation end
-    this.client.on('EndCall', () => {
-      this.saveConversation()
-    })
-  }
-
-  private logStateChange(state: MicdropState) {
-    this.conversationHistory.push({
-      timestamp: new Date(),
-      message: {
-        type: 'state_change',
-        isListening: state.isListening,
-        isProcessing: state.isProcessing,
-        isAssistantSpeaking: state.isAssistantSpeaking,
-      },
-    })
-  }
-
-  private handleStateChange(state: MicdropState) {
-    // Update UI based on state
-    if (state.isListening) {
-      this.showListeningIndicator()
-    } else if (state.isProcessing) {
-      this.showProcessingIndicator()
-    } else if (state.isAssistantSpeaking) {
-      this.showSpeakingIndicator()
-    }
-  }
-
-  private async handleError(error: MicdropClientError) {
-    console.error('Conversation error:', error)
-
-    // Implement retry logic for recoverable errors
-    if (error.code === 'Connection' && this.retryCount < 3) {
-      await this.retryConnection()
-    } else {
-      this.showErrorDialog(error)
-    }
-  }
-
-  async start() {
-    await this.client.start()
-  }
-
-  async stop() {
-    await this.client.stop()
-    this.saveConversation()
-  }
-
-  private saveConversation() {
-    // Save conversation history
-    localStorage.setItem(
-      'conversation_history',
-      JSON.stringify(this.conversationHistory)
-    )
-  }
-}
+const micDeviceId = micdrop.micDevices[0].deviceId
+const speakerDeviceId = micdrop.speakerDevices[0].deviceId
+await micdrop.changeMicDevice(micDeviceId)
+await micdrop.changeSpeakerDevice(speakerDeviceId)
 ```
 
-## Integration with Custom Components
+See more complete example in demo [DevicesSettings](../../../examples/demo-client/src/DevicesSettings.tsx) component.
 
-Integrate MicdropClient with custom UI components:
+## Voice Activity Detection (VAD)
 
-```typescript
-class VoiceCallWidget {
-  private client: MicdropClient
-  private container: HTMLElement
-
-  constructor(containerId: string, serverUrl: string) {
-    this.container = document.getElementById(containerId)
-    this.client = new MicdropClient({ url: serverUrl })
-
-    this.createUI()
-    this.setupEventHandlers()
-  }
-
-  private createUI() {
-    this.container.innerHTML = `
-      <div class="voice-call-widget">
-        <div class="status" id="status">Ready to start</div>
-        <div class="controls">
-          <button id="startBtn">Start Call</button>
-          <button id="pauseBtn" disabled>Pause</button>
-          <button id="stopBtn" disabled>Stop Call</button>
-        </div>
-        <div class="volume-meters">
-          <div class="mic-volume">
-            <label>Microphone</label>
-            <div class="volume-bar" id="micVolume"></div>
-          </div>
-          <div class="speaker-volume">
-            <label>Speaker</label>
-            <div class="volume-bar" id="speakerVolume"></div>
-          </div>
-        </div>
-      </div>
-    `
-  }
-
-  private setupEventHandlers() {
-    // Button handlers
-    document.getElementById('startBtn').addEventListener('click', () => {
-      this.start()
-    })
-
-    document.getElementById('pauseBtn').addEventListener('click', () => {
-      this.togglePause()
-    })
-
-    document.getElementById('stopBtn').addEventListener('click', () => {
-      this.stop()
-    })
-
-    // Client event handlers
-    this.client.on('StateChange', (state) => {
-      this.updateUI(state)
-    })
-  }
-
-  private updateUI(state: MicdropState) {
-    const statusElement = document.getElementById('status')
-    const startBtn = document.getElementById('startBtn') as HTMLButtonElement
-    const pauseBtn = document.getElementById('pauseBtn') as HTMLButtonElement
-    const stopBtn = document.getElementById('stopBtn') as HTMLButtonElement
-
-    if (state.isListening) {
-      statusElement.textContent = '🎤 Listening...'
-    } else if (state.isProcessing) {
-      statusElement.textContent = '🤔 Processing...'
-    } else if (state.isAssistantSpeaking) {
-      statusElement.textContent = '🔊 Assistant speaking...'
-    } else if (state.isStarted) {
-      statusElement.textContent = '✅ Connected'
-    }
-
-    // Update button states
-    startBtn.disabled = state.isStarted || state.isStarting
-    pauseBtn.disabled = !state.isStarted
-    stopBtn.disabled = !state.isStarted
-
-    pauseBtn.textContent = state.isPaused ? 'Resume' : 'Pause'
-  }
-
-  async start() {
-    try {
-      await this.client.start()
-    } catch (error) {
-      console.error('Failed to start call:', error)
-    }
-  }
-
-  togglePause() {
-    if (this.client.isPaused) {
-      this.client.resume()
-    } else {
-      this.client.pause()
-    }
-  }
-
-  async stop() {
-    await this.client.stop()
-  }
-}
-
-// Usage
-const widget = new VoiceCallWidget('voice-widget', 'ws://localhost:8081')
-```
+Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and send chunks of audio to server only when speech is detected. For detailed information about the VAD implementations and configuration options, please refer to the [VAD documentation](./VAD.md).
 
 ## Error Handling
 
-Comprehensive error management:
+The handler uses `MicdropClientError` for error management. Each error instance contains a specific error code that helps identify the type of error that occurred.
+
+Example handling different error types:
 
 ```typescript
-client.on('Error', (error: MicdropClientError) => {
+Micdrop.on('Error', (error) => {
   switch (error.code) {
-    case 'MissingUrl':
-      console.error('Server URL is required')
-      showConfigurationError()
+    case MicdropClientErrorCode.Mic:
+      console.error('Microphone error - check permissions or hardware')
       break
-
-    case 'Connection':
-      console.error('Failed to connect to server')
-      attemptReconnection()
+    case MicdropClientErrorCode.MissingUrl:
+      console.error('Missing URL - check url in Micdrop options')
       break
-
-    case 'Mic':
-      console.error('Microphone error:', error.message)
-      handleMicrophoneError(error)
+    case MicdropClientErrorCode.BadRequest:
+      console.error('Bad request - check params in Micdrop options')
       break
-
-    case 'Unauthorized':
-      console.error('Authentication failed')
-      redirectToLogin()
+    case MicdropClientErrorCode.NotFound:
+      console.error('Not found - check server implementation')
       break
-
-    default:
-      console.error('Unknown error:', error.message)
-      showGenericError(error)
+    case MicdropClientErrorCode.Connection:
+      console.error('Connection error - check server implementation')
+      break
+    case MicdropClientErrorCode.InternalServer:
+      console.error('Internal server error - check server logs')
+      break
+    case MicdropClientErrorCode.Unauthorized:
+      console.error('Authentication failed - check credentials')
+      break
+    case MicdropClientErrorCode.Error:
+      console.error('General error occurred')
+      break
   }
 })
 ```
-
-## Performance Optimization
-
-Optimize client performance:
-
-```typescript
-// Lazy load VAD for better startup performance
-const client = new MicdropClient({
-  url: 'ws://localhost:8081',
-  vad: 'volume', // Start with lightweight VAD
-})
-
-// Upgrade to AI VAD after connection
-client.on('StateChange', (state) => {
-  if (state.isStarted && client.vad.constructor.name === 'VolumeVAD') {
-    // Upgrade to Silero VAD for better accuracy
-    client.micRecorder.setVAD(['volume', 'silero'])
-  }
-})
-```
-
-## Next Steps
-
-- [**Mic**](./mic) - Direct microphone control
-- [**MicRecorder**](./mic-recorder) - Audio recording with VAD
-- [**Speaker**](./speaker) - Audio output management
