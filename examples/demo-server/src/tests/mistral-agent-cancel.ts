@@ -11,7 +11,7 @@ const agent = new MistralAgent({
 agent.logger = new Logger('MistralAgent')
 
 agent.addUserMessage('Tell me a story')
-const { stream } = agent.answer()
+const stream = agent.answer()
 
 const COUNT_STOP = 10
 let i = 0

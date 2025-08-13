@@ -28,7 +28,7 @@ export abstract class Agent<
   constructor(protected options: Options)
 
   // Generate a streaming response with both stream and promise interfaces
-  abstract answer(): AgentAnswerReturn
+  abstract answer(): Readable
 
   // Cancel the current answer generation process
   abstract cancel(): void
@@ -50,17 +50,6 @@ export interface AgentEvents {
   CancelLastAssistantMessage: []
   SkipAnswer: []
   EndCall: []
-}
-
-export interface AgentAnswerReturn {
-  message: Promise<string>
-  stream: Readable
-}
-
-export interface TextPromise {
-  promise: Promise<string>
-  resolve: (value: string) => void
-  reject: (reason?: any) => void
 }
 
 export interface MicdropConversationMessage {
@@ -89,20 +78,16 @@ constructor(protected options: Options) {
 
 ## Abstract Methods
 
-### `answer(): AgentAnswerReturn`
+### `answer(): Readable`
 
-Generates a streaming response based on the current conversation history. Must return an `AgentAnswerReturn` object containing both a stream and a promise.
+Generates a streaming response based on the current conversation history.
 
-**Return Value:**
-
-- `stream`: A `Readable` stream that emits text chunks in real-time
-- `message`: A `Promise<string>` that resolves with the complete response text
+**Return Value:** A `Readable` stream that emits text chunks in real-time
 
 **Implementation Requirements:**
 
-- Return an `AgentAnswerReturn` object with both stream and promise
 - Handle cancellation via the `cancel()` method
-- Add the complete response to conversation history when finished
+- Add the complete response to conversation history when finished with `addAssistantMessage()`
 - Emit appropriate events during processing
 
 ### `cancel(): void`
@@ -164,10 +149,6 @@ Removes the last assistant message from the conversation history (if it exists) 
 ### `skipAnswer()`
 
 Emits the `SkipAnswer` event to indicate the agent is skipping the current response.
-
-### `createTextPromise(): TextPromise`
-
-Utility method to create a promise with external resolve/reject functions, useful for streaming implementations.
 
 ### `log(...message: any[])`
 
@@ -241,12 +222,7 @@ agent.logger = new Logger('CustomAgent')
 ### Creating a Custom Agent Implementation
 
 ```typescript
-import {
-  Agent,
-  AgentOptions,
-  AgentAnswerReturn,
-  TextPromise,
-} from '@micdrop/server'
+import { Agent, AgentOptions } from '@micdrop/server'
 import { PassThrough, Writable } from 'stream'
 
 interface CustomAgentOptions extends AgentOptions {
@@ -265,16 +241,23 @@ class CustomAgent extends Agent<CustomAgentOptions> {
     super(options)
   }
 
-  answer(): AgentAnswerReturn {
+  answer() {
     this.log('Start answering')
     this.cancelled = false
+    this.running = true
     const stream = new PassThrough()
-    const textPromise = this.createTextPromise()
-    this.generateAnswer(stream, textPromise)
-    return { message: textPromise.promise, stream }
+
+    this.generateAnswer(stream).finally(() => {
+      if (stream.writable) {
+        stream.end()
+      }
+      this.running = false
+    })
+
+    return stream
   }
 
-  private async generateAnswer(stream: Writable, textPromise: TextPromise) {
+  private async generateAnswer(stream: Writable) {
     this.running = true
     this.cancelled = false
 
@@ -326,16 +309,8 @@ class CustomAgent extends Agent<CustomAgentOptions> {
 
       // Add complete response to conversation
       this.addAssistantMessage(fullResponse)
-      textPromise.resolve(fullResponse)
     } catch (error: any) {
       console.error('[CustomAgent] Error:', error)
-      textPromise.reject(error)
-      stream.emit('error', error)
-    } finally {
-      if (stream.writable) {
-        stream.end()
-      }
-      this.running = false
     }
   }
 
@@ -403,13 +378,12 @@ new MicdropServer(socket, {
 ### Simple Echo Agent Example
 
 ```typescript
-import { Agent, AgentOptions, AgentAnswerReturn } from '@micdrop/server'
-import { PassThrough, Readable } from 'stream'
+import { Agent } from '@micdrop/server'
+import { PassThrough } from 'stream'
 
 class EchoAgent extends Agent {
-  answer(): AgentAnswerReturn {
+  answer() {
     const stream = new PassThrough()
-    const textPromise = this.createTextPromise()
 
     // Get the last user message
     const lastUserMessage = this.conversation
@@ -417,26 +391,22 @@ class EchoAgent extends Agent {
       .pop()
 
     if (lastUserMessage) {
-      const response = `You said: "${lastUserMessage.content}"`
-
-      // Add to conversation
-      this.addAssistantMessage(response)
-
-      // Stream the response
+      // Simulate a delay before responding
       setTimeout(() => {
+        const response = `You said: "${lastUserMessage.content}"`
+
+        // Stream the response
         stream.write(response)
         stream.end()
-        textPromise.resolve(response)
+
+        // Add to conversation
+        this.addAssistantMessage(response)
       }, 100)
     } else {
       stream.end()
-      textPromise.resolve('Hello, how are you?')
     }
 
-    return {
-      stream,
-      message: textPromise.promise,
-    }
+    return stream
   }
 
   cancel(): void {
@@ -450,7 +420,7 @@ const echoAgent = new EchoAgent({
 })
 
 echoAgent.addUserMessage('Hello!')
-const { stream, message } = echoAgent.answer()
+const stream = echoAgent.answer()
 
 stream.on('data', (chunk) => {
   console.log('Chunk:', chunk.toString())
@@ -458,12 +428,6 @@ stream.on('data', (chunk) => {
 
 stream.on('end', async () => {
   console.log('Stream ended')
-})
-
-message.then((text) => {
-  console.log('Text:', text)
-  setTimeout(() => {
-    echoAgent.destroy()
-  }, 100)
+  echoAgent.destroy()
 })
 ```

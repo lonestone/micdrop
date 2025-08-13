@@ -1,4 +1,4 @@
-import { Agent, AgentOptions, TextPromise } from '@micdrop/server'
+import { Agent, AgentOptions } from '@micdrop/server'
 import { Mistral } from '@mistralai/mistralai'
 import { ChatCompletionStreamRequest } from '@mistralai/mistralai/models/components'
 import { PassThrough, Writable } from 'stream'
@@ -25,12 +25,11 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
     this.log('Start answering')
     this.cancelled = false
     const stream = new PassThrough()
-    const textPromise = this.createTextPromise()
-    this.generateAnswer(stream, textPromise)
-    return { message: textPromise.promise, stream }
+    this.generateAnswer(stream)
+    return stream
   }
 
-  private async generateAnswer(stream: Writable, textPromise: TextPromise) {
+  private async generateAnswer(stream: Writable) {
     this.running = true
     this.cancelled = false
 
@@ -66,10 +65,8 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
 
       // Add full answer to conversation
       this.addAssistantMessage(fullAnswer)
-      textPromise.resolve(fullAnswer)
     } catch (error: any) {
       console.error('[MistralAgent] Error:', error)
-      textPromise.resolve('')
       stream.emit('error', error)
     } finally {
       if (stream.writable) {

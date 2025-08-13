@@ -178,7 +178,7 @@ export class MicdropServer {
     this.cancel()
     try {
       // LLM: Generate answer
-      const { stream } = this.config.agent.answer()
+      const stream = this.config.agent.answer()
 
       // TTS: Generate answer audio
       await this.speak(stream)

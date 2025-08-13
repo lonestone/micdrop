@@ -3,6 +3,7 @@ dotenv.config()
 
 import { OpenaiAgent } from '@micdrop/openai'
 import { Logger } from '@micdrop/server'
+import { Readable } from 'stream'
 import { z } from 'zod'
 
 const agent = new OpenaiAgent({
@@ -54,9 +55,23 @@ agent.addTool({
   callback: () => new Date().toLocaleTimeString(),
 })
 
+const waitForStreamEnd = (stream: Readable) =>
+  new Promise<void>((resolve, reject) => {
+    stream.on('data', () => {})
+    stream.on('end', () => {
+      setTimeout(() => {
+        resolve()
+      }, 100)
+    })
+    stream.on('error', (err) => {
+      reject(err)
+    })
+  })
+
 async function answerTo(message: string) {
   agent.addUserMessage(message)
-  await agent.answer().message
+  const stream = agent.answer()
+  await waitForStreamEnd(stream)
 }
 
 async function run() {

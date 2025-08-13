@@ -1,4 +1,4 @@
-import { Agent, AgentOptions, TextPromise } from '@micdrop/server'
+import { Agent, AgentOptions } from '@micdrop/server'
 import OpenAI from 'openai'
 import { PassThrough } from 'stream'
 import { z } from 'zod'
@@ -61,27 +61,24 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
     this.cancel()
     this.log('Start answering')
     const stream = new PassThrough()
-    const textPromise = this.createTextPromise()
 
-    this.generateAnswer(stream, textPromise).finally(() => {
+    this.generateAnswer(stream).finally(() => {
       this.abortController = undefined
       if (stream.writable) {
         stream.end()
       }
     })
 
-    return { message: textPromise.promise, stream }
+    return stream
   }
 
   private async generateAnswer(
     stream: PassThrough,
-    textPromise: TextPromise,
     callCount = 0,
     toolInputs?: Array<ToolCall | ToolCallOutput>
   ): Promise<void> {
     if (callCount >= (this.options.maxCalls || DEFAULT_MAX_CALLS)) {
       console.error('[OpenaiAgent] Max calls reached')
-      textPromise.resolve('')
       return
     }
 
@@ -131,7 +128,6 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
           case 'response.output_text.done':
             this.addAssistantMessage(event.text)
             stream.end()
-            textPromise.resolve(event.text)
             hasAnswer = true
             break
 
@@ -152,18 +148,9 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
 
       // Query again in case of tool call
       if (toolOutputs.length > 0 && !hasAnswer && !skipAnswer) {
-        await this.generateAnswer(
-          stream,
-          textPromise,
-          callCount + 1,
-          toolOutputs
-        )
-      } else {
-        // Ensure promise is resolved (if skipAnswer is true in a tool)
-        textPromise.resolve('')
+        await this.generateAnswer(stream, callCount + 1, toolOutputs)
       }
     } catch (error) {
-      textPromise.resolve('')
       if (!(error instanceof OpenAI.APIUserAbortError)) {
         console.error('[OpenaiAgent] Error answering:', error)
       }
