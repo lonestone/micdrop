@@ -27,13 +27,13 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/lonestone/micdrop/tree/main/doc/docs',
+          editUrl: 'https://github.com/lonestone/micdrop/tree/main/doc',
           showLastUpdateAuthor: true,
           showLastUpdateTime: true,
         },
         blog: {
           showReadingTime: true,
-          editUrl: 'https://github.com/lonestone/micdrop/tree/main/doc/blog',
+          editUrl: 'https://github.com/lonestone/micdrop/tree/main/doc',
         },
         theme: {
           customCss: './src/css/custom.css',
