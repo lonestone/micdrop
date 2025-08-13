@@ -104,7 +104,7 @@ The `isListening` state is `true` only when ALL these conditions are met:
 
 ### UI State Management
 
-```typescript
+```tsx
 function CallInterface() {
   const [callState, setCallState] = useState(Micdrop.state)
 
@@ -146,7 +146,7 @@ function CallInterface() {
 
 ### Visual Indicators
 
-```typescript
+```tsx
 function CallStatusIndicator() {
   const [state, setState] = useState(Micdrop.state)
 

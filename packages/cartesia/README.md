@@ -1,19 +1,8 @@
 # @micdrop/cartesia
 
-Cartesia implementation for [@micdrop/server](../server/README.md).
+[Micdrop website](https://micdrop.dev) | [Documentation](https://micdrop.dev/docs/ai-integration/provided-integrations/cartesia)
 
-This package provides high-quality real-time text-to-speech implementation using Cartesia's streaming API.
-
-## Features
-
-- 🎙️ **Cartesia TTS** - High-quality streaming text-to-speech with:
-  - Real-time audio streaming via WebSocket
-  - Ultra-low latency voice synthesis
-  - Support for 15+ languages
-  - Multiple voice options and models
-  - Configurable speech speed (fast, normal, slow)
-  - Automatic reconnection on connection loss
-  - Streaming cancellation support
+Cartesia implementation for [@micdrop/server](https://micdrop.dev/docs/server).
 
 ## Installation
 
@@ -44,51 +33,9 @@ new MicdropServer(socket, {
 })
 ```
 
-### Options
+## Documentation
 
-| Option     | Type                           | Default  | Description                   |
-| ---------- | ------------------------------ | -------- | ----------------------------- |
-| `apiKey`   | `string`                       | Required | Your Cartesia API key         |
-| `modelId`  | `string`                       | Required | Cartesia model ID to use      |
-| `voiceId`  | `string`                       | Required | Voice ID for speech synthesis |
-| `language` | `CartesiaLanguage`             | Optional | Language code for speech      |
-| `speed`    | `'fast' \| 'normal' \| 'slow'` | Optional | Speech speed                  |
-
-### Supported Languages
-
-The package supports the following languages:
-
-| Code | Language | Code | Language   | Code | Language |
-| ---- | -------- | ---- | ---------- | ---- | -------- |
-| `en` | English  | `fr` | French     | `de` | German   |
-| `es` | Spanish  | `pt` | Portuguese | `zh` | Chinese  |
-| `ja` | Japanese | `hi` | Hindi      | `it` | Italian  |
-| `ko` | Korean   | `nl` | Dutch      | `pl` | Polish   |
-| `ru` | Russian  | `sv` | Swedish    | `tr` | Turkish  |
-
-## Getting Started
-
-1. Sign up for a [Cartesia account](https://cartesia.ai) and get your API key
-2. Choose a model ID and voice ID from the Cartesia dashboard
-3. Install the package and configure with your credentials
-
-```typescript
-import { CartesiaTTS } from '@micdrop/cartesia'
-
-const tts = new CartesiaTTS({
-  apiKey: 'your-cartesia-api-key',
-  modelId: 'sonic-english', // Or sonic-multilingual for multiple languages
-  voiceId: 'your-preferred-voice-id',
-  language: 'en',
-  speed: 'normal',
-})
-
-// Use with MicdropServer
-new MicdropServer(socket, {
-  tts,
-  // ... other options
-})
-```
+Read full [documentation of the Cartesia integration for Micdrop](https://micdrop.dev/docs/ai-integration/provided-integrations/cartesia) on the [website](https://micdrop.dev).
 
 ## License
 

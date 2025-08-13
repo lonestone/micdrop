@@ -4,14 +4,6 @@ Mistral AI implementation for [@micdrop/server](../../server).
 
 This package provides AI agent implementation using Mistral AI's API for conversational AI applications.
 
-## Features
-
-- 🤖 **Mistral Agent** - Mistral-powered conversational AI with:
-  - Streaming responses for real-time conversation
-  - Support for all Mistral AI models including Ministral, Mistral Large, and Pixtral
-  - Configurable model selection and API settings
-  - Seamless integration with MicdropServer
-
 ## Installation
 
 ```bash

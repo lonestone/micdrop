@@ -1,5 +1,7 @@
 # @micdrop/react
 
+[Micdrop website](https://micdrop.dev) | [Documentation](https://micdrop.dev/docs/client/react-hooks)
+
 React hooks for Micdrop voice conversation client.
 
 ## Installation
@@ -8,89 +10,22 @@ React hooks for Micdrop voice conversation client.
 npm install @micdrop/react
 ```
 
-## Usage
+## Available hooks
 
-### useMicdropState
+- `useMicdropState`
+- `useMicdropEndCall`
+- `useMicdropError`
+- `useMicVolume`
+- `useSpeakerVolume`
 
-Hook to get the complete Micdrop state and subscribe to state changes.
+## Documentation
 
-```tsx
-import { useMicdropState } from '@micdrop/react'
+Read full [documentation of the React hooks for Micdrop](https://micdrop.dev/docs/client/react-hooks) on the [website](https://micdrop.dev).
 
-function MyComponent() {
-  const state = useMicdropState()
+## License
 
-  return <div>{state.isStarted ? 'Started' : 'Stopped'}</div>
-}
-```
+MIT
 
-### useMicdropEndCall
+## Author
 
-Hook to handle EndCall events.
-
-```tsx
-import { useMicdropEndCall } from '@micdrop/react'
-
-function MyComponent() {
-  useMicdropEndCall(() => {
-    console.log('Call ended!')
-    Micdrop.stop()
-  })
-
-  return <div>...</div>
-}
-```
-
-### useMicdropError
-
-Hook to handle Error events.
-
-```tsx
-import { useMicdropError } from '@micdrop/react'
-
-function MyComponent() {
-  useMicdropError((error) => {
-    console.error('Micdrop error:', error.message)
-  })
-
-  return <div>...</div>
-}
-```
-
-### useMicVolume
-
-Hook to get microphone volume data.
-
-```tsx
-import { useMicVolume } from '@micdrop/react'
-
-function MicVolumeIndicator() {
-  const { micVolume, maxMicVolume } = useMicVolume()
-
-  return (
-    <div>
-      Volume: {micVolume}
-      Max: {maxMicVolume}
-    </div>
-  )
-}
-```
-
-### useSpeakerVolume
-
-Hook to get speaker volume data.
-
-```tsx
-import { useSpeakerVolume } from '@micdrop/react'
-
-function SpeakerVolumeIndicator() {
-  const { speakerVolume, maxSpeakerVolume } = useSpeakerVolume()
-
-  return (
-    <div>
-      Volume: {speakerVolume}
-      Max: {maxSpeakerVolume}
-    </div>
-  )
-}
-```
+Originally developed for [Raconte.ai](https://www.raconte.ai) and open sourced by [Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))

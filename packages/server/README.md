@@ -1,12 +1,14 @@
 # 🖐️🎤 Micdrop: Real-Time Voice Conversations with AI
 
+[Micdrop website](https://micdrop.dev) | [Documentation](https://micdrop.dev/docs/server) | [Demo](../../examples/demo-server)
+
 Micdrop is a set of open source Typescript packages to build real-time voice conversations with AI agents. It handles all the complexities on the browser and server side (microphone, speaker, VAD, network communication, etc) and provides ready-to-use implementations for various AI providers.
 
 # @micdrop/server
 
-The Node.js server implementation of [Micdrop](../../README.md).
+The Node.js server implementation of [Micdrop](https://micdrop.dev).
 
-For browser implementation, see [@micdrop/client](../client/README.md) package.
+For browser implementation, see [@micdrop/client](https://micdrop.dev/docs/client).
 
 ## Features
 
@@ -28,38 +30,32 @@ npm install @micdrop/server
 ## Quick Start
 
 ```typescript
-import { ElevenLabsTTS } from '@micdrop/elevenlabs'
-import { GladiaSTT } from '@micdrop/gladia'
-import { OpenaiAgent } from '@micdrop/openai'
 import { MicdropServer } from '@micdrop/server'
+import { OpenaiAgent } from '@micdrop/openai'
+import { GladiaSTT } from '@micdrop/gladia'
+import { ElevenLabsTTS } from '@micdrop/elevenlabs'
 import { WebSocketServer } from 'ws'
 
-const wss = new WebSocketServer({ port: 8080 })
+const wss = new WebSocketServer({ port: 8081 })
 
 wss.on('connection', (socket) => {
-  // Setup agent
-  const agent = new OpenaiAgent({
-    apiKey: process.env.OPENAI_API_KEY || '',
-    systemPrompt: 'You are a helpful assistant',
-  })
-
-  // Setup STT
-  const stt = new GladiaSTT({
-    apiKey: process.env.GLADIA_API_KEY || '',
-  })
-
-  // Setup TTS
-  const tts = new ElevenLabsTTS({
-    apiKey: process.env.ELEVENLABS_API_KEY || '',
-    voiceId: process.env.ELEVENLABS_VOICE_ID || '',
-  })
-
-  // Handle call
+  // Handle voice conversation
   new MicdropServer(socket, {
-    firstMessage: 'Hello, how can I help you today?',
-    agent,
-    stt,
-    tts,
+    firstMessage: 'How can I help you today?',
+
+    agent: new OpenaiAgent({
+      apiKey: process.env.OPENAI_API_KEY,
+      systemPrompt: 'You are a helpful assistant',
+    }),
+
+    stt: new GladiaSTT({
+      apiKey: process.env.GLADIA_API_KEY,
+    }),
+
+    tts: new ElevenLabsTTS({
+      apiKey: process.env.ELEVENLABS_API_KEY,
+      voiceId: process.env.ELEVENLABS_VOICE_ID,
+    }),
   })
 })
 ```
@@ -76,221 +72,23 @@ Micdrop server has 3 main components:
 
 Micdrop provides ready-to-use implementations for the following AI providers:
 
-- [@micdrop/openai](../openai/README.md)
-- [@micdrop/elevenlabs](../elevenlabs/README.md)
-- [@micdrop/cartesia](../cartesia/README.md)
-- [@micdrop/mistral](../mistral/README.md)
-- [@micdrop/gladia](../gladia/README.md)
+- [@micdrop/openai](https://micdrop.dev/docs/ai-integration/provided-integrations/openai)
+- [@micdrop/elevenlabs](https://micdrop.dev/docs/ai-integration/provided-integrations/elevenlabs)
+- [@micdrop/cartesia](https://micdrop.dev/docs/ai-integration/provided-integrations/cartesia)
+- [@micdrop/mistral](https://micdrop.dev/docs/ai-integration/provided-integrations/mistral)
+- [@micdrop/gladia](https://micdrop.dev/docs/ai-integration/provided-integrations/gladia)
 
 ### Custom implementations
 
 You can use provided abstractions to write your own implementation:
 
-- **[Agent](./docs/Agent.md)** - Abstract class for answer generation
-- **[STT](./docs/STT.md)** - Abstract class for speech-to-text
-- **[TTS](./docs/TTS.md)** - Abstract class for text-to-speech
-
-## Examples
-
-### Authorization and Language Parameters
-
-For production applications, you'll want to handle authorization and language configuration:
-
-```typescript
-import { ElevenLabsTTS } from '@micdrop/elevenlabs'
-import { GladiaSTT } from '@micdrop/gladia'
-import { OpenaiAgent } from '@micdrop/openai'
-import {
-  MicdropServer,
-  waitForParams,
-  MicdropError,
-  MicdropErrorCode,
-  handleError,
-} from '@micdrop/server'
-import { WebSocketServer } from 'ws'
-import { z } from 'zod'
-
-const wss = new WebSocketServer({ port: 8080 })
-
-// Define params schema for authorization and language
-const callParamsSchema = z.object({
-  authorization: z.string(),
-  lang: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/), // e.g., "en", "fr", "en-US"
-})
-
-wss.on('connection', async (socket) => {
-  try {
-    // Wait for client parameters (authorization & language)
-    const params = await waitForParams(socket, callParamsSchema.parse)
-
-    // Validate authorization
-    if (params.authorization !== process.env.AUTHORIZATION_KEY) {
-      throw new MicdropError(
-        MicdropErrorCode.Unauthorized,
-        'Invalid authorization'
-      )
-    }
-
-    // Setup agent with language-specific system prompt
-    const agent = new OpenaiAgent({
-      apiKey: process.env.OPENAI_API_KEY || '',
-      systemPrompt: `You are a helpful assistant. Respond in ${params.lang} language.`,
-    })
-
-    // Setup STT with language configuration
-    const stt = new GladiaSTT({
-      apiKey: process.env.GLADIA_API_KEY || '',
-      language: params.lang,
-    })
-
-    // Setup TTS with language configuration
-    const tts = new ElevenLabsTTS({
-      apiKey: process.env.ELEVENLABS_API_KEY || '',
-      voiceId: process.env.ELEVENLABS_VOICE_ID || '',
-      language: params.lang,
-    })
-
-    // Handle call
-    new MicdropServer(socket, {
-      firstMessage: 'Hello! How can I help you today?',
-      agent,
-      stt,
-      tts,
-    })
-  } catch (error) {
-    handleError(socket, error)
-  }
-})
-```
-
-### With Fastify
-
-Using Fastify for WebSocket handling:
-
-```typescript
-import { ElevenLabsTTS } from '@micdrop/elevenlabs'
-import { GladiaSTT } from '@micdrop/gladia'
-import { OpenaiAgent } from '@micdrop/openai'
-import { MicdropServer } from '@micdrop/server'
-import Fastify from 'fastify'
-
-const fastify = Fastify()
-
-// Register WebSocket support
-await fastify.register(import('@fastify/websocket'))
-
-// WebSocket route for voice calls
-fastify.register(async function (fastify) {
-  fastify.get('/call', { websocket: true }, (socket) => {
-    // Setup agent
-    const agent = new OpenaiAgent({
-      apiKey: process.env.OPENAI_API_KEY || '',
-      systemPrompt: 'You are a helpful voice assistant',
-    })
-
-    // Setup STT
-    const stt = new GladiaSTT({
-      apiKey: process.env.GLADIA_API_KEY || '',
-    })
-
-    // Setup TTS
-    const tts = new ElevenLabsTTS({
-      apiKey: process.env.ELEVENLABS_API_KEY || '',
-      voiceId: process.env.ELEVENLABS_VOICE_ID || '',
-    })
-
-    // Handle call
-    new MicdropServer(socket, {
-      firstMessage: 'Hello, how can I help you today?',
-      agent,
-      stt,
-      tts,
-    })
-  })
-})
-
-// Start server
-fastify
-  .listen({ port: 8080 })
-  .then(() => console.log('Server listening on port 8080'))
-  .catch((err) => fastify.log.error(err))
-```
-
-### With NestJS
-
-Using NestJS for WebSocket handling:
-
-```typescript
-// micdrop.gateway.ts
-import {
-  WebSocketGateway,
-  WebSocketServer,
-  OnGatewayConnection,
-} from '@nestjs/websockets'
-import { ElevenLabsTTS } from '@micdrop/elevenlabs'
-import { GladiaSTT } from '@micdrop/gladia'
-import { OpenaiAgent } from '@micdrop/openai'
-import { MicdropServer } from '@micdrop/server'
-import { Server } from 'ws'
-
-@WebSocketGateway({ path: '/call' })
-export class MicdropGateway implements OnGatewayConnection {
-  @WebSocketServer()
-  server: Server
-
-  handleConnection(socket: Server) {
-    // Setup agent
-    const agent = new OpenaiAgent({
-      apiKey: process.env.OPENAI_API_KEY || '',
-      systemPrompt: 'You are a helpful voice assistant built with NestJS',
-    })
-
-    // Setup STT
-    const stt = new GladiaSTT({
-      apiKey: process.env.GLADIA_API_KEY || '',
-    })
-
-    // Setup TTS
-    const tts = new ElevenLabsTTS({
-      apiKey: process.env.ELEVENLABS_API_KEY || '',
-      voiceId: process.env.ELEVENLABS_VOICE_ID || '',
-    })
-
-    // Handle call
-    new MicdropServer(socket, {
-      firstMessage: 'Hello, how can I help you today?',
-      agent,
-      stt,
-      tts,
-    })
-  }
-}
-```
-
-```typescript
-// app.module.ts
-import { Module } from '@nestjs/common'
-import { MicdropGateway } from './micdrop.gateway'
-
-@Module({
-  providers: [MicdropGateway],
-})
-export class AppModule {}
-```
-
-## Demo
-
-Check out the demo implementation in the [@micdrop/demo-server](../../examples/demo-server/README.md) package. It shows:
-
-- Setting up a Fastify server with WebSocket support
-- Configuring the MicdropServer with custom handlers
-- Basic authentication flow
-- Example agent, speech-to-text and text-to-speech implementations
-- Error handling patterns
+- **[Agent](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-agent)** - Abstract class for answer generation
+- **[STT](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-stt)** - Abstract class for speech-to-text
+- **[TTS](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-tts)** - Abstract class for text-to-speech
 
 ## Documentation
 
-Learn more about the protocol of Micdrop in [protocol.md](./docs/protocol.md).
+Read full [documentation of the Micdrop server](https://micdrop.dev/docs/server) on the [website](https://micdrop.dev).
 
 ## License
 

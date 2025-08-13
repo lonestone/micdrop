@@ -15,6 +15,7 @@ const sidebars: SidebarsConfig = {
         'client/react-hooks',
         'client/start-stop-call',
         'client/pause-resume-call',
+        'client/display-conversation-messages',
         'client/devices-management',
         'client/vad',
         'client/error-handling',
@@ -45,6 +46,7 @@ const sidebars: SidebarsConfig = {
         'server/first-message',
         'server/save-messages',
         'server/error-handling',
+        'server/protocol',
       ],
     },
     {

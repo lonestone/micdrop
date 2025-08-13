@@ -4,17 +4,6 @@ ElevenLabs implementation for [@micdrop/server](../../server).
 
 This package provides high-quality real-time text-to-speech implementation using ElevenLabs' streaming API.
 
-## Features
-
-- 🎙️ **ElevenLabs TTS** - High-quality streaming text-to-speech with:
-  - Real-time audio streaming via WebSocket
-  - Multiple voice models (Multilingual V2, Turbo V2.5, Flash V2.5)
-  - Customizable voice settings (stability, similarity, style)
-  - Support for 29+ languages
-  - Automatic reconnection on connection loss
-  - Streaming cancellation support
-  - Keep-alive functionality for long sessions
-
 ## Installation
 
 ```bash

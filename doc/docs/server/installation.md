@@ -26,10 +26,10 @@ npm install @micdrop/openai @micdrop/gladia @micdrop/elevenlabs
 ### 2. Create `server.ts`
 
 ```typescript
+import { MicdropServer } from '@micdrop/server'
 import { ElevenLabsTTS } from '@micdrop/elevenlabs'
 import { GladiaSTT } from '@micdrop/gladia'
 import { OpenaiAgent } from '@micdrop/openai'
-import { MicdropServer } from '@micdrop/server'
 import { WebSocketServer } from 'ws'
 
 const wss = new WebSocketServer({ port: 8081 })

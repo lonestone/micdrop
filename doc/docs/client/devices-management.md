@@ -170,7 +170,7 @@ Mic.analyser.off('volume', onMicVolumeChange)
 
 #### Using React Hook
 
-```typescript
+```tsx
 import { useMicVolume } from '@micdrop/react'
 
 function MicVolumeIndicator() {
@@ -233,7 +233,7 @@ Speaker.analyser.off('volume', onSpeakerVolumeChange)
 
 #### Using React Hook
 
-```typescript
+```tsx
 import { useSpeakerVolume } from '@micdrop/react'
 
 function SpeakerVolumeIndicator() {

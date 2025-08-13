@@ -4,18 +4,6 @@ Gladia implementation for [@micdrop/server](../../server).
 
 This package provides high-quality real-time speech-to-text implementation using Gladia's streaming API.
 
-## Features
-
-- 🎤 **Real-time STT** - High-quality streaming speech-to-text with:
-  - Real-time audio transcription via WebSocket
-  - Support for 90+ languages with automatic language detection
-  - Customizable preprocessing (audio enhancement, speech threshold)
-  - Named entity recognition and sentiment analysis
-  - Translation capabilities with target language selection
-  - Automatic reconnection on connection loss
-  - Silence detection for improved accuracy
-  - High-quality PCM audio conversion (16kHz, 16-bit)
-
 ## Installation
 
 ```bash

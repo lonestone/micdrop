@@ -33,7 +33,7 @@ Micdrop.on('StateChange', (state) => {
 
 With React hook:
 
-```typescript
+```tsx
 // React component example
 function ErrorDisplay() {
   const state = useMicdropState()

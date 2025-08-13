@@ -4,17 +4,6 @@ Cartesia implementation for [@micdrop/server](../../server).
 
 This package provides high-quality real-time text-to-speech implementation using Cartesia's streaming API.
 
-## Features
-
-- 🎙️ **Cartesia TTS** - High-quality streaming text-to-speech with:
-  - Real-time audio streaming via WebSocket
-  - Ultra-low latency voice synthesis
-  - Support for 15+ languages
-  - Multiple voice options and models
-  - Configurable speech speed (fast, normal, slow)
-  - Automatic reconnection on connection loss
-  - Streaming cancellation support
-
 ## Installation
 
 ```bash

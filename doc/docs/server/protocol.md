@@ -1,4 +1,4 @@
-# Micdrop server protocol
+# Micdrop Protocol
 
 ## WebSocket Protocol
 

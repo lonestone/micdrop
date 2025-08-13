@@ -1,6 +1,6 @@
 # Getting Started
 
-Get up and running with Micdrop to build real-time voice conversations with AI agents.
+Get up and running with [Micdrop](/) to build real-time voice conversations with AI agents.
 
 ## Quick Setup
 
@@ -76,7 +76,7 @@ wss.on('connection', (socket) => {
 
 Don't forget to set the API keys in the environment variables.
 
-## Demos
+## Demo
 
 See Micdrop in action:
 

@@ -23,16 +23,6 @@ await Micdrop.start({
 })
 ```
 
-## Features
-
-- 🎤 **Microphone Management** - Device selection, permissions, and audio streaming
-- 🔊 **Audio Playback** - High-quality streaming audio with device control
-- 🧠 **Voice Activity Detection** - Multiple VAD algorithms including AI-based detection
-- 🌐 **WebSocket Communication** - Low-latency bidirectional audio streaming
-- 📱 **Device Management** - Select and test microphone and speaker devices
-- ⚡ **Real-time State** - Complete conversation state with events
-- 🛡️ **Error Handling** - Comprehensive error management with specific codes
-
 ## Browser Support
 
 Fully tested on desktop and mobile:

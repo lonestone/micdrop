@@ -9,22 +9,22 @@ Listen for conversation messages:
 ```typescript
 const agent = new OpenaiAgent({
   apiKey: process.env.OPENAI_API_KEY,
-  systemPrompt: 'You are a helpful assistant'
+  systemPrompt: 'You are a helpful assistant',
 })
 
 // Listen for all conversation messages
 agent.on('Message', (message) => {
   console.log('New message:', {
-    role: message.role,        // 'user' or 'assistant' 
-    content: message.content,  // The message text
-    timestamp: new Date().toISOString()
+    role: message.role, // 'user' or 'assistant'
+    content: message.content, // The message text
+    timestamp: new Date().toISOString(),
   })
 })
 
 new MicdropServer(socket, { agent, tts })
 ```
 
-## Save to Database
+## Save Messages to Database
 
 Store messages in your database:
 
@@ -38,7 +38,7 @@ agent.on('Message', async (message) => {
       sessionId: currentSessionId,
       role: message.role,
       content: message.content,
-      timestamp: new Date()
+      timestamp: new Date(),
     })
   } catch (error) {
     console.error('Failed to save message:', error)
@@ -46,45 +46,29 @@ agent.on('Message', async (message) => {
 })
 ```
 
-## Conversation Analytics
+## Save Conversation when Call ends
 
-Track conversation metrics:
+Save the complete conversation when the call ends:
 
 ```typescript
-class ConversationAnalytics {
-  private stats = {
-    messageCount: 0,
-    userMessages: 0,
-    assistantMessages: 0,
-    startTime: Date.now()
-  }
+import { MicdropServer } from '@micdrop/server'
 
-  constructor(agent) {
-    agent.on('Message', this.trackMessage.bind(this))
-  }
-
-  private trackMessage(message) {
-    this.stats.messageCount++
-    
-    if (message.role === 'user') {
-      this.stats.userMessages++
-    } else {
-      this.stats.assistantMessages++
-    }
-    
-    console.log('Conversation stats:', this.getStats())
-  }
-
-  getStats() {
-    return {
-      ...this.stats,
-      duration: Date.now() - this.stats.startTime,
-      avgResponseTime: this.calculateAvgResponseTime()
-    }
-  }
-}
-
-const analytics = new ConversationAnalytics(agent)
+const server = new MicdropServer(socket, {
+  agent,
+  stt,
+  tts,
+  onEnd: (call) => {
+    // Save conversation
+    await db.conversations.create({
+      userId: currentUserId,
+      sessionId: currentSessionId,
+      messages: call.conversation,
+      endedAt: new Date(),
+      duration: call.duration,
+      totalMessages: conversationMessages.length,
+    })
+  },
+})
 ```
 
-The Agent "Message" event captures all conversation messages, allowing you to implement custom storage, analytics, and conversation management features.
+> ⚠️ **Warning**: In case of server errors or crashes, the conversation may not be saved using this approach. For critical applications, it's recommended to save messages individually as they arrive (see [Save to Database](#save-to-database) section above) to ensure no messages are lost.

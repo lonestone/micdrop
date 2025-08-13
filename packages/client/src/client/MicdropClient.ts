@@ -478,7 +478,7 @@ export class MicdropClient
   }
 
   private addMessage(message: MicdropConversationMessage) {
-    this.conversation.push(message)
+    this.conversation = [...this.conversation, message]
     this.notifyStateChange()
   }
 

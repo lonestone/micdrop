@@ -4,19 +4,6 @@ OpenAI implementation for [@micdrop/server](../../server).
 
 This package provides AI agent and speech-to-text implementations using OpenAI's API.
 
-## Features
-
-- 🤖 **OpenAI Agent** - GPT-powered conversational AI with advanced features:
-  - Streaming responses for real-time conversation
-  - Auto end call detection when user requests to end conversation
-  - Semantic turn detection to handle incomplete sentences
-  - User noise filtering to ignore meaningless interjections
-  - Tool calling support for enhanced interactions
-- 🎙️ **OpenAI STT** - Whisper-powered speech-to-text with:
-  - High-quality transcription using Whisper models
-  - Multi-language support
-  - Configurable model selection
-
 ## Installation
 
 ```bash
@@ -66,37 +53,6 @@ new MicdropServer(socket, {
 | `autoSemanticTurn`    | `boolean \| string` | `false`    | Handle incomplete user sentences        |
 | `autoIgnoreUserNoise` | `boolean \| string` | `false`    | Filter meaningless user sounds          |
 | `settings`            | `object`            | `{}`       | Additional OpenAI API parameters        |
-
-## OpenAI STT (Speech-to-Text)
-
-### Usage
-
-```typescript
-import { OpenaiSTT } from '@micdrop/openai'
-import { MicdropServer } from '@micdrop/server'
-
-const stt = new OpenaiSTT({
-  apiKey: process.env.OPENAI_API_KEY || '',
-  model: 'whisper-1', // Default Whisper model
-  language: 'en', // Optional: specify language for better accuracy
-})
-
-// Use with MicdropServer
-new MicdropServer(socket, {
-  stt,
-  // ... other options
-})
-```
-
-### Options
-
-| Option     | Type     | Default       | Description                     |
-| ---------- | -------- | ------------- | ------------------------------- |
-| `apiKey`   | `string` | Required      | Your OpenAI API key             |
-| `model`    | `string` | `'whisper-1'` | Whisper model to use            |
-| `language` | `string` | Optional      | Language code for transcription |
-
-## Tool Management
 
 The OpenAI Agent supports adding and removing custom tools to extend its capabilities.
 
@@ -172,8 +128,6 @@ Use `getTool(name: string)` to retrieve a tool by name:
 const tool = agent.getTool('get_time')
 ```
 
-## Advanced Features
-
 ### Auto End Call
 
 When enabled, the agent automatically detects when the user wants to end the conversation and triggers the call termination:
@@ -215,3 +169,32 @@ const agent = new OpenaiAgent({
   // autoIgnoreUserNoise: 'Last user message is just an interjection',
 })
 ```
+
+## OpenAI STT (Speech-to-Text)
+
+### Usage
+
+```typescript
+import { OpenaiSTT } from '@micdrop/openai'
+import { MicdropServer } from '@micdrop/server'
+
+const stt = new OpenaiSTT({
+  apiKey: process.env.OPENAI_API_KEY || '',
+  model: 'whisper-1', // Default Whisper model
+  language: 'en', // Optional: specify language for better accuracy
+})
+
+// Use with MicdropServer
+new MicdropServer(socket, {
+  stt,
+  // ... other options
+})
+```
+
+### Options
+
+| Option     | Type     | Default       | Description                     |
+| ---------- | -------- | ------------- | ------------------------------- |
+| `apiKey`   | `string` | Required      | Your OpenAI API key             |
+| `model`    | `string` | `'whisper-1'` | Whisper model to use            |
+| `language` | `string` | Optional      | Language code for transcription |

@@ -7,12 +7,7 @@ Handle server-side errors gracefully with comprehensive error management and rec
 Use `handleError` utility for consistent error handling:
 
 ```typescript
-import {
-  MicdropServer,
-  handleError,
-  MicdropError,
-  MicdropErrorCode,
-} from '@micdrop/server'
+import { MicdropServer, handleError } from '@micdrop/server'
 
 wss.on('connection', async (socket) => {
   try {
@@ -34,7 +29,12 @@ wss.on('connection', async (socket) => {
 Create specific error responses:
 
 ```typescript
-import { MicdropError, MicdropErrorCode } from '@micdrop/server'
+import {
+  MicdropError,
+  MicdropErrorCode,
+  waitForParams,
+  handleError,
+} from '@micdrop/server'
 
 wss.on('connection', async (socket) => {
   try {
@@ -54,6 +54,8 @@ wss.on('connection', async (socket) => {
         'Invalid authorization token'
       )
     }
+
+    // Setup MicdropServer
   } catch (error) {
     handleError(socket, error)
   }

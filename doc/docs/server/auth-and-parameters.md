@@ -12,22 +12,20 @@ import { z } from 'zod'
 
 // Define parameter schema
 const paramsSchema = z.object({
-  authorization: z.string(),
-  language: z.string().optional(),
-  userId: z.string().optional(),
+  language: z.string().oneOf(['en', 'fr']).default('en'),
 })
 
 wss.on('connection', async (socket) => {
   try {
     // Wait for parameters from client
-    const params = await waitForParams(socket, paramsSchema.parse, 5000)
+    const params = await waitForParams(socket, paramsSchema.parse)
 
     console.log('Client params:', params)
 
     // Use parameters to configure agent
     const agent = new OpenaiAgent({
       apiKey: process.env.OPENAI_API_KEY,
-      systemPrompt: `Respond in ${params.language || 'en'} language`,
+      systemPrompt: `Respond in ${params.language} language`,
     })
 
     // Setup STT and TTS [...]
@@ -45,7 +43,15 @@ wss.on('connection', async (socket) => {
 ### JWT Token Validation
 
 ```typescript
+import {
+  MicdropServer,
+  MicdropError,
+  MicdropErrorCode,
+  waitForParams,
+  handleError,
+} from '@micdrop/server'
 import jwt from 'jsonwebtoken'
+import { z } from 'zod'
 
 async function validateJWT(token: string) {
   try {
@@ -56,22 +62,20 @@ async function validateJWT(token: string) {
   }
 }
 
+const paramsSchema = z.object({
+  authorization: z.string().startsWith('Bearer '),
+})
+
 wss.on('connection', async (socket) => {
   try {
-    const params = await waitForParams(socket, (data) => {
-      return z
-        .object({
-          authorization: z.string().startsWith('Bearer '),
-        })
-        .parse(data)
-    })
+    const params = await waitForParams(socket, paramsSchema.parse)
 
+    // Validate JWT token
     const token = params.authorization.replace('Bearer ', '')
     const auth = await validateJWT(token)
 
     if (!auth.isValid) {
-      socket.close(1008, 'Authentication failed')
-      return
+      throw new MicdropError(MicdropErrorCode.Unauthorized, 'Invalid JWT token')
     }
 
     // Use authenticated user data
@@ -90,17 +94,28 @@ wss.on('connection', async (socket) => {
 ### API Key Authentication
 
 ```typescript
+import {
+  MicdropServer,
+  MicdropError,
+  MicdropErrorCode,
+  waitForParams,
+  handleError,
+} from '@micdrop/server'
+import { z } from 'zod'
+
 const validApiKeys = new Set([process.env.API_KEY_1, process.env.API_KEY_2])
+
+const paramsSchema = z.object({
+  apiKey: z.string(),
+})
 
 wss.on('connection', async (socket) => {
   try {
-    const params = await waitForParams(socket, (data) => ({
-      apiKey: z.string().parse(data.apiKey),
-    }))
+    const params = await waitForParams(socket, paramsSchema.parse)
 
+    // Validate API key
     if (!validApiKeys.has(params.apiKey)) {
-      socket.close(1008, 'Invalid API key')
-      return
+      throw new MicdropError(MicdropErrorCode.Unauthorized, 'Invalid API key')
     }
 
     // Setup AI components [..]
