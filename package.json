@@ -4,7 +4,8 @@
   "license": "MIT",
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "examples/*",
+    "doc"
   ],
   "scripts": {
     "build": "turbo run build --concurrency=12",

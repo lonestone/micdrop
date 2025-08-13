@@ -1,6 +1,6 @@
 # OpenAI
 
-OpenAI implementation for [@micdrop/server](../server/README.md).
+OpenAI implementation for [@micdrop/server](../../server).
 
 This package provides AI agent and speech-to-text implementations using OpenAI's API.
 

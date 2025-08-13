@@ -1,6 +1,6 @@
 # Gladia
 
-Gladia implementation for [@micdrop/server](../server/README.md).
+Gladia implementation for [@micdrop/server](../../server).
 
 This package provides high-quality real-time speech-to-text implementation using Gladia's streaming API.
 

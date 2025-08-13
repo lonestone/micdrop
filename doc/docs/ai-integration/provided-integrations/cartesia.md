@@ -1,6 +1,6 @@
 # Cartesia
 
-Cartesia implementation for [@micdrop/server](../server/README.md).
+Cartesia implementation for [@micdrop/server](../../server).
 
 This package provides high-quality real-time text-to-speech implementation using Cartesia's streaming API.
 

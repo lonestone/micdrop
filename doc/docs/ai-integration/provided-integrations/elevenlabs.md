@@ -1,6 +1,6 @@
 # ElevenLabs
 
-ElevenLabs implementation for [@micdrop/server](../server/README.md).
+ElevenLabs implementation for [@micdrop/server](../../server).
 
 This package provides high-quality real-time text-to-speech implementation using ElevenLabs' streaming API.
 

@@ -2,11 +2,11 @@
 
 The `MicdropClient` class manages real-time audio communication between a client and server, handling microphone input, WebSocket connections, and audio playback. It's designed to facilitate interactive voice conversations with support for bi-directional audio streaming.
 
-For server implementation, see [@micdrop/server](../../server/README.md) package.
+For server implementation, see [@micdrop/server](../../server) package.
 
 ## Usage Example
 
-⚠️ In most cases, you should not use the constructor directly, but use the `Micdrop.start()` method instead (see [README](../README.md)). An instance is already created and available as `Micdrop` object.
+⚠️ In most cases, you should not use the constructor directly, but use the `Micdrop.start()` method instead (see [Start/Stop Call](../start-stop-call)). An instance is already created and available as `Micdrop` object.
 
 ```typescript
 import { MicdropClient } from '@micdrop/client'
@@ -62,7 +62,7 @@ You can pass options to `MicdropClient` constructor or to the `start` method:
 
 - `url`: URL of the WebSocket server (using @micdrop/server)
 - `params`: Parameters (optional) to check auth or provide other data
-- `vad`: VAD configuration (see [VAD](./VAD.md) section)
+- `vad`: VAD configuration (see [VAD](../vad) section)
 - `disableInterruption`: If true, disables automatic mic muting when the assistant is speaking (default: false)
 - `debugLog`: Boolean flag to enable/disable debug logging
 
@@ -194,7 +194,7 @@ Starts the microphone with optional device selection and recording control.
 
 It can by usefull if you want to start the microphone before the call starts.
 
-- `vad`: VAD configuration (see [VAD](./VAD.md) section)
+- `vad`: VAD configuration (see [VAD](../vad) section)
 - `deviceId`: Device ID to use for the microphone
 - `record`: Boolean flag to enable/disable recording
 
@@ -225,7 +225,7 @@ See more complete example in demo [DevicesSettings](../../../examples/demo-clien
 
 ## Voice Activity Detection (VAD)
 
-Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and send chunks of audio to server only when speech is detected. For detailed information about the VAD implementations and configuration options, please refer to the [VAD documentation](./VAD.md).
+Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and send chunks of audio to server only when speech is detected. For detailed information about the VAD implementations and configuration options, please refer to the [VAD documentation](../vad).
 
 ## Error Handling
 

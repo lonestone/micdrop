@@ -101,7 +101,7 @@ Unmutes the recorder (resumes recording).
 
 The `MicRecorder` class uses a VAD (Voice Activity Detection) system to detect speech. You can access the internal VAD instance via `recorder.vad` to update options or listen to VAD-specific events.
 
-See [VAD documentation](./VAD.md) for more information and available options.
+See [VAD documentation](../vad) for more information and available options.
 
 ## Technical Details
 

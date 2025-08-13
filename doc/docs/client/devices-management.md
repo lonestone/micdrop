@@ -206,7 +206,7 @@ This provides real-time visual feedback of microphone input levels, helping user
 
 **Example:** [MicVolume component](https://github.com/lonestone/micdrop/blob/main/examples/demo-client/src/components/MicVolume.tsx)
 
-**Learn more:** [Mic utility class](./utility-classes/mic.md)
+**Learn more:** [Mic utility class](./utility-classes/mic)
 
 ### Test Speaker
 
@@ -267,4 +267,4 @@ function SpeakerVolumeIndicator() {
 
 **Example:** [SpeakerTestButton component](https://github.com/lonestone/micdrop/blob/main/examples/demo-client/src/components/SpeakerTestButton.tsx)
 
-**Learn more:** [Speaker utility class](../utility-classes/speaker.md)
+**Learn more:** [Speaker utility class](./utility-classes/speaker)

@@ -1,6 +1,6 @@
 # Mistral
 
-Mistral AI implementation for [@micdrop/server](../server/README.md).
+Mistral AI implementation for [@micdrop/server](../../server).
 
 This package provides AI agent implementation using Mistral AI's API for conversational AI applications.
 
