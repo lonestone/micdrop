@@ -152,9 +152,9 @@ const config: Config = {
       respectPrefersColorScheme: false,
     },
     algolia: {
-      appId: 'YOUR_APP_ID',
-      apiKey: 'YOUR_SEARCH_API_KEY',
-      indexName: 'micdrop',
+      appId: 'DXD2XNHHEN',
+      apiKey: '48321ed44b3c849280be207db9260d46',
+      indexName: 'Micdrop Documentation',
       contextualSearch: true,
       searchParameters: {},
       searchPagePath: 'search',
