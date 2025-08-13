@@ -59,8 +59,8 @@ export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext()
   return (
     <Layout
-      title={`${siteConfig.title} - TypeScript Voice AI Library`}
-      description="TypeScript library for real-time voice conversations with AI agents. Build voice apps with microphone input, audio playback, and AI integration."
+      title={`${siteConfig.title} - Real-time voice conversations with AI in the browser`}
+      description="Integrate a powerful voice mode in your webapp with a few lines of code using Micdrop. Use provided AI integrations (agents, STT, TTS) or build your own. Build the best UX with our SDK."
     >
       <HomepageHeader />
       <main>
