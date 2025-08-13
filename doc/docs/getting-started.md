@@ -83,6 +83,18 @@ See Micdrop in action:
 - **[Demo Client](https://github.com/lonestone/micdrop/tree/main/examples/demo-client)** - React application with full UI
 - **[Demo Server](https://github.com/lonestone/micdrop/tree/main/examples/demo-server)** - Server setup with fastify
 
+## Setup Documentation MCP
+
+To vibe code your Micdrop implementation faster with Cursor, Claude Code or any other agent, [install Context7 MCP](https://github.com/upstash/context7).
+
+Once the MCP is installed, you can prompt like this:
+
+```
+create a simple fastify server that implements a micdrop server (use context7) and a React webapp with micdrop client.
+show play/stop/pause buttons and conversation, no other UI.
+make it beautiful and futuristic.
+```
+
 ## Troubleshooting
 
 **Microphone not working?**
