@@ -63,7 +63,7 @@ html {
   --ifm-color-content-secondary: #94a3b8;
 
   /* Navbar and Footer */
-  --ifm-navbar-background-color: rgba(2, 6, 23, 0.8);
+  --ifm-navbar-background-color: #1e293b;
   --ifm-footer-background-color: #0f172a;
 
   /* Sidebar */
@@ -117,7 +117,7 @@ html {
   --ifm-color-content-secondary: #334155;
 
   /* Navbar and Footer */
-  --ifm-navbar-background-color: rgba(248, 250, 252, 0.8);
+  --ifm-navbar-background-color: #f1f5f9;
   --ifm-footer-background-color: #f1f5f9;
 
   /* Sidebar */
@@ -133,7 +133,11 @@ html {
 /* Keep only essential Docusaurus-specific styles that can't be replaced with Tailwind */
 
 /* Enhanced navigation - Docusaurus specific classes */
-.navbar {
+
+.navbar-sidebar {
+  height: 100dvh;
+}
+.navbar-sidebar__backdrop {
   backdrop-filter: blur(10px);
 }
 
