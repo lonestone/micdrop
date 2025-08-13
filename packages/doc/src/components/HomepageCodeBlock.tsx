@@ -3,7 +3,7 @@ import { CustomCodeBlock } from './CustomCodeBlock'
 
 function getTabStyle(active: boolean) {
   return active
-    ? 'tab-active text-ai-primary-800 dark:text-ai-primary-200 bg-ai-surface-50 dark:bg-ai-surface-800'
+    ? 'tab-active text-ai-primary-800 dark:text-ai-primary-200 bg-ai-surface-100 dark:bg-ai-surface-800'
     : 'tab-inactive text-ai-surface-700 dark:text-ai-surface-400 bg-ai-surface-200 dark:bg-ai-surface-700'
 }
 
@@ -11,7 +11,7 @@ export function HomepageCodeBlock() {
   const [activeTab, setActiveTab] = useState('client')
 
   return (
-    <div className="bg-ai-surface-50 dark:bg-ai-surface-800 light:bg-ai-surface-100 rounded-xl animate-fade-in h-full flex flex-col glow-shadow">
+    <div className="bg-ai-surface-100 dark:bg-ai-surface-800 rounded-xl animate-fade-in h-full flex flex-col shadow-glow">
       {/* Top Tabs */}
       <div className="flex">
         <button

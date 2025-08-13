@@ -21,10 +21,6 @@ This package provides AI agent and speech-to-text implementations using OpenAI's
 
 ```bash
 npm install @micdrop/openai
-# or
-yarn add @micdrop/openai
-# or
-pnpm add @micdrop/openai
 ```
 
 ## OpenAI Agent

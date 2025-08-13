@@ -23,10 +23,6 @@ For browser implementation, see [@micdrop/client](../client/README.md) package.
 
 ```bash
 npm install @micdrop/server
-# or
-yarn add @micdrop/server
-# or
-pnpm add @micdrop/server
 ```
 
 ## Quick Start
@@ -225,7 +221,7 @@ fastify
 Using NestJS for WebSocket handling:
 
 ```typescript
-// websocket.gateway.ts
+// micdrop.gateway.ts
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -274,7 +270,7 @@ export class MicdropGateway implements OnGatewayConnection {
 ```typescript
 // app.module.ts
 import { Module } from '@nestjs/common'
-import { MicdropGateway } from './websocket.gateway'
+import { MicdropGateway } from './micdrop.gateway'
 
 @Module({
   providers: [MicdropGateway],

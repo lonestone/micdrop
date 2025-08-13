@@ -71,12 +71,6 @@ html {
   --ifm-menu-color-background-hover: rgba(16, 185, 129, 0.05);
   --ifm-menu-color-active: #10b981;
 
-  /* Code blocks */
-  --ifm-code-font-size: 95%;
-  --ifm-code-background: #1e293b;
-  --ifm-blockquote-border-left-color: #10b981;
-  --docusaurus-highlighted-code-line-bg: rgba(16, 185, 129, 0.1);
-
   /* Cards and containers */
   --ifm-card-background-color: #1e293b;
   --ifm-hover-overlay: rgba(16, 185, 129, 0.05);
@@ -131,11 +125,6 @@ html {
   --ifm-menu-color: #334155;
   --ifm-menu-color-active: #047857;
 
-  /* Code blocks - keep dark theme for code */
-  --ifm-code-background: #1e293b;
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(16, 185, 129, 0.1);
-
   /* Links */
   --ifm-link-color: #047857;
   --ifm-link-hover-color: #065f46;
@@ -159,6 +148,10 @@ html {
 .footer__copyright a {
   color: inherit;
   text-decoration: underline;
+}
+
+pre {
+  background-color: transparent !important;
 }
 
 /* Scrollbar styling */

@@ -20,10 +20,6 @@ This package provides high-quality real-time speech-to-text implementation using
 
 ```bash
 npm install @micdrop/gladia
-# or
-yarn add @micdrop/gladia
-# or
-pnpm add @micdrop/gladia
 ```
 
 ## Usage

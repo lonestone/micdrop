@@ -20,10 +20,6 @@ This package provides high-quality real-time text-to-speech implementation using
 
 ```bash
 npm install @micdrop/elevenlabs
-# or
-yarn add @micdrop/elevenlabs
-# or
-pnpm add @micdrop/elevenlabs
 ```
 
 ## ElevenLabs TTS (Text-to-Speech)

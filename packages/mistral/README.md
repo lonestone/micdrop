@@ -16,10 +16,6 @@ This package provides AI agent implementation using Mistral AI's API for convers
 
 ```bash
 npm install @micdrop/mistral
-# or
-yarn add @micdrop/mistral
-# or
-pnpm add @micdrop/mistral
 ```
 
 ## Mistral Agent

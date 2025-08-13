@@ -17,9 +17,21 @@ That's it! No additional configuration or dependencies needed.
 ```typescript
 import { Micdrop } from '@micdrop/client'
 
+// Start a voice conversation
 await Micdrop.start({
-  url: 'ws://localhost:8081/',
+  url: 'ws://localhost:8081',
+  vad: ['volume', 'silero'],
 })
+
+// Listen for state changes
+Micdrop.on('StateChange', (state) => {
+  console.log('Listening:', state.isListening)
+  console.log('Processing:', state.isProcessing)
+  console.log('Assistant speaking:', state.isAssistantSpeaking)
+})
+
+// Stop the conversation
+await Micdrop.stop()
 ```
 
 ### React
@@ -120,14 +132,3 @@ For quick prototyping or simple HTML pages:
   })
 </script>
 ```
-
-## Browser Requirements
-
-Ensure your target browsers support:
-
-- **WebSocket API** - For real-time communication
-- **Web Audio API** - For audio processing and playback
-- **MediaDevices API** - For microphone access
-- **MediaRecorder API** - For audio recording
-
-All modern browsers support these APIs. For legacy browser support, consider polyfills.

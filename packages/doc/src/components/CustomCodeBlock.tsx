@@ -6,35 +6,14 @@ interface CustomCodeBlockProps {
 }
 
 export function CustomCodeBlock({ language, code }: CustomCodeBlockProps) {
-  const getBorderColor = (lang: string) => {
-    switch (lang) {
-      case 'bash':
-        return 'border-l-ai-primary-400'
-      case 'typescript':
-        return 'border-l-ai-accent-400'
-      default:
-        return 'border-l-ai-primary-400'
-    }
-  }
-
-  const getBackgroundGradient = (lang: string) => {
-    switch (lang) {
-      case 'bash':
-        return 'bg-gradient-to-r from-ai-primary-500/5 to-transparent'
-      case 'typescript':
-        return 'bg-gradient-to-r from-ai-accent-500/5 to-transparent'
-      default:
-        return 'bg-gradient-to-r from-ai-primary-500/5 to-transparent'
-    }
-  }
-
   return (
-    <div
-      className={`${getBorderColor(language)} ${getBackgroundGradient(language)} border-l-4`}
-    >
-      <div className="[&_.prism-code]:!bg-transparent [&_.prism-code]:!p-2 [&_.prism-code]:!m-0 [&_.prism-code]:text-sm [&_.prism-code]:text-left [&_pre]:text-left [&_.prism-code]:whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_code]:whitespace-pre-wrap [&_.theme-code-block]:mb-0">
-        <CodeBlock language={language}>{code}</CodeBlock>
-      </div>
+    <div className="[&_.theme-code-block]:mb-0">
+      <CodeBlock
+        language={language}
+        className="p-2 m-0 text-md text-left !bg-ai-surface-50 dark:!bg-ai-surface-900"
+      >
+        {code}
+      </CodeBlock>
     </div>
   )
 }

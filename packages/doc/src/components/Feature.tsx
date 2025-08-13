@@ -16,7 +16,10 @@ export function Feature({ title, Icon, description }: FeatureProps) {
         />
       </div>
       <div className="text-center px-4">
-        <Heading as="h3" className="text-ai-primary-300 mb-4 font-bold text-xl">
+        <Heading
+          as="h3"
+          className="dark:text-ai-primary-300 mb-4 font-bold text-xl"
+        >
           {title}
         </Heading>
         <p className="text-ai-surface-700 dark:text-ai-surface-300 leading-relaxed">

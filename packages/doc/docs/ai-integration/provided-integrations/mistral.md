@@ -1,6 +1,16 @@
 # Mistral
 
-Cost-effective AI agents using Mistral's open-source and commercial language models.
+Mistral AI implementation for [@micdrop/server](../server/README.md).
+
+This package provides AI agent implementation using Mistral AI's API for conversational AI applications.
+
+## Features
+
+- 🤖 **Mistral Agent** - Mistral-powered conversational AI with:
+  - Streaming responses for real-time conversation
+  - Support for all Mistral AI models including Ministral, Mistral Large, and Pixtral
+  - Configurable model selection and API settings
+  - Seamless integration with MicdropServer
 
 ## Installation
 
@@ -8,69 +18,59 @@ Cost-effective AI agents using Mistral's open-source and commercial language mod
 npm install @micdrop/mistral
 ```
 
-## Basic Usage
+## Mistral Agent
+
+### Usage
 
 ```typescript
 import { MistralAgent } from '@micdrop/mistral'
-
-const agent = new MistralAgent({
-  apiKey: process.env.MISTRAL_API_KEY,
-  model: 'mistral-large-latest'
-})
-```
-
-## Key Features
-
-- **Cost-effective** - Competitive pricing for high-quality models
-- **Fast inference** - Optimized for real-time conversations  
-- **Multiple models** - From lightweight to advanced reasoning
-- **Multilingual** - Strong performance across languages
-
-## Available Models
-
-| Model | Speed | Quality | Cost | Use Case |
-|-------|-------|---------|------|----------|
-| `mistral-small-latest` | Fast | Good | $ | Simple conversations |
-| `mistral-medium-latest` | Medium | Better | $$ | Balanced performance |
-| `mistral-large-latest` | Medium | Excellent | $$$ | Advanced reasoning |
-
-## Configuration
-
-```typescript
-const agent = new MistralAgent({
-  apiKey: process.env.MISTRAL_API_KEY,
-  model: 'mistral-large-latest',
-  systemPrompt: 'You are a helpful assistant',
-  temperature: 0.7,
-  maxTokens: 150
-})
-```
-
-## Complete Example
-
-```typescript
 import { MicdropServer } from '@micdrop/server'
-import { MistralAgent } from '@micdrop/mistral'
-import { ElevenLabsTTS } from '@micdrop/elevenlabs'
 
-wss.on('connection', (socket) => {
-  const agent = new MistralAgent({
-    apiKey: process.env.MISTRAL_API_KEY,
-    model: 'mistral-large-latest',
-    systemPrompt: 'You are a knowledgeable assistant powered by Mistral AI'
-  })
+const agent = new MistralAgent({
+  apiKey: process.env.MISTRAL_API_KEY || '',
+  model: 'ministral-8b-latest', // Default model
+  systemPrompt: 'You are a helpful assistant',
+})
 
-  const tts = new ElevenLabsTTS({
-    apiKey: process.env.ELEVENLABS_API_KEY,
-    voiceId: process.env.ELEVENLABS_VOICE_ID
-  })
-
-  new MicdropServer(socket, {
-    firstMessage: 'Hello! I\'m powered by Mistral AI. How can I assist you?',
-    agent,
-    tts
-  })
+// Use with MicdropServer
+new MicdropServer(socket, {
+  agent,
+  // ... other options
 })
 ```
 
-For detailed model capabilities and configuration, see the [Mistral package README](../../../packages/mistral/README.md).
+### Options
+
+| Option         | Type     | Default                 | Description                          |
+| -------------- | -------- | ----------------------- | ------------------------------------ |
+| `apiKey`       | `string` | Required                | Your Mistral AI API key              |
+| `model`        | `string` | `'ministral-8b-latest'` | Mistral AI model to use              |
+| `systemPrompt` | `string` | Required                | System prompt for the agent          |
+| `settings`     | `object` | `{}`                    | Additional Mistral AI API parameters |
+
+### Available Models
+
+Mistral AI offers several models you can choose from:
+
+- **`ministral-8b-latest`** - Fast and efficient 8B parameter model (default)
+- **`mistral-large-latest`** - Most capable model for complex tasks
+- **`mistral-small-latest`** - Balanced performance and cost
+- **`codestral-latest`** - Specialized for code generation
+
+### Settings Object
+
+The `settings` parameter accepts any additional options from the Mistral AI Chat Completions API:
+
+```typescript
+const agent = new MistralAgent({
+  apiKey: process.env.MISTRAL_API_KEY || '',
+  systemPrompt: 'You are a helpful assistant',
+  settings: {
+    temperature: 0.7, // Controls randomness (0-1)
+    max_tokens: 1000, // Maximum tokens in response
+    top_p: 0.9, // Nucleus sampling parameter
+    random_seed: 42, // For reproducible outputs
+    safe_prompt: false, // Enable/disable safety filtering
+  },
+})
+```

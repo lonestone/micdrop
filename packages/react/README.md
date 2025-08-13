@@ -6,10 +6,6 @@ React hooks for Micdrop voice conversation client.
 
 ```bash
 npm install @micdrop/react
-# or
-yarn add @micdrop/react
-# or
-pnpm add @micdrop/react
 ```
 
 ## Usage

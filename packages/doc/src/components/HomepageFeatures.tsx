@@ -48,7 +48,7 @@ const FeatureList: FeatureItem[] = [
 
 export function HomepageFeatures() {
   return (
-    <section className="flex items-center py-8 w-full">
+    <section className="flex items-center py-8 w-full bg-ai-surface-100 dark:bg-ai-surface-900">
       <div className="container flex flex-col gap-24 my-24 mx-auto px-4">
         {/* Features Section */}
         <div className="flex flex-wrap gap-8 justify-center">
@@ -72,9 +72,12 @@ export function HomepageFeatures() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
             {/* Core Packages */}
             <div className="ai-card text-center">
-              <h3 className="text-ai-primary-300 font-bold text-xl mb-4">
+              <h3 className="dark:text-ai-primary-300 font-bold text-xl mb-4">
                 Core Packages
               </h3>
+              <p className="text-ai-surface-700 dark:text-ai-surface-300">
+                Essential packages for browser and server-side implementation
+              </p>
               <div className="flex flex-wrap justify-center gap-2 mb-4">
                 <a href="/docs/packages/client" className="ai-badge-core">
                   @micdrop/client
@@ -83,16 +86,16 @@ export function HomepageFeatures() {
                   @micdrop/server
                 </a>
               </div>
-              <p className="text-ai-surface-700 dark:text-ai-surface-300">
-                Essential packages for browser and server-side implementation
-              </p>
             </div>
 
             {/* AI Integrations */}
             <div className="ai-card text-center">
-              <h3 className="text-ai-primary-300 font-bold text-xl mb-4">
+              <h3 className="dark:text-ai-primary-300 font-bold text-xl mb-4">
                 AI Integrations
               </h3>
+              <p className="text-ai-surface-700 dark:text-ai-surface-300">
+                Ready-to-use integrations with popular AI providers
+              </p>
               <div className="flex flex-wrap justify-center gap-2 mb-4">
                 <a href="/docs/packages/openai" className="ai-badge-ai">
                   @micdrop/openai
@@ -110,24 +113,21 @@ export function HomepageFeatures() {
                   @micdrop/gladia
                 </a>
               </div>
-              <p className="text-ai-surface-700 dark:text-ai-surface-300">
-                Ready-to-use integrations with popular AI providers
-              </p>
             </div>
 
             {/* Utilities */}
             <div className="ai-card text-center">
-              <h3 className="text-ai-primary-300 font-bold text-xl mb-4">
+              <h3 className="dark:text-ai-primary-300 font-bold text-xl mb-4">
                 Utilities
               </h3>
+              <p className="text-ai-surface-700 dark:text-ai-surface-300">
+                React hooks and utilities for seamless frontend integration
+              </p>
               <div className="flex flex-wrap justify-center gap-2 mb-4">
                 <a href="/docs/packages/react" className="ai-badge-utility">
                   @micdrop/react
                 </a>
               </div>
-              <p className="text-ai-surface-700 dark:text-ai-surface-300">
-                React hooks and utilities for seamless frontend integration
-              </p>
             </div>
           </div>
         </div>

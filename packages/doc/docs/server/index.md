@@ -8,7 +8,9 @@ Micdrop server orchestrates voice conversations by integrating AI agents, speech
 npm install @micdrop/server
 ```
 
-Example with WebSocket server:
+See [Installation](./installation) for more details.
+
+## Quick Example
 
 ```typescript
 import { MicdropServer } from '@micdrop/server'
@@ -18,10 +20,10 @@ const wss = new WebSocketServer({ port: 8081 })
 
 wss.on('connection', (socket) => {
   new MicdropServer(socket, {
+    firstMessage: 'Hello! How can I help you today?',
     agent: new OpenaiAgent({ apiKey: '...' }),
     stt: new GladiaSTT({ apiKey: '...' }),
-    tts: new ElevenLabsTTS({ apiKey: '...' }),
-    firstMessage: 'Hello! How can I help you today?',
+    tts: new ElevenLabsTTS({ apiKey: '...', voiceId: '...' }),
   })
 })
 ```
@@ -35,7 +37,6 @@ wss.on('connection', (socket) => {
 - 💬 **Conversation Management** - Message history and state tracking
 - 🔄 **Streaming Support** - Real-time response generation and audio streaming
 - 🛡️ **Error Handling** - Comprehensive error management and recovery
-- 📝 **Protocol Compliant** - Works with any Micdrop client implementation
 
 ## Architecture
 

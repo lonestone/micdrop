@@ -1,372 +1,317 @@
-# Custom STT
+# Speech-to-Text (STT)
 
-Build your own speech-to-text implementation by extending the abstract STT base class.
+The `STT` class is the core abstraction for speech-to-text functionality in Micdrop. It provides a standardized interface for integrating various speech-to-text providers into real-time voice conversations.
+
+## Available Implementations
+
+- [OpenaiSTT](https://github.com/lonestone/micdrop/blob/main/packages/openai/src/OpenaiSTT.ts) from [@micdrop/openai](../provided-integrations/openai)
+- [GladiaSTT](https://github.com/lonestone/micdrop/blob/main/packages/gladia/src/GladiaSTT.ts) from [@micdrop/gladia](../provided-integrations/gladia)
+- [MockSTT](https://github.com/lonestone/micdrop/blob/main/packages/server/src/stt/MockSTT.ts) for testing
 
 ## Overview
 
-The STT class provides the foundation for creating custom speech-to-text integrations that can convert audio to text in Micdrop voice applications.
+The `STT` class is an abstract base class that extends `EventEmitter` and manages:
 
-## Basic Implementation
+- Real-time audio stream processing
+- Automatic audio format detection
+- Event emission for transcription results
+- Integration with logging systems
+- Resource cleanup and cancellation
 
 ```typescript
-import { STT } from '@micdrop/server'
+export abstract class STT extends EventEmitter<STTEvents> {
+  protected mimeType?: keyof typeof MIME_TYPE_TO_EXTENSION
+  public logger?: Logger
 
-class MyCustomSTT extends STT {
-  private apiKey: string
-  private baseURL: string
+  // Transcribe audio stream to text (emits Transcript event)
+  transcribe(audioStream: Readable): void
 
-  constructor(options: { apiKey: string; baseURL: string }) {
-    super()
-    this.apiKey = options.apiKey
-    this.baseURL = options.baseURL
-  }
-
-  async transcribe(audioBlob: Blob): Promise<string> {
-    try {
-      // Convert blob to format expected by your STT service
-      const audioData = await this.prepareAudioData(audioBlob)
-      
-      // Call your STT service
-      const transcription = await this.callSTTService(audioData)
-      
-      return transcription
-    } catch (error) {
-      console.error('STT transcription failed:', error)
-      throw error
-    }
-  }
-
-  private async prepareAudioData(audioBlob: Blob): Promise<Buffer> {
-    const arrayBuffer = await audioBlob.arrayBuffer()
-    return Buffer.from(arrayBuffer)
-  }
-
-  private async callSTTService(audioData: Buffer): Promise<string> {
-    // Implement your STT service integration
-    // This could be Google Cloud Speech, Azure Speech, AWS Transcribe, etc.
-    
-    const formData = new FormData()
-    formData.append('audio', new Blob([audioData]), 'audio.wav')
-    
-    const response = await fetch(`${this.baseURL}/transcribe`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: formData
-    })
-
-    const result = await response.json()
-    return result.transcription || ''
-  }
+  // Cleanup
+  destroy(): void
 }
 ```
 
-## Advanced Implementation
+## Events
 
-### With Configuration Options
+The STT class emits one primary event:
+
+### Transcript
+
+Emitted when a transcription is ready.
 
 ```typescript
-interface CustomSTTOptions {
-  apiKey: string
-  baseURL: string
-  language?: string
-  model?: string
-  enablePunctuation?: boolean
-  enableDiarization?: boolean
-}
-
-class AdvancedCustomSTT extends STT {
-  private config: Required<CustomSTTOptions>
-
-  constructor(options: CustomSTTOptions) {
-    super()
-    this.config = {
-      language: 'en',
-      model: 'base',
-      enablePunctuation: true,
-      enableDiarization: false,
-      ...options
-    }
-  }
-
-  async transcribe(audioBlob: Blob): Promise<string> {
-    const audioBuffer = await audioBlob.arrayBuffer()
-    
-    // Prepare request with configuration
-    const requestData = {
-      audio: Buffer.from(audioBuffer).toString('base64'),
-      config: {
-        language: this.config.language,
-        model: this.config.model,
-        enable_punctuation: this.config.enablePunctuation,
-        enable_diarization: this.config.enableDiarization
-      }
-    }
-
-    const response = await fetch(`${this.config.baseURL}/v1/transcribe`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.config.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestData)
-    })
-
-    if (!response.ok) {
-      throw new Error(`STT service error: ${response.status} ${response.statusText}`)
-    }
-
-    const result = await response.json()
-    return result.text || ''
-  }
-}
+stt.on('Transcript', (text: string) => {
+  console.log('Transcript:', text)
+})
 ```
 
-## Real-World Examples
+## Debug Logging
 
-### Google Cloud Speech-to-Text
+Enable detailed logging for development:
+
+```typescript
+// Enable debug logging
+stt.logger = new Logger('CustomSTT')
+```
+
+## Custom STT Implementation
+
+### Creating a Real-time STT Implementation
+
+For services that support real-time streaming transcription:
 
 ```typescript
 import { STT } from '@micdrop/server'
-import { SpeechClient } from '@google-cloud/speech'
+import { Readable } from 'stream'
+import WebSocket from 'ws'
 
-class GoogleCloudSTT extends STT {
-  private client: SpeechClient
-  private config: any
+export class CustomRealtimeSTT extends STT {
+  private socket?: WebSocket
+  private reconnectTimeout?: NodeJS.Timeout
+  private keepAliveInterval?: NodeJS.Timeout
 
-  constructor(options: {
-    keyFilename?: string
-    projectId?: string
-    language?: string
-    model?: string
-  }) {
+  constructor(
+    private options: {
+      apiKey: string
+      language?: string
+    }
+  ) {
     super()
-    
-    this.client = new SpeechClient({
-      keyFilename: options.keyFilename,
-      projectId: options.projectId
+  }
+
+  async transcribe(audioStream: Readable) {
+    // Initialize WebSocket connection
+    await this.initConnection()
+
+    // Process incoming audio chunks
+    audioStream.on('data', (chunk: Buffer) => {
+      this.processAudioChunk(chunk)
     })
-    
-    this.config = {
-      encoding: 'WEBM_OPUS',
-      sampleRateHertz: 48000,
-      languageCode: options.language || 'en-US',
-      model: options.model || 'latest_long'
-    }
+
+    audioStream.on('end', () => {
+      this.finalizeStream()
+    })
+
+    audioStream.on('error', (error) => {
+      this.log('Audio stream error:', error)
+      this.emit('error', error)
+    })
   }
 
-  async transcribe(audioBlob: Blob): Promise<string> {
-    try {
-      const audioBytes = Buffer.from(await audioBlob.arrayBuffer()).toString('base64')
-      
-      const request = {
-        audio: { content: audioBytes },
-        config: this.config
-      }
+  private async initConnection() {
+    if (this.socket) return
+    const wsUrl = `wss://api.example.com/v1/stream?key=${this.options.apiKey}`
 
-      const [response] = await this.client.recognize(request)
-      
-      if (response.results && response.results.length > 0) {
-        return response.results
-          .map(result => result.alternatives?.[0]?.transcript)
-          .filter(Boolean)
-          .join(' ')
-      }
+    this.socket = new WebSocket(wsUrl)
 
-      return ''
-    } catch (error) {
-      console.error('Google Cloud STT error:', error)
-      throw error
-    }
-  }
-}
-```
+    this.socket.addEventListener('open', () => {
+      this.log('Connected to STT service')
+      this.sendConfiguration()
+      this.startKeepAlive()
+    })
 
-### Azure Cognitive Services Speech
+    this.socket.addEventListener('message', (event) => {
+      this.handleMessage(JSON.parse(event.data))
+    })
 
-```typescript
-import { STT } from '@micdrop/server'
-import * as sdk from 'microsoft-cognitiveservices-speech-sdk'
+    this.socket.addEventListener('error', (error) => {
+      this.log('WebSocket error:', error)
+      this.emit('error', error)
+    })
 
-class AzureSTT extends STT {
-  private speechConfig: sdk.SpeechConfig
-  
-  constructor(options: {
-    subscriptionKey: string
-    region: string
-    language?: string
-  }) {
-    super()
-    
-    this.speechConfig = sdk.SpeechConfig.fromSubscription(
-      options.subscriptionKey, 
-      options.region
-    )
-    this.speechConfig.speechRecognitionLanguage = options.language || 'en-US'
-  }
-
-  async transcribe(audioBlob: Blob): Promise<string> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const audioBuffer = Buffer.from(await audioBlob.arrayBuffer())
-        const audioConfig = sdk.AudioConfig.fromWavFileInput(audioBuffer)
-        const recognizer = new sdk.SpeechRecognizer(this.speechConfig, audioConfig)
-
-        recognizer.recognizeOnceAsync(
-          result => {
-            if (result.reason === sdk.ResultReason.RecognizedSpeech) {
-              resolve(result.text)
-            } else {
-              reject(new Error(`Recognition failed: ${result.errorDetails}`))
-            }
-            recognizer.close()
-          },
-          error => {
-            console.error('Azure STT error:', error)
-            recognizer.close()
-            reject(error)
-          }
-        )
-      } catch (error) {
-        reject(error)
+    this.socket.addEventListener('close', ({ code, reason }) => {
+      this.log(`Connection closed: ${code} ${reason}`)
+      if (code !== 1000) {
+        this.reconnect()
       }
     })
   }
-}
-```
 
-### Local Whisper Implementation
+  private sendConfiguration() {
+    if (!this.socket) return
 
-```typescript
-import { STT } from '@micdrop/server'
-import { spawn } from 'child_process'
-import { writeFileSync, unlinkSync } from 'fs'
-import { join } from 'path'
+    const config = {
+      type: 'config',
+      language: this.options.language || 'en',
+      encoding: 'pcm',
+      interim_results: true,
+    }
 
-class LocalWhisperSTT extends STT {
-  private modelPath: string
-  private tempDir: string
-
-  constructor(options: {
-    modelPath: string
-    tempDir?: string
-  }) {
-    super()
-    this.modelPath = options.modelPath
-    this.tempDir = options.tempDir || '/tmp'
+    this.socket.send(JSON.stringify(config))
   }
 
-  async transcribe(audioBlob: Blob): Promise<string> {
-    const tempFile = join(this.tempDir, `audio_${Date.now()}.wav`)
-    
-    try {
-      // Save audio to temporary file
-      const audioBuffer = Buffer.from(await audioBlob.arrayBuffer())
-      writeFileSync(tempFile, audioBuffer)
-
-      // Run Whisper CLI
-      const result = await this.runWhisper(tempFile)
-      
-      return result
-    } finally {
-      // Clean up temporary file
-      try {
-        unlinkSync(tempFile)
-      } catch (e) {
-        // Ignore cleanup errors
-      }
+  private processAudioChunk(chunk: Buffer) {
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      // Convert to required format if needed
+      const processedChunk = this.convertAudioFormat(chunk)
+      this.socket.send(processedChunk)
     }
   }
 
-  private runWhisper(audioFile: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const whisper = spawn('whisper', [
-        audioFile,
-        '--model', this.modelPath,
-        '--output_format', 'txt',
-        '--output_dir', this.tempDir
-      ])
+  private convertAudioFormat(chunk: Buffer): Buffer {
+    // Example: Convert to 16kHz PCM if needed
+    // Implementation depends on your audio processing requirements
+    return chunk
+  }
 
-      let output = ''
-      let error = ''
-
-      whisper.stdout.on('data', (data) => {
-        output += data.toString()
-      })
-
-      whisper.stderr.on('data', (data) => {
-        error += data.toString()
-      })
-
-      whisper.on('close', (code) => {
-        if (code === 0) {
-          // Extract transcription from output
-          const transcription = this.extractTranscription(output)
-          resolve(transcription)
-        } else {
-          reject(new Error(`Whisper failed with code ${code}: ${error}`))
+  private handleMessage(message: any) {
+    switch (message.type) {
+      case 'transcript':
+        if (message.is_final && message.text) {
+          this.log(`Final transcript: "${message.text}"`)
+          this.emit('Transcript', message.text)
         }
-      })
-    })
+        break
+
+      case 'error':
+        this.log('Service error:', message.error)
+        this.emit('error', new Error(message.error))
+        break
+
+      case 'ping':
+        this.socket?.send(JSON.stringify({ type: 'pong' }))
+        break
+    }
   }
 
-  private extractTranscription(output: string): string {
-    // Parse Whisper output to extract transcription
-    const lines = output.split('\n')
-    const transcriptionLines = lines.filter(line => 
-      !line.startsWith('[') && line.trim().length > 0
-    )
-    return transcriptionLines.join(' ').trim()
+  private finalizeStream() {
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ type: 'end_stream' }))
+    }
   }
-}
-```
 
-## Usage Example
+  private startKeepAlive() {
+    this.keepAliveInterval = setInterval(() => {
+      if (this.socket?.readyState === WebSocket.OPEN) {
+        this.socket.send(JSON.stringify({ type: 'ping' }))
+      }
+    }, 30000)
+  }
 
-```typescript
-import { MicdropServer } from '@micdrop/server'
-import { OpenaiAgent } from '@micdrop/openai'
+  private reconnect() {
+    this.log('Attempting reconnection...')
+    this.reconnectTimeout = setTimeout(() => {
+      this.initConnection().catch(() => this.reconnect())
+    }, 1000)
+  }
 
-// Use your custom STT
-const customSTT = new MyCustomSTT({
-  apiKey: process.env.CUSTOM_STT_API_KEY,
-  baseURL: 'https://your-stt-service.com'
-})
+  destroy() {
+    super.destroy()
 
-const agent = new OpenaiAgent({
-  apiKey: process.env.OPENAI_API_KEY
-})
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+    }
 
-wss.on('connection', (socket) => {
-  new MicdropServer(socket, {
-    agent,
-    stt: customSTT,
-    firstMessage: 'Hello! I\'m using custom speech-to-text.'
-  })
-})
-```
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval)
+    }
 
-## Testing Your STT
-
-```typescript
-// Test your custom STT implementation
-async function testSTT() {
-  const stt = new MyCustomSTT({
-    apiKey: 'test-key',
-    baseURL: 'https://test-stt-service.com'
-  })
-
-  // Create test audio blob (you'd use real audio in practice)
-  const testAudio = new Blob(['fake audio data'], { type: 'audio/wav' })
-  
-  try {
-    const transcription = await stt.transcribe(testAudio)
-    console.log('Transcription:', transcription)
-  } catch (error) {
-    console.error('STT test failed:', error)
+    if (this.socket) {
+      this.socket.close(1000, 'Client disconnect')
+    }
   }
 }
 ```
 
-For more details on the STT interface and requirements, see the [STT documentation](../../../packages/server/docs/STT.md).
+### Using CustomRealtimeSTT with MicdropServer
+
+```typescript
+// Create custom STT
+const stt = new CustomRealtimeSTT({
+  apiKey: process.env.CUSTOM_STT_API_KEY || '',
+  language: 'en',
+})
+
+// Add logging
+stt.logger = new Logger('CustomSTT')
+
+// Create server with custom STT
+const server = new MicdropServer(socket, {
+  stt,
+  // ... other options
+})
+```
+
+### Creating a File-based STT Implementation
+
+For services that require complete audio files:
+
+```typescript
+import { FileSTT } from '@micdrop/server'
+
+export class CustomFileSTT extends FileSTT {
+  constructor(
+    private options: {
+      apiKey: string
+      model?: string
+      language?: string
+    }
+  ) {
+    super()
+  }
+
+  async transcribeFile(file: File): Promise<string> {
+    this.log(`Transcribing file: ${file.name} (${file.size} bytes)`)
+
+    try {
+      // Prepare request
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('model', this.options.model || 'whisper-1')
+
+      if (this.options.language) {
+        formData.append('language', this.options.language)
+      }
+
+      // Make API request
+      const response = await fetch(
+        'https://api.example.com/v1/audio/transcriptions',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.options.apiKey}`,
+          },
+          body: formData,
+        }
+      )
+
+      if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`STT API error: ${response.status} ${error}`)
+      }
+
+      const result = await response.json()
+
+      if (!result.text) {
+        throw new Error('No transcription text in response')
+      }
+
+      this.log(`Transcription successful: "${result.text}"`)
+      return result.text
+    } catch (error) {
+      this.log('Transcription failed:', error)
+      throw error
+    }
+  }
+}
+```
+
+### Using CustomFileSTT with MicdropServer
+
+```typescript
+// Create custom STT
+const stt = new CustomFileSTT({
+  apiKey: process.env.CUSTOM_STT_API_KEY || '',
+  model: 'whisper-1',
+  language: 'en',
+})
+
+// Add logging
+stt.logger = new Logger('CustomSTT')
+
+// Create server with custom STT
+const server = new MicdropServer(socket, {
+  stt,
+  // ... other options
+})
+```

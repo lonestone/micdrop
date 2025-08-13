@@ -92,7 +92,7 @@ const config: Config = {
             },
             {
               label: 'React Hooks',
-              to: '/docs/react-hooks',
+              to: '/docs/client/react-hooks',
             },
           ],
         },

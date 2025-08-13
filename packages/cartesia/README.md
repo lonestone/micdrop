@@ -19,10 +19,6 @@ This package provides high-quality real-time text-to-speech implementation using
 
 ```bash
 npm install @micdrop/cartesia
-# or
-yarn add @micdrop/cartesia
-# or
-pnpm add @micdrop/cartesia
 ```
 
 ## Cartesia TTS (Text-to-Speech)

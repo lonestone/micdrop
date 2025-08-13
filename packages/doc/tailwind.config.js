@@ -121,6 +121,12 @@ module.exports = {
     require('tailwindcss/plugin')(function ({ addUtilities, addComponents }) {
       // Add custom utilities for AI theme
       addUtilities({
+        '.shadow-glow': {
+          '@apply animate-shadow-glow': {},
+        },
+        '.border-glow': {
+          '@apply animate-border-glow border-2': {},
+        },
         '.text-glow': {
           '@apply animate-text-glow': {},
         },
@@ -139,13 +145,8 @@ module.exports = {
       // Add reusable component classes
       addComponents({
         '.ai-card': {
-          '@apply p-8 rounded-2xl backdrop-blur-sm border animate-slide-up bg-gradient-to-br from-ai-surface-50 to-ai-surface-100 border-ai-surface-200 dark:from-ai-surface-800/50 dark:to-ai-surface-900/50 dark:border-ai-surface-700/50':
+          '@apply p-8 rounded-2xl backdrop-blur-sm animate-slide-up border-glow bg-ai-surface-100 dark:bg-ai-surface-800':
             {},
-          /**
-             * 
-             * background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-  border-color: #e2e8f0 !important;
-             */
         },
         '.ai-badge-core': {
           '@apply inline-flex items-center px-4 py-2 bg-gradient-to-r from-ai-primary-500 to-ai-primary-400 dark:from-ai-primary-900 dark:to-ai-primary-800 text-white rounded-full text-sm font-semibold shadow-lg transition-all duration-300 no-underline':
@@ -168,7 +169,7 @@ module.exports = {
           },
         },
         '.ai-badge-utility': {
-          '@apply inline-flex items-center px-4 py-2 bg-gradient-to-r from-ai-surface-600 to-ai-surface-500 dark:from-ai-surface-800 dark:to-ai-surface-700 text-white rounded-full text-sm font-semibold shadow-lg transition-all duration-300 no-underline':
+          '@apply inline-flex items-center px-4 py-2 bg-gradient-to-r from-ai-surface-600 to-ai-surface-500 dark:from-ai-surface-700 dark:to-ai-surface-600 text-white rounded-full text-sm font-semibold shadow-lg transition-all duration-300 no-underline':
             {},
           '&:hover': {
             boxShadow: '0 8px 25px rgba(100, 116, 139, 0.3)',
@@ -178,12 +179,11 @@ module.exports = {
           },
         },
         '.ai-button': {
-          '@apply inline-flex items-center px-8 py-4 bg-gradient-to-r from-ai-primary-500 to-ai-primary-400 text-white rounded-xl font-semibold shadow-xl transition-all duration-300 no-underline':
+          '@apply inline-flex items-center px-8 py-4 bg-gradient-to-r from-ai-primary-500 to-ai-primary-400 dark:from-ai-primary-600 dark:to-ai-primary-500 text-white rounded-xl font-semibold shadow-xl transition-all duration-300 no-underline':
             {},
           '&:hover': {
             transform: 'translateY(-3px) scale(1.02)',
             boxShadow: '0 12px 30px rgba(16, 185, 129, 0.4)',
-            backgroundImage: 'linear-gradient(to right, #34d399, #6ee7b7)',
             textDecoration: 'none',
             color: 'white',
           },
@@ -200,17 +200,17 @@ module.exports = {
           },
         },
         '.tab-content': {
-          '@apply border-2 border-transparent animate-border-glow': {},
+          '@apply border-glow': {},
           borderTop: 'none !important',
         },
         '.tab-inactive': {
-          '@apply border-2 border-transparent animate-border-glow': {},
+          '@apply border-glow': {},
           borderTop: 'none !important',
           borderLeft: 'none !important',
           borderRight: 'none !important',
         },
         '.tab-active': {
-          '@apply border-2 border-transparent animate-border-glow': {},
+          '@apply border-glow': {},
           borderBottom: 'none !important',
         },
       })

@@ -29,10 +29,6 @@ For server implementation, see [@micdrop/server](../server/README.md) package.
 
 ```bash
 npm install @micdrop/client
-# or
-yarn add @micdrop/client
-# or
-pnpm add @micdrop/client
 ```
 
 If you're using React, you can also install [@micdrop/react](../react/README.md) package to get a ready-to-use React hooks.

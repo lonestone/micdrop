@@ -10,6 +10,8 @@ npm install @micdrop/client
 
 That's it 🎉 The client is ready to use in any browser, with any framework.
 
+See [Installation](./installation) for more details.
+
 ## Quick Example
 
 ```typescript
@@ -18,18 +20,7 @@ import { Micdrop } from '@micdrop/client'
 // Start a voice conversation
 await Micdrop.start({
   url: 'ws://localhost:8081',
-  vad: ['volume', 'silero'],
 })
-
-// Listen for state changes
-Micdrop.on('StateChange', (state) => {
-  console.log('Listening:', state.isListening)
-  console.log('Processing:', state.isProcessing)
-  console.log('Assistant speaking:', state.isAssistantSpeaking)
-})
-
-// Stop the conversation
-await Micdrop.stop()
 ```
 
 ## Features
@@ -44,9 +35,16 @@ await Micdrop.stop()
 
 ## Browser Support
 
-- ✅ Chrome/Chromium 60+
-- ✅ Firefox 60+
-- ✅ Safari 12+
-- ✅ Edge 80+
+Fully tested on desktop and mobile:
 
-Requires: WebSocket API, Web Audio API, MediaDevices API, MediaRecorder API
+- ✅ Chrome/Chromium
+- ✅ Firefox
+- ✅ Safari
+- ✅ Edge
+
+Target browsers must support the following APIs:
+
+- **WebSocket API** - For real-time communication
+- **Web Audio API** - For audio processing and playback
+- **MediaDevices API** - For microphone access
+- **MediaRecorder API** - For audio recording
