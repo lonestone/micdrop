@@ -1,4 +1,4 @@
-import EventEmitter from 'eventemitter3'
+import { EventEmitter } from 'eventemitter3'
 import { Readable } from 'stream'
 import { Logger } from '../Logger'
 

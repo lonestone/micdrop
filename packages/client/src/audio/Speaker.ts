@@ -1,4 +1,4 @@
-import EventEmitter from 'eventemitter3'
+import { EventEmitter } from 'eventemitter3'
 import { AudioStream } from './stream/AudioStream'
 import { Pcm16AudioStream } from './stream/Pcm16AudioStream'
 import { AudioAnalyser } from './utils/AudioAnalyser'

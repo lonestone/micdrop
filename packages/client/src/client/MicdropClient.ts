@@ -6,7 +6,7 @@ import {
   MicdropServerCommands,
   VAD,
 } from '@micdrop/client'
-import EventEmitter from 'eventemitter3'
+import { EventEmitter } from 'eventemitter3'
 import { Mic, Speaker } from '../audio'
 import { MicRecorder } from '../audio/MicRecorder'
 import { VADConfig } from '../audio/vad/getVAD'

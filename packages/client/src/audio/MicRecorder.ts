@@ -1,4 +1,4 @@
-import EventEmitter from 'eventemitter3'
+import { EventEmitter } from 'eventemitter3'
 import { createDelayedStream } from './utils/delayedStream'
 import { stopStream } from './utils/stopStream'
 import { VAD } from './vad/VAD'

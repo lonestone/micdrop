@@ -1,4 +1,4 @@
-import EventEmitter from 'eventemitter3'
+import { EventEmitter } from 'eventemitter3'
 
 export interface VADEvents {
   // Speech starts, even it it's not confirmed
