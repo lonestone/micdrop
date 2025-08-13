@@ -29,11 +29,8 @@ function HomepageHeader() {
               TTS) or build your own. Build the best UX with our SDK.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link
-                className="ai-button"
-                to="/docs/getting-started/installation"
-              >
-                Get Started (5 min)
+              <Link className="ai-button" to="/docs/getting-started">
+                Start Building (5 min)
               </Link>
               <Link
                 className="ai-button-secondary"
