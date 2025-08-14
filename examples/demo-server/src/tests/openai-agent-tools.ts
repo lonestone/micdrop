@@ -3,8 +3,8 @@ dotenv.config()
 
 import { OpenaiAgent } from '@micdrop/openai'
 import { Logger } from '@micdrop/server'
-import { Readable } from 'stream'
 import { z } from 'zod'
+import { waitForStreamEnd } from './utils/waitForStreamEnd'
 
 const agent = new OpenaiAgent({
   apiKey: process.env.OPENAI_API_KEY || '',
@@ -54,19 +54,6 @@ agent.addTool({
   description: 'Get the current time',
   callback: () => new Date().toLocaleTimeString(),
 })
-
-const waitForStreamEnd = (stream: Readable) =>
-  new Promise<void>((resolve, reject) => {
-    stream.on('data', () => {})
-    stream.on('end', () => {
-      setTimeout(() => {
-        resolve()
-      }, 100)
-    })
-    stream.on('error', (err) => {
-      reject(err)
-    })
-  })
 
 async function answerTo(message: string) {
   agent.addUserMessage(message)

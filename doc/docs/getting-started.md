@@ -90,9 +90,9 @@ To vibe code your Micdrop implementation faster with Cursor, Claude Code or any 
 Once the MCP is installed, you can prompt like this:
 
 ```
-create a simple fastify server that implements a micdrop server (use context7) and a React webapp with micdrop client.
-show play/stop/pause buttons and conversation, no other UI.
-make it beautiful and futuristic.
+create a turbo monorepo in current folder with a client and a server in a new /apps folder:
+- server: a simple fastify server with Typescript that implements a micdrop server (use context7)
+- client: a simple React webapp with micdrop client. show play/stop/pause buttons and conversation, no other UI. make it beautiful and futuristic.
 ```
 
 ## Troubleshooting

@@ -1,4 +1,4 @@
-import { Agent, AgentOptions } from '@micdrop/server'
+import { Agent, AgentOptions, MicdropAnswerMetadata } from '@micdrop/server'
 import OpenAI from 'openai'
 import { PassThrough } from 'stream'
 import { z } from 'zod'
@@ -30,6 +30,25 @@ export interface OpenaiAgentOptions extends AgentOptions {
   // Ignore of the last user message when it's meaningless
   // You can provide a custom prompt to use instead of the default one by passing a string
   autoIgnoreUserNoise?: boolean | string
+
+  // Extract a value from the answer
+  // Value must be at the end of the answer, in JSON or between tags
+  extract?: ExtractJsonOptions | ExtractTagOptions
+}
+
+interface ExtractOptions {
+  callback?: (value: string) => void
+  saveInMetadata?: boolean
+}
+
+interface ExtractJsonOptions extends ExtractOptions {
+  json: true
+  callback?: (value: any) => void
+}
+
+interface ExtractTagOptions extends ExtractOptions {
+  startTag: string
+  endTag: string
 }
 
 const DEFAULT_MODEL = 'gpt-4o'
@@ -99,6 +118,10 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
       input.push(...toolInputs)
     }
 
+    // Prepare extracting
+    let extracting = false
+    const extractOptions = this.getExtractOptions()
+
     try {
       // Generate answer
       const response = await this.openai.responses.create(
@@ -122,11 +145,34 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
         switch (event.type) {
           case 'response.output_text.delta':
             this.log(`Answer chunk: "${event.delta}"`)
+
+            // Extracting value?
+            if (extractOptions) {
+              if (!extracting) {
+                const startTagIndex = event.delta.indexOf(
+                  extractOptions.startTag
+                )
+                if (startTagIndex !== -1) {
+                  extracting = true
+                  const messagePart = event.delta
+                    .slice(0, startTagIndex)
+                    .trimEnd()
+                  stream.write(messagePart)
+                  break
+                }
+              } else {
+                // Extracting, don't write to stream
+                break
+              }
+            }
+
+            // Send chunk
             stream.write(event.delta)
             break
 
           case 'response.output_text.done':
-            this.addAssistantMessage(event.text)
+            const { message, metadata } = this.extract(event.text)
+            this.addAssistantMessage(message, metadata)
             stream.end()
             hasAnswer = true
             break
@@ -231,6 +277,62 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
         }),
       }
     }
+  }
+
+  private getExtractOptions(): ExtractTagOptions | undefined {
+    const extract = this.options.extract
+    if (!extract) return undefined
+    if ('json' in extract && extract.json) {
+      return { ...extract, startTag: '{', endTag: '}' }
+    }
+    if ('startTag' in extract && 'endTag' in extract) {
+      return extract
+    }
+    return undefined
+  }
+
+  private extract(message: string) {
+    const extractOptions = this.getExtractOptions()
+    let metadata: MicdropAnswerMetadata | undefined = undefined
+
+    // Extract value?
+    if (extractOptions) {
+      const startTagIndex = message.indexOf(extractOptions.startTag)
+      if (startTagIndex !== -1) {
+        // Find end tag
+        let endTagIndex = message.indexOf(extractOptions.endTag)
+        if (endTagIndex === -1) endTagIndex = message.length + 1
+        else endTagIndex += extractOptions.endTag.length
+        const extractedText = message.slice(startTagIndex, endTagIndex).trim()
+
+        // Parse extracted value
+        try {
+          const extractedValue =
+            'json' in extractOptions && extractOptions.json
+              ? JSON.parse(extractedText)
+              : extractedText
+
+          // Call callback
+          if (extractOptions.callback) {
+            extractOptions.callback(extractedValue)
+          }
+
+          // Save in metadata
+          if (extractOptions.saveInMetadata) {
+            metadata = { extracted: extractedValue }
+          }
+        } catch (error) {
+          console.error(
+            `[OpenaiAgent] Error parsing extracted value (${extractedText}):`,
+            error
+          )
+        }
+
+        // Remove extracted value from message
+        message = message.slice(0, startTagIndex).trimEnd()
+      }
+    }
+    return { message, metadata }
   }
 
   cancel() {
