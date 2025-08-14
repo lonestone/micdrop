@@ -4,6 +4,7 @@ import {
   MicdropConversation,
   MicdropConversationMessage,
   MicdropServerCommands,
+  MicdropToolCall,
   VAD,
 } from '@micdrop/client'
 import { EventEmitter } from 'eventemitter3'
@@ -19,6 +20,7 @@ export interface MicdropEvents {
   EndCall: []
   Error: [MicdropClientError]
   StateChange: [MicdropState]
+  ToolCall: [MicdropToolCall]
 }
 
 export interface MicdropOptions {
@@ -402,11 +404,19 @@ export class MicdropClient
       console.warn(`[MicdropClient] Unknown message type: ${event.data}`)
     } else if (event.data.startsWith(MicdropServerCommands.Message)) {
       // Received user/assistant message
-      const message = JSON.parse(
-        event.data.substring(MicdropServerCommands.Message.length + 1)
-      )
-      this._isProcessing = false
-      this.addMessage(message)
+      try {
+        const message = JSON.parse(
+          event.data.substring(MicdropServerCommands.Message.length + 1)
+        )
+        this._isProcessing = false
+        this.addMessage(message)
+      } catch (error) {
+        console.error(
+          '[MicdropClient] Error parsing message:',
+          event.data,
+          error
+        )
+      }
     } else if (event.data === MicdropServerCommands.EndCall) {
       // Call ended
       this.emit('EndCall')
@@ -430,6 +440,20 @@ export class MicdropClient
         this.conversation = this.conversation.slice(0, -1)
         this._isProcessing = false
         this.notifyStateChange()
+      }
+    } else if (event.data.startsWith(MicdropServerCommands.ToolCall)) {
+      // Received tool call information
+      try {
+        const toolCall = JSON.parse(
+          event.data.substring(MicdropServerCommands.ToolCall.length + 1)
+        )
+        this.emit('ToolCall', toolCall)
+      } catch (error) {
+        console.error(
+          '[MicdropClient] Error parsing tool call:',
+          event.data,
+          error
+        )
       }
     }
   }

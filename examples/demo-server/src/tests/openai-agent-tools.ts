@@ -22,6 +22,10 @@ When you have all the info, you can say good bye.`,
 })
 agent.logger = new Logger('OpenaiAgent')
 
+agent.on('ToolCall', (toolCall) => {
+  console.log('Tool call:', toolCall)
+})
+
 agent.addTool({
   name: 'set_city',
   description: 'Set the city where user lives in',
@@ -31,6 +35,7 @@ agent.addTool({
   callback: ({ city }) => {
     console.log('City:', city)
   },
+  emitOutput: true,
 })
 
 agent.addTool({

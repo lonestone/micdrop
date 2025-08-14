@@ -16,6 +16,7 @@ const sidebars: SidebarsConfig = {
         'client/start-stop-call',
         'client/pause-resume-call',
         'client/display-conversation-messages',
+        'client/handling-tool-calls',
         'client/devices-management',
         'client/vad',
         'client/error-handling',

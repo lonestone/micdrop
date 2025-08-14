@@ -263,6 +263,15 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
       const args = JSON.parse(toolCall.arguments)
       const result = await tool.callback(args)
 
+      // Emit output
+      if (tool.emitOutput) {
+        this.emit('ToolCall', {
+          name: toolCall.name,
+          parameters: args,
+          output: result,
+        })
+      }
+
       return {
         toolCall,
         toolCallOutput: createToolCallOutput(toolCall, result || {}),

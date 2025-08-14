@@ -43,6 +43,11 @@ export class MicdropServer {
     this.config.agent.on('EndCall', () =>
       this.socket?.send(MicdropServerCommands.EndCall)
     )
+    this.config.agent.on('ToolCall', (toolCall) =>
+      this.socket?.send(
+        `${MicdropServerCommands.ToolCall} ${JSON.stringify(toolCall)}`
+      )
+    )
 
     // Assistant speaks first
     this.sendFirstMessage()

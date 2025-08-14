@@ -14,6 +14,7 @@ export enum MicdropServerCommands {
   CancelLastUserMessage = 'CancelLastUserMessage',
   SkipAnswer = 'SkipAnswer',
   EndCall = 'EndCall',
+  ToolCall = 'ToolCall',
 }
 
 export interface MicdropConfig {
@@ -42,6 +43,12 @@ export interface MicdropConversationMessage<
   role: 'system' | 'user' | 'assistant'
   content: string
   metadata?: Data
+}
+
+export interface MicdropToolCall {
+  name: string
+  parameters: any
+  output: any
 }
 
 export type DeepPartial<T> = T extends object

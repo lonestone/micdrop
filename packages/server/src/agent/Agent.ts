@@ -5,6 +5,7 @@ import {
   MicdropAnswerMetadata,
   MicdropConversation,
   MicdropConversationMessage,
+  MicdropToolCall,
 } from '../types'
 
 export interface AgentOptions {
@@ -17,6 +18,7 @@ export interface AgentEvents {
   CancelLastAssistantMessage: []
   SkipAnswer: []
   EndCall: []
+  ToolCall: [MicdropToolCall]
 }
 
 export abstract class Agent<

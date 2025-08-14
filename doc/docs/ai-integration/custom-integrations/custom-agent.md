@@ -50,12 +50,19 @@ export interface AgentEvents {
   CancelLastAssistantMessage: []
   SkipAnswer: []
   EndCall: []
+  ToolCall: [MicdropToolCall]
 }
 
 export interface MicdropConversationMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
   metadata?: any
+}
+
+export interface MicdropToolCall {
+  name: string
+  parameters: any
+  output: any
 }
 ```
 
