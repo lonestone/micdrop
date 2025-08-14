@@ -76,12 +76,14 @@ wss.on('connection', (socket) => {
 
 Don't forget to set the API keys in the environment variables.
 
-## Demo
+## Demos
 
 See Micdrop in action:
 
-- **[Demo Client](https://github.com/lonestone/micdrop/tree/main/examples/demo-client)** - React application with full UI
-- **[Demo Server](https://github.com/lonestone/micdrop/tree/main/examples/demo-server)** - Server setup with fastify
+- **Main Demo**
+  - **[Client](https://github.com/lonestone/micdrop/tree/main/examples/demo-client)** - React application with full UI
+  - **[Server](https://github.com/lonestone/micdrop/tree/main/examples/demo-server)** - Server setup with fastify
+- **[Form Demo](https://github.com/lonestone/micdrop-form-demo)** - A demo app showcasing Micdrop's capabilities for voice-assisted form filling using OpenAI and tool calling.
 
 ## Setup Documentation MCP
 
