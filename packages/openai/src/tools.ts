@@ -9,7 +9,7 @@ export interface Tool<Schema extends z.ZodObject = z.ZodObject> {
   name: string
   description: string
   parameters?: Schema
-  callback: (input: z.infer<Schema>) => any | Promise<any>
+  callback?: (input: z.infer<Schema>) => any | Promise<any>
   skipAnswer?: boolean
   emitOutput?: boolean
 }

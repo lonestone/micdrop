@@ -261,7 +261,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
 
       this.log('Executing tool:', toolCall.name, toolCall.arguments)
       const args = JSON.parse(toolCall.arguments)
-      const result = await tool.callback(args)
+      const result = tool.callback ? await tool.callback(args) : {}
 
       // Emit output
       if (tool.emitOutput) {
@@ -309,7 +309,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
       const startTagIndex = message.indexOf(extractOptions.startTag)
       if (startTagIndex !== -1) {
         // Find end tag
-        let endTagIndex = message.indexOf(extractOptions.endTag)
+        let endTagIndex = message.lastIndexOf(extractOptions.endTag)
         if (endTagIndex === -1) endTagIndex = message.length + 1
         else endTagIndex += extractOptions.endTag.length
         const extractedText = message.slice(startTagIndex, endTagIndex).trim()
