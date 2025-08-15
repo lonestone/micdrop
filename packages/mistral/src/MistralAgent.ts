@@ -41,6 +41,10 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
       })
     }
 
+    // Prepare extracting
+    let extracting = false
+    const extractOptions = this.getExtractOptions()
+
     try {
       const result = await this.mistral.chat.stream({
         model: this.options.model || DEFAULT_MODEL,
@@ -58,13 +62,31 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
         const chunk = event.data.choices[0].delta.content
         if (typeof chunk === 'string') {
           this.log(`Answer chunk: "${chunk}"`)
-          stream.write(chunk)
           fullAnswer += chunk
+
+          // Extracting value?
+          if (extractOptions) {
+            if (!extracting) {
+              const startTagIndex = fullAnswer.indexOf(extractOptions.startTag)
+              if (startTagIndex !== -1) {
+                extracting = true
+                const messagePart = fullAnswer.slice(0, startTagIndex).trimEnd()
+                stream.write(messagePart)
+                continue
+              }
+            } else {
+              // Extracting, don't write to stream
+              continue
+            }
+          }
+
+          stream.write(chunk)
         }
       }
 
       // Add full answer to conversation
-      this.addAssistantMessage(fullAnswer)
+      const { message, metadata } = this.extract(fullAnswer)
+      this.addAssistantMessage(message, metadata)
     } catch (error: any) {
       console.error('[MistralAgent] Error:', error)
       stream.emit('error', error)

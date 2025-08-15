@@ -9,7 +9,7 @@ const agent = new OpenaiAgent({
   apiKey: process.env.OPENAI_API_KEY || '',
   systemPrompt: `You are a helpful assistant.
 
-  When the user give you a city, append the city and country names in JSON (no markdown code block, just compacted JSON) to your answer.`,
+  When the user give you a city, append the city and country names in JSON (no markdown code block, just compacted JSON) to your answer (say thanks before).`,
   extract: {
     json: true,
     saveInMetadata: true,

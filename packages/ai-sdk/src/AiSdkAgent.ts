@@ -73,11 +73,11 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
               extracting = true
               const messagePart = textPart.slice(0, startTagIndex).trimEnd()
               stream.write(messagePart)
-              break
+              continue
             }
           } else {
             // Extracting, don't write to stream
-            break
+            continue
           }
         }
 
