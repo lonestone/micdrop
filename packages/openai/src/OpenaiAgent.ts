@@ -1,13 +1,7 @@
-import {
-  Agent,
-  AgentOptions,
-  createToolCallOutput,
-  createToolSchema,
-  ToolCall,
-  ToolCallOutput,
-} from '@micdrop/server'
+import { Agent, AgentOptions } from '@micdrop/server'
 import OpenAI from 'openai'
 import { PassThrough } from 'stream'
+import z, { toJSONSchema } from 'zod'
 
 export interface OpenaiAgentOptions extends AgentOptions {
   apiKey: string
@@ -21,6 +15,7 @@ export interface OpenaiAgentOptions extends AgentOptions {
 
 const DEFAULT_MODEL = 'gpt-4o'
 const DEFAULT_MAX_CALLS = 5
+const DEFAULT_MAX_RETRIES = 3
 
 export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   private openai: OpenAI
@@ -49,7 +44,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   private async generateAnswer(
     stream: PassThrough,
     callCount = 0,
-    toolInputs?: Array<ToolCall | ToolCallOutput>
+    tryCount = 0
   ): Promise<void> {
     if (callCount >= (this.options.maxRetry || DEFAULT_MAX_CALLS)) {
       console.error('[OpenaiAgent] Max calls reached')
@@ -58,20 +53,6 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
 
     this.abortController = new AbortController()
     const signal = this.abortController.signal
-
-    // Disable tools if first message
-    const enableTools = this.conversation.length > 1
-
-    // Build input
-    const input: OpenAI.Responses.ResponseInput = this.conversation.map(
-      (message) => ({
-        role: message.role,
-        content: message.content,
-      })
-    )
-    if (toolInputs) {
-      input.push(...toolInputs)
-    }
 
     // Prepare extracting
     let extracting = false
@@ -82,16 +63,15 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
       const response = await this.openai.responses.create(
         {
           model: this.options.model || DEFAULT_MODEL,
-          input,
+          input: this.buildInput(),
+          tools: this.buildTools(),
           temperature: 0.5,
           max_output_tokens: 250,
           stream: true,
-          tools: enableTools ? this.tools.map(createToolSchema) : undefined,
           ...this.options.settings,
         },
         { signal }
       )
-      const toolOutputs: Array<ToolCall | ToolCallOutput> = []
       let hasAnswer = false
       let skipAnswer = false
 
@@ -135,14 +115,12 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
           case 'response.output_item.done':
             if (event.item.type === 'function_call') {
               const toolCall = event.item
-              const result = await this.executeTool(
-                toolCall.name,
-                toolCall.arguments
-              )
-              toolOutputs.push(
-                toolCall,
-                createToolCallOutput(toolCall, result.output)
-              )
+              const result = await this.executeTool({
+                role: 'tool_call',
+                toolCallId: toolCall.call_id,
+                toolName: toolCall.name,
+                parameters: toolCall.arguments,
+              })
               if (result.skipAnswer) {
                 skipAnswer = true
               }
@@ -155,14 +133,58 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
       }
 
       // Query again in case of tool call
-      if (toolOutputs.length > 0 && !hasAnswer && !skipAnswer) {
-        await this.generateAnswer(stream, callCount + 1, toolOutputs)
+      if (!hasAnswer && !skipAnswer) {
+        await this.generateAnswer(stream, callCount + 1)
       }
     } catch (error) {
       if (!(error instanceof OpenAI.APIUserAbortError)) {
         console.error('[OpenaiAgent] Error answering:', error)
+        if (tryCount < (this.options.maxRetry || DEFAULT_MAX_RETRIES)) {
+          await this.generateAnswer(stream, callCount, tryCount + 1)
+        }
       }
     }
+  }
+
+  private buildInput(): OpenAI.Responses.ResponseInput {
+    return this.conversation.map((message) => {
+      switch (message.role) {
+        case 'user':
+        case 'assistant':
+        case 'system':
+          return {
+            role: message.role,
+            content: message.content,
+          }
+        case 'tool_call':
+          return {
+            type: 'function_call',
+            call_id: message.toolCallId,
+            name: message.toolName,
+            arguments: JSON.stringify(message.parameters),
+          }
+        case 'tool_result':
+          return {
+            type: 'function_call_output',
+            call_id: message.toolCallId,
+            output: message.output,
+          }
+      }
+    })
+  }
+
+  private buildTools(): OpenAI.Responses.Tool[] | undefined {
+    // Disable tools if first message
+    const enableTools = this.conversation.length > 1
+    if (!enableTools) return undefined
+
+    return this.tools.map((tool) => ({
+      type: 'function',
+      name: tool.name,
+      description: tool.description,
+      strict: true,
+      parameters: toJSONSchema(tool.inputSchema || z.object()),
+    }))
   }
 
   cancel() {

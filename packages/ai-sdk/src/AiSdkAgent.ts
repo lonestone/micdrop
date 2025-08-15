@@ -2,6 +2,7 @@ import { Agent, AgentOptions } from '@micdrop/server'
 import {
   CallSettings,
   LanguageModel,
+  ModelMessage,
   stepCountIs,
   streamText,
   tool,
@@ -37,15 +38,6 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
     this.abortController = new AbortController()
     const signal = this.abortController.signal
 
-    // Disable tools if first message
-    const enableTools = this.conversation.length > 1
-
-    // Build messages for AI SDK
-    const messages = this.conversation.map((message) => ({
-      role: message.role as 'user' | 'assistant' | 'system',
-      content: message.content,
-    }))
-
     // Prepare extracting
     let extracting = false
     const extractOptions = this.getExtractOptions()
@@ -54,8 +46,8 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
       // Generate response using AI SDK
       const result = streamText({
         model: this.options.model,
-        messages,
-        tools: enableTools ? this.convertToAISDKTools() : undefined,
+        messages: this.buildMessages(),
+        tools: this.buildTools(),
         maxRetries: 3,
         stopWhen: stepCountIs(5),
         ...this.options.settings,
@@ -90,7 +82,6 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
 
       // Emit message
       this.addAssistantMessage(message, metadata)
-      stream.write(message)
     } catch (error: any) {
       if (!signal.aborted) {
         console.error('[AiSdkAgent] Error answering:', error)
@@ -98,14 +89,66 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
     }
   }
 
-  private convertToAISDKTools() {
+  private buildMessages(): ModelMessage[] {
+    return this.conversation.map((message): ModelMessage => {
+      switch (message.role) {
+        case 'user':
+        case 'assistant':
+        case 'system':
+          return {
+            role: message.role,
+            content: message.content,
+          }
+        case 'tool_call':
+          return {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool-call',
+                toolCallId: message.toolCallId,
+                toolName: message.toolName,
+                input: JSON.parse(message.parameters),
+              },
+            ],
+          }
+        case 'tool_result':
+          return {
+            role: 'tool',
+            content: [
+              {
+                type: 'tool-result',
+                toolCallId: message.toolCallId,
+                toolName: message.toolName,
+                output: {
+                  type: 'json',
+                  value: JSON.parse(message.output),
+                },
+              },
+            ],
+          }
+      }
+    })
+  }
+
+  private buildTools() {
     const tools: ToolSet = {}
+
+    // Disable tools if first message
+    const enableTools = this.conversation.length > 1
+    if (!enableTools) return tools
+
     this.tools.forEach((t) => {
       tools[t.name] = tool({
         name: t.name,
         description: t.description,
         inputSchema: t.inputSchema || z.object({}),
-        execute: (args) => this.executeTool(t.name, JSON.stringify(args)),
+        execute: (args, { toolCallId }) =>
+          this.executeTool({
+            role: 'tool_call',
+            toolCallId,
+            toolName: t.name,
+            parameters: JSON.stringify(args),
+          }),
       })
     })
     return tools

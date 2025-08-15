@@ -4,14 +4,47 @@ Monitor and respond to AI agent tool executions in real-time on the client side.
 
 ## Overview
 
-When AI agents use tools (functions) during conversations, you can monitor these tool calls on the client side. This is useful for:
+When AI agents use tools (functions) during conversations, you can monitor these tool calls on the client side. Tool calls and their results are now part of the conversation history, making them easy to display and track. This is useful for:
 
 - **Real-time UI updates**: Show users what actions the AI is performing
 - **Progress indicators**: Display loading states during tool execution
 - **Interactive confirmations**: Allow users to approve/deny tool actions
 - **Analytics and logging**: Track tool usage and effectiveness
+- **Conversation history**: Tool calls appear in the conversation alongside messages
 
 ## Basic Tool Call Monitoring
+
+You can monitor tool calls in two ways:
+
+### 1. Through Conversation History
+
+Tool calls and results are automatically added to the conversation history:
+
+```typescript
+import { Micdrop } from '@micdrop/client'
+
+// Access conversation including tool calls and results
+const conversation = Micdrop.conversation
+
+conversation.forEach((item, index) => {
+  switch (item.role) {
+    case 'tool_call':
+      console.log('Tool called:', item.toolName)
+      console.log('Parameters:', JSON.parse(item.parameters))
+      break
+    case 'tool_result':
+      console.log('Tool result:', item.toolName)
+      console.log('Output:', JSON.parse(item.output))
+      break
+    case 'user':
+    case 'assistant':
+      console.log(`${item.role}: ${item.content}`)
+      break
+  }
+})
+```
+
+### 2. Through Real-time Events
 
 Listen for tool call events using the Micdrop client:
 
@@ -25,6 +58,8 @@ Micdrop.on('ToolCall', (toolCall) => {
   console.log('Result:', toolCall.output)
 })
 ```
+
+Only tools with the `emitOutput` option enabled will emit `ToolCall` events.
 
 ## Tool Call Structure
 

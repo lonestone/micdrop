@@ -2,37 +2,34 @@
 
 ### Development Commands
 
+Build all packages
+
 ```bash
-# Start all development servers
-npm run dev
-
-# Build all packages
-npm run build
-
-# Type-check all packages
-npm run typecheck
+pnpm build
 ```
 
-### Package-specific Development
-
-Each package can be developed independently:
+Run (watch) the client and server
 
 ```bash
-# Client development
-cd packages/client
-npm run dev
+pnpm dev:main
+```
 
-# Server development
-cd packages/server
-npm run dev
+Run (watch) the demo server and client
 
-# Demo client
-cd packages/demo-client
-npm run dev
+```bash
+pnpm dev:demo
+```
 
-# Demo server
-cd packages/demo-server
-npm run dev
+Run (watch) the documentation server
+
+```bash
+pnpm dev:doc
+```
+
+Run (watch) a specific package
+
+```bash
+pnpm --filter <package-name> dev
 ```
 
 ### Publishing to npm

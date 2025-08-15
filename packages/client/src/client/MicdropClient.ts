@@ -1,17 +1,16 @@
-import {
-  getClientErrorFromWSCloseEvent,
-  MicdropClientCommands,
-  MicdropConversation,
-  MicdropConversationMessage,
-  MicdropServerCommands,
-  MicdropToolCall,
-  VAD,
-} from '@micdrop/client'
 import { EventEmitter } from 'eventemitter3'
-import { Mic, Speaker } from '../audio'
+import { Mic, Speaker, VAD } from '../audio'
 import { MicRecorder } from '../audio/MicRecorder'
 import { VADConfig } from '../audio/vad/getVAD'
 import {
+  MicdropClientCommands,
+  MicdropConversation,
+  MicdropConversationItem,
+  MicdropServerCommands,
+  MicdropToolCall,
+} from '../types'
+import {
+  getClientErrorFromWSCloseEvent,
   MicdropClientError,
   MicdropClientErrorCode,
 } from './MicdropClientError'
@@ -501,7 +500,7 @@ export class MicdropClient
     this.notifyStateChange()
   }
 
-  private addMessage(message: MicdropConversationMessage) {
+  private addMessage(message: MicdropConversationItem) {
     this.conversation = [...this.conversation, message]
     this.notifyStateChange()
   }

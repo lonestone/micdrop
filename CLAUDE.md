@@ -6,19 +6,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Build all packages
-npm run build
+pnpm build
 
-# Start all development servers
-npm run dev
+# Build server and client only
+pnpm build:server
+pnpm build:client
 
-# Type-check all packages
-npm run typecheck
+# Build demo applications
+pnpm build:demo
+
+# Build documentation
+pnpm build:doc
+
+# Start main development servers (server + client)
+pnpm dev:main
+
+# Start demo development servers (demo-server + demo-client)
+pnpm dev:demo
+
+# Type-check individual packages (no global typecheck command)
+pnpm --filter <package-name> typecheck
 
 # Format code
-npm run format
+pnpm format
 
 # Clean build artifacts
-npm run clean
+pnpm clean
 ```
 
 ## Typescript Formatting
@@ -35,7 +48,7 @@ Follow this Prettierformatting for all Typescript code.
 
 ## Monorepo Structure
 
-This is a Turbo monorepo with packages in `packages/` and examples in `examples/`. Each package can be developed independently by running `npm run dev` in the package directory.
+This is a pnpm monorepo with packages in `packages/` and examples in `examples/`. Each package can be developed independently by running `pnpm dev` in the package directory.
 
 ### Core Architecture
 

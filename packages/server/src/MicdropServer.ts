@@ -1,11 +1,23 @@
 import { Duplex, PassThrough, Readable } from 'stream'
 import { WebSocket } from 'ws'
+import type { Agent } from './agent'
 import { Logger } from './Logger'
+import type { STT } from './stt'
+import type { TTS } from './tts'
 import {
+  MicdropCallSummary,
   MicdropClientCommands,
-  MicdropConfig,
   MicdropServerCommands,
 } from './types'
+
+export interface MicdropConfig {
+  firstMessage?: string
+  generateFirstMessage?: boolean
+  agent: Agent
+  stt: STT
+  tts: TTS
+  onEnd?(call: MicdropCallSummary): void
+}
 
 export class MicdropServer {
   public socket: WebSocket | null = null

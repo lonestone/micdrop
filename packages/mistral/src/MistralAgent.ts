@@ -1,15 +1,21 @@
 import { Agent, AgentOptions } from '@micdrop/server'
 import { Mistral } from '@mistralai/mistralai'
-import { ChatCompletionStreamRequest } from '@mistralai/mistralai/models/components'
+import {
+  ChatCompletionStreamRequest,
+  ChatCompletionStreamRequestMessages,
+} from '@mistralai/mistralai/models/components'
 import { PassThrough, Writable } from 'stream'
+import z, { toJSONSchema } from 'zod-v4'
 
 export interface MistralAgentOptions extends AgentOptions {
   apiKey: string
   model?: string
   settings?: Omit<ChatCompletionStreamRequest, 'messages' | 'model'>
+  maxRetry?: number
 }
 
 const DEFAULT_MODEL = 'ministral-8b-latest'
+const DEFAULT_MAX_RETRY = 3
 
 export class MistralAgent extends Agent<MistralAgentOptions> {
   private mistral: Mistral
@@ -29,7 +35,7 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
     return stream
   }
 
-  private async generateAnswer(stream: Writable) {
+  private async generateAnswer(stream: Writable, callCount = 0, tryCount = 0) {
     this.running = true
     this.cancelled = false
 
@@ -48,19 +54,23 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
     try {
       const result = await this.mistral.chat.stream({
         model: this.options.model || DEFAULT_MODEL,
-        messages: this.conversation.map((message) => ({
-          role: message.role,
-          content: message.content,
-        })),
+        messages: this.buildMessages(),
+        tools: this.buildTools(),
         ...this.options.settings,
       })
-
-      // Get and stream chunks
       let fullAnswer = ''
+      let skipAnswer = false
+
+      // Handle response events
       for await (const event of result) {
         if (this.cancelled) return
-        const chunk = event.data.choices[0].delta.content
+        const delta = event.data.choices[0]?.delta
+        const chunk = delta?.content
+        const toolCalls = delta?.toolCalls
+
+        // Text chunk
         if (typeof chunk === 'string') {
+          if (chunk === '') continue
           this.log(`Answer chunk: "${chunk}"`)
           fullAnswer += chunk
 
@@ -79,23 +89,98 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
               continue
             }
           }
-
           stream.write(chunk)
+        } else if (toolCalls?.length) {
+          for (const toolCall of toolCalls) {
+            const result = await this.executeTool({
+              role: 'tool_call',
+              toolCallId: toolCall.id || '',
+              toolName: toolCall.function.name,
+              parameters: toolCall.function.arguments as string,
+            })
+            if (result.skipAnswer) {
+              skipAnswer = true
+            }
+          }
         }
       }
 
-      // Add full answer to conversation
-      const { message, metadata } = this.extract(fullAnswer)
-      this.addAssistantMessage(message, metadata)
+      if (fullAnswer) {
+        // Add full answer to conversation
+        const { message, metadata } = this.extract(fullAnswer)
+        this.addAssistantMessage(message, metadata)
+      } else if (!skipAnswer) {
+        // Query again in case of tool call
+        await this.generateAnswer(stream, callCount + 1)
+      }
     } catch (error: any) {
       console.error('[MistralAgent] Error:', error)
-      stream.emit('error', error)
+      if (tryCount < (this.options.maxRetry || DEFAULT_MAX_RETRY)) {
+        await this.generateAnswer(stream, callCount, tryCount + 1)
+      }
     } finally {
       if (stream.writable) {
         stream.end()
       }
       this.running = false
     }
+  }
+
+  private buildMessages(): ChatCompletionStreamRequestMessages[] {
+    return this.conversation.map(
+      (message): ChatCompletionStreamRequestMessages => {
+        switch (message.role) {
+          case 'user':
+          case 'assistant':
+          case 'system':
+            return {
+              role: message.role,
+              content: message.content,
+            }
+          case 'tool_call':
+            return {
+              role: 'assistant',
+              toolCalls: [
+                {
+                  type: 'function',
+                  id: message.toolCallId,
+                  function: {
+                    name: message.toolName,
+                    arguments: JSON.stringify(message.parameters),
+                  },
+                },
+              ],
+            }
+          case 'tool_result':
+            return {
+              role: 'tool',
+              toolCallId: message.toolCallId,
+              name: message.toolName,
+              content: [
+                {
+                  type: 'text',
+                  text: message.output,
+                },
+              ],
+            }
+        }
+      }
+    )
+  }
+
+  private buildTools(): ChatCompletionStreamRequest['tools'] {
+    // Disable tools if first message
+    const enableTools = this.conversation.length > 1
+    if (!enableTools) return undefined
+
+    return this.tools.map((tool) => ({
+      type: 'function',
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: toJSONSchema(tool.inputSchema || z.object()),
+      },
+    }))
   }
 
   cancel() {

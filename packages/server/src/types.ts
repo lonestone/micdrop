@@ -1,7 +1,3 @@
-import type { Agent } from './agent'
-import type { STT } from './stt'
-import type { TTS } from './tts'
-
 export enum MicdropClientCommands {
   StartSpeaking = 'StartSpeaking',
   StopSpeaking = 'StopSpeaking',
@@ -17,21 +13,17 @@ export enum MicdropServerCommands {
   ToolCall = 'ToolCall',
 }
 
-export interface MicdropConfig {
-  firstMessage?: string
-  generateFirstMessage?: boolean
-  agent: Agent
-  stt: STT
-  tts: TTS
-  onEnd?(call: MicdropCallSummary): void
-}
-
 export interface MicdropCallSummary {
   conversation: MicdropConversation
   duration: number
 }
 
-export type MicdropConversation = MicdropConversationMessage[]
+export type MicdropConversationItem =
+  | MicdropConversationMessage
+  | MicdropConversationToolCall
+  | MicdropConversationToolResult
+
+export type MicdropConversation = Array<MicdropConversationItem>
 
 export type MicdropAnswerMetadata = {
   [key: string]: any
@@ -43,6 +35,20 @@ export interface MicdropConversationMessage<
   role: 'system' | 'user' | 'assistant'
   content: string
   metadata?: Data
+}
+
+export interface MicdropConversationToolCall {
+  role: 'tool_call'
+  toolCallId: string
+  toolName: string
+  parameters: string
+}
+
+export interface MicdropConversationToolResult {
+  role: 'tool_result'
+  toolCallId: string
+  toolName: string
+  output: string
 }
 
 export interface MicdropToolCall {

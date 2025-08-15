@@ -1,7 +1,6 @@
 node_modules
 dist
 build
-.turbo
 .env
 .DS_Store
 *.tgz

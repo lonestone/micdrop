@@ -1,11 +1,14 @@
 import { EventEmitter } from 'eventemitter3'
 import { Readable } from 'stream'
-import { z } from 'zod'
+import type { z } from 'zod'
 import { Logger } from '../Logger'
 import {
   MicdropAnswerMetadata,
   MicdropConversation,
+  MicdropConversationItem,
   MicdropConversationMessage,
+  MicdropConversationToolCall,
+  MicdropConversationToolResult,
   MicdropToolCall,
 } from '../types'
 import {
@@ -39,7 +42,7 @@ export interface AgentOptions {
 }
 
 export interface AgentEvents {
-  Message: [MicdropConversationMessage]
+  Message: [MicdropConversationItem]
   CancelLastUserMessage: []
   CancelLastAssistantMessage: []
   SkipAnswer: []
@@ -114,6 +117,14 @@ export abstract class Agent<
     this.emit('Message', message)
   }
 
+  protected addToolMessage(
+    message: MicdropConversationToolCall | MicdropConversationToolResult
+  ) {
+    this.log('Adding tool message:', message)
+    this.conversation.push(message)
+    this.emit('Message', message)
+  }
+
   protected endCall() {
     this.log('Ending call')
     this.emit('EndCall')
@@ -177,21 +188,33 @@ export abstract class Agent<
     return tools
   }
 
-  protected async executeTool(name: string, args: string) {
+  protected async executeTool(toolCall: MicdropConversationToolCall) {
     try {
-      const tool = this.getTool(name)
+      const tool = this.getTool(toolCall.toolName)
       if (!tool) {
-        throw new Error(`Tool not found "${name}"`)
+        throw new Error(`Tool not found "${toolCall.toolName}"`)
       }
 
-      this.log('Executing tool:', name, args)
-      const parameters = JSON.parse(args)
+      this.log('Executing tool:', toolCall.toolName, toolCall.parameters)
+
+      // Save tool call in conversation
+      this.addToolMessage(toolCall)
+
+      const parameters = JSON.parse(toolCall.parameters)
       const output = tool.execute ? await tool.execute(parameters) : {}
+
+      // Save tool result in conversation
+      this.addToolMessage({
+        role: 'tool_result',
+        toolCallId: toolCall.toolCallId,
+        toolName: toolCall.toolName,
+        output: JSON.stringify(output ?? null),
+      })
 
       // Emit output
       if (tool.emitOutput) {
         this.emit('ToolCall', {
-          name,
+          name: toolCall.toolName,
           parameters,
           output,
         })

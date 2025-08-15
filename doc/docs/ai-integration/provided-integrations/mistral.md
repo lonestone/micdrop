@@ -66,3 +66,13 @@ const agent = new MistralAgent({
   },
 })
 ```
+
+### Advanced Features
+
+The Mistral Agent supports advanced features for improved conversation handling:
+
+- **[Auto End Call](../../server/auto-end-call)**: Automatically detect when users want to end the conversation
+- **[Semantic Turn Detection](../../server/semantic-turn-detection)**: Handle incomplete sentences for natural flow
+- **[User Noise Filtering](../../server/user-noise-filtering)**: Filter out meaningless sounds and filler words
+- **[Extract Value from Answer](../../server/extract)**: Extract structured data from responses
+- **[Tools](../../server/tools)**: Add custom tools to the agent

@@ -8,21 +8,19 @@
     "doc"
   ],
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "dev:main": "turbo run dev --filter=@micdrop/client --filter=@micdrop/server",
-    "dev:demo": "turbo run dev --filter=@micdrop/client --filter=@micdrop/server --filter=@micdrop/demo-client --filter=@micdrop/demo-server",
-    "dev:client": "turbo run dev --filter=@micdrop/client",
-    "dev:server": "turbo run dev --filter=@micdrop/server",
-    "dev:doc": "turbo run dev --filter=@micdrop/doc",
-    "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
-    "clean": "turbo run clean",
+    "build": "pnpm build:server && pnpm build:client && concurrently -n \"ai-sdk,cartesia,elevenlabs,gladia,mistral,openai,react\" -c \"blue,green,yellow,magenta,cyan,red,green\" \"pnpm --filter ai-sdk build\" \"pnpm --filter cartesia build\" \"pnpm --filter elevenlabs build\" \"pnpm --filter gladia build\" \"pnpm --filter mistral build\" \"pnpm --filter openai build\" \"pnpm --filter react build\"",
+    "build:server": "pnpm --filter server build",
+    "build:client": "pnpm --filter client build",
+    "build:demo": "pnpm --filter demo-server build && pnpm --filter demo-client build",
+    "build:doc": "pnpm --filter doc build",
+    "clean": "pnpm -r clean",
+    "dev:main": "concurrently -n \"server,client\" -c \"blue,green\" \"pnpm --filter server dev\" \"pnpm --filter client dev\"",
+    "dev:demo": "concurrently -n \"demo-server,demo-client\" -c \"blue,yellow\" \"pnpm --filter demo-server dev\" \"pnpm --filter demo-client dev\"",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
-    "prettier": "^3.0.0",
-    "turbo": "latest"
+    "concurrently": "^9.2.0",
+    "prettier": "^3.0.0"
   },
-  "packageManager": "npm@10.2.4"
+  "packageManager": "pnpm@8.15.4"
 }
