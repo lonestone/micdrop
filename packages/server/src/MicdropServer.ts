@@ -7,6 +7,7 @@ import type { TTS } from './tts'
 import {
   MicdropCallSummary,
   MicdropClientCommands,
+  MicdropConversationItem,
   MicdropServerCommands,
 } from './types'
 
@@ -25,6 +26,7 @@ export class MicdropServer {
   public logger?: Logger
 
   private startTime = Date.now()
+  private lastMessageSpeeched?: MicdropConversationItem
 
   // When user is speaking, we're streaming chunks for STT
   private currentUserStream?: Duplex
@@ -45,9 +47,6 @@ export class MicdropServer {
     )
     this.config.agent.on('CancelLastUserMessage', () =>
       this.socket?.send(MicdropServerCommands.CancelLastUserMessage)
-    )
-    this.config.agent.on('CancelLastAssistantMessage', () =>
-      this.socket?.send(MicdropServerCommands.CancelLastAssistantMessage)
     )
     this.config.agent.on('SkipAnswer', () =>
       this.socket?.send(MicdropServerCommands.SkipAnswer)
@@ -149,7 +148,11 @@ export class MicdropServer {
     this.currentUserStream = undefined
 
     const conversation = this.config?.agent.conversation
-    if (conversation && conversation[conversation.length - 1].role === 'user') {
+    const lastMessage = conversation?.[conversation.length - 1]
+    if (
+      lastMessage?.role === 'user' &&
+      this.lastMessageSpeeched !== lastMessage
+    ) {
       this.log(
         'User stopped speaking and a transcript already exists, answering'
       )
@@ -193,6 +196,16 @@ export class MicdropServer {
   private async answer() {
     if (!this.config) return
     this.cancel()
+
+    // Prevent answering twice
+    const lastMessage =
+      this.config.agent.conversation[this.config.agent.conversation.length - 1]
+    if (this.lastMessageSpeeched === lastMessage) {
+      this.log('Already answered, skipping')
+      return
+    }
+    this.lastMessageSpeeched = lastMessage
+
     try {
       // LLM: Generate answer
       const stream = this.config.agent.answer()

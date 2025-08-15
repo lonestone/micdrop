@@ -12,7 +12,7 @@ export default async (app: FastifyInstance) => {
       const { lang } = await checkParams(socket)
 
       // Select demo providers (see files agents.ts, speech2text.ts, text2speech.ts)
-      const agent = agents.aiSdk(lang)
+      const agent = agents.openai(lang)
       const stt = speech2text.gladia()
       const tts = text2speech.elevenlabs()
 

@@ -47,7 +47,6 @@ export interface AgentOptions {
 export interface AgentEvents {
   Message: [MicdropConversationMessage]
   CancelLastUserMessage: []
-  CancelLastAssistantMessage: []
   SkipAnswer: []
   EndCall: []
   ToolCall: [MicdropToolCall]
@@ -149,10 +148,6 @@ Emits the `EndCall` event to signal that the conversation should end.
 
 Removes the last user message from the conversation history (if it exists) and emits the `CancelLastUserMessage` event.
 
-### `cancelLastAssistantMessage()`
-
-Removes the last assistant message from the conversation history (if it exists) and emits the `CancelLastAssistantMessage` event.
-
 ### `skipAnswer()`
 
 Emits the `SkipAnswer` event to indicate the agent is skipping the current response.
@@ -182,16 +177,6 @@ Emitted when the last user message is cancelled.
 ```typescript
 agent.on('CancelLastUserMessage', () => {
   console.log('Last user message was cancelled')
-})
-```
-
-### `CancelLastAssistantMessage`
-
-Emitted when the last assistant message is cancelled.
-
-```typescript
-agent.on('CancelLastAssistantMessage', () => {
-  console.log('Last assistant message was cancelled')
 })
 ```
 

@@ -76,7 +76,7 @@ This is a pnpm monorepo with packages in `packages/` and examples in `examples/`
 **Agent** (`packages/server/src/agent/Agent.ts`):
 
 - Abstract base class for AI agents with conversation management
-- Emits events: `Message`, `CancelLastUserMessage`, `CancelLastAssistantMessage`, `SkipAnswer`, `EndCall`
+- Emits events: `Message`, `CancelLastUserMessage`, `SkipAnswer`, `EndCall`
 - Maintains conversation history and handles streaming responses
 
 ## Package Development

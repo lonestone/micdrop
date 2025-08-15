@@ -109,7 +109,13 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
         // Add full answer to conversation
         const { message, metadata } = this.extract(fullAnswer)
         this.addAssistantMessage(message, metadata)
-      } else if (!skipAnswer) {
+      } else if (skipAnswer) {
+        // Hack: Mistral needs an assistant message after tool calls
+        this.conversation.push({
+          role: 'assistant',
+          content: ' ',
+        })
+      } else {
         // Query again in case of tool call
         await this.generateAnswer(stream, callCount + 1)
       }

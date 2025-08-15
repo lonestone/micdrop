@@ -68,7 +68,6 @@ The client can send the following commands to the server:
 The server can send the following commands to the client:
 
 - `MicdropServerCommands.Message` - A message from the assistant.
-- `MicdropServerCommands.CancelLastAssistantMessage` - Cancel the last assistant message.
 - `MicdropServerCommands.CancelLastUserMessage` - Cancel the last user message.
 - `MicdropServerCommands.SkipAnswer` - Notify that the last generated answer was ignored, it's listening again.
 - `MicdropServerCommands.EndCall` - End the call.

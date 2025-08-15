@@ -87,6 +87,7 @@ export class ElevenLabsTTS extends TTS {
     this.receivedAudioText = ''
     this.audioStream.end()
     this.audioStream = undefined
+    this.socket?.send(JSON.stringify({ text: ' ', flush: true }))
   }
 
   destroy() {

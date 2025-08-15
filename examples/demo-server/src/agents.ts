@@ -50,5 +50,8 @@ export default {
       apiKey: process.env.MISTRAL_API_KEY || '',
       model: 'mistral-large-latest',
       systemPrompt: getSystemPrompt(lang),
+      autoEndCall: true,
+      autoSemanticTurn: true,
+      autoIgnoreUserNoise: true,
     }),
 }

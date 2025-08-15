@@ -35,8 +35,10 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
   }
 
   private async generateAnswer(stream: PassThrough): Promise<void> {
-    this.abortController = new AbortController()
+    const abortController = new AbortController()
+    this.abortController = abortController
     const signal = this.abortController.signal
+    let skipAnswer = false
 
     // Prepare extracting
     let extracting = false
@@ -50,11 +52,20 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
         tools: this.buildTools(),
         maxRetries: 3,
         stopWhen: stepCountIs(5),
+        onStepFinish: (step) => {
+          const tools = step.toolCalls.map((toolCall) =>
+            this.getTool(toolCall.toolName)
+          )
+          if (tools.some((t) => t?.skipAnswer)) {
+            skipAnswer = true
+          }
+        },
         ...this.options.settings,
         abortSignal: signal,
       })
 
       for await (const textPart of result.textStream) {
+        if (skipAnswer) return
         this.log(`Answer chunk: "${textPart}"`)
 
         // Extracting value?
@@ -76,6 +87,7 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
         // Send chunk
         stream.write(textPart)
       }
+      if (skipAnswer) return
 
       const fullText = await result.text
       const { message, metadata } = this.extract(fullText)
@@ -83,7 +95,7 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
       // Emit message
       this.addAssistantMessage(message, metadata)
     } catch (error: any) {
-      if (!signal.aborted) {
+      if (abortController === this.abortController) {
         console.error('[AiSdkAgent] Error answering:', error)
       }
     }

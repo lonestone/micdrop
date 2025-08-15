@@ -6,7 +6,6 @@ export enum MicdropClientCommands {
 
 export enum MicdropServerCommands {
   Message = 'Message',
-  CancelLastAssistantMessage = 'CancelLastAssistantMessage',
   CancelLastUserMessage = 'CancelLastUserMessage',
   SkipAnswer = 'SkipAnswer',
   EndCall = 'EndCall',

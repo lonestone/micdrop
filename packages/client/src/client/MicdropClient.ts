@@ -419,24 +419,19 @@ export class MicdropClient
     } else if (event.data === MicdropServerCommands.EndCall) {
       // Call ended
       this.emit('EndCall')
-    } else if (
-      event.data === MicdropServerCommands.CancelLastAssistantMessage
-    ) {
-      // Remove last assistant message if aborted
-      const lastMessage = this.conversation[this.conversation.length - 1]
-      if (lastMessage?.role === 'assistant') {
-        this.conversation = this.conversation.slice(0, -1)
-        this.notifyStateChange()
-      }
     } else if (event.data === MicdropServerCommands.SkipAnswer) {
       // Answer was skipped, listen again
       this._isProcessing = false
       this.notifyStateChange()
     } else if (event.data === MicdropServerCommands.CancelLastUserMessage) {
       // Remove last user message if aborted
-      const lastMessage = this.conversation[this.conversation.length - 1]
-      if (lastMessage?.role === 'user') {
-        this.conversation = this.conversation.slice(0, -1)
+      const lastMessage = this.conversation.findLastIndex(
+        (message) => message.role === 'user'
+      )
+      if (lastMessage !== -1) {
+        this.conversation = this.conversation.filter(
+          (_, index) => index !== lastMessage
+        )
         this._isProcessing = false
         this.notifyStateChange()
       }

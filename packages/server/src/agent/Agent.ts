@@ -44,7 +44,6 @@ export interface AgentOptions {
 export interface AgentEvents {
   Message: [MicdropConversationItem]
   CancelLastUserMessage: []
-  CancelLastAssistantMessage: []
   SkipAnswer: []
   EndCall: []
   ToolCall: [MicdropToolCall]
@@ -132,18 +131,13 @@ export abstract class Agent<
 
   protected cancelLastUserMessage() {
     this.log('Cancelling last user message')
-    const lastMessage = this.conversation[this.conversation.length - 1]
-    if (lastMessage?.role !== 'user') return
-    this.conversation.pop()
+    const lastMessageIndex = this.conversation.findLastIndex(
+      (message) => message.role === 'user'
+    )
+    if (lastMessageIndex !== -1) {
+      this.conversation.splice(lastMessageIndex, 1)
+    }
     this.emit('CancelLastUserMessage')
-  }
-
-  protected cancelLastAssistantMessage() {
-    this.log('Cancelling last assistant message')
-    const lastMessage = this.conversation[this.conversation.length - 1]
-    if (lastMessage?.role !== 'assistant') return
-    this.conversation.pop()
-    this.emit('CancelLastAssistantMessage')
   }
 
   protected skipAnswer() {

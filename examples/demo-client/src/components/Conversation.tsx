@@ -1,3 +1,4 @@
+import { MicdropConversationToolResult } from '@micdrop/client'
 import { useMicdropState } from '@micdrop/react'
 import { useEffect, useRef } from 'react'
 
@@ -35,32 +36,27 @@ export default function Conversation({ className }: Props) {
         )
 
       case 'tool_call':
-        return (
-          <div
-            key={index}
-            className="max-w-[80%] p-3 rounded-xl bg-blue-50 ml-0 mr-auto border-l-4 border-blue-300"
-          >
-            <div className="text-sm text-blue-600 font-medium mb-1">
-              🔧 Tool Call: {item.toolName}
-            </div>
-            <div className="text-xs text-blue-500 font-mono bg-blue-100 p-2 rounded">
-              {JSON.stringify(JSON.parse(item.parameters), null, 2)}
-            </div>
-          </div>
-        )
-
-      case 'tool_result':
+        const result = conversation.find(
+          (message) =>
+            message.role === 'tool_result' &&
+            message.toolCallId === item.toolCallId
+        ) as MicdropConversationToolResult | undefined
         return (
           <div
             key={index}
             className="max-w-[80%] p-3 rounded-xl bg-purple-50 ml-0 mr-auto border-l-4 border-purple-300"
           >
-            <div className="text-sm text-purple-600 font-medium mb-1">
-              📋 Tool Result: {item.toolName}
+            <div className="flex flex-row gap-1 items-center text-sm text-purple-600 font-medium mb-2">
+              🔧 {item.toolName}
+              <div className="text-xs text-purple-500 font-mono bg-purple-100 p-2 rounded">
+                {JSON.stringify(JSON.parse(item.parameters), null, 2)}
+              </div>
             </div>
-            <div className="text-xs text-purple-500 font-mono bg-purple-100 p-2 rounded">
-              {JSON.stringify(JSON.parse(item.output), null, 2)}
-            </div>
+            {result && (
+              <div className="text-xs text-purple-500 font-mono bg-purple-100 p-2 rounded">
+                ✅ {JSON.stringify(JSON.parse(result.output), null, 2)}
+              </div>
+            )}
           </div>
         )
 

@@ -80,6 +80,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
         switch (event.type) {
           case 'response.output_text.delta':
             this.log(`Answer chunk: "${event.delta}"`)
+            hasAnswer = true
 
             // Extracting value?
             if (extractOptions) {
