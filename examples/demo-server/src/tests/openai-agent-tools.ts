@@ -29,10 +29,10 @@ agent.on('ToolCall', (toolCall) => {
 agent.addTool({
   name: 'set_city',
   description: 'Set the city where user lives in',
-  parameters: z.object({
+  inputSchema: z.object({
     city: z.string().describe('City'),
   }),
-  callback: ({ city }) => {
+  execute: ({ city }) => {
     console.log('City:', city)
   },
   emitOutput: true,
@@ -41,14 +41,14 @@ agent.addTool({
 agent.addTool({
   name: 'set_job_info',
   description: 'Set the job info of the user',
-  parameters: z.object({
+  inputSchema: z.object({
     jobTitle: z.string().describe('Job title').nullable(),
     experience: z
       .number()
       .describe('Number of years of experience of the user')
       .nullable(),
   }),
-  callback: (info) => {
+  execute: (info) => {
     console.log('Job title:', info.jobTitle)
     console.log('Experience:', info.experience)
   },
@@ -57,7 +57,7 @@ agent.addTool({
 agent.addTool({
   name: 'get_time',
   description: 'Get the current time',
-  callback: () => new Date().toLocaleTimeString(),
+  execute: () => new Date().toLocaleTimeString(),
 })
 
 async function answerTo(message: string) {

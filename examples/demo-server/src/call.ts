@@ -1,6 +1,7 @@
+import { openai } from '@ai-sdk/openai'
+import { AiSdkAgent } from '@micdrop/ai-sdk'
 import { ElevenLabsTTS } from '@micdrop/elevenlabs'
 import { GladiaSTT } from '@micdrop/gladia'
-import { OpenaiAgent } from '@micdrop/openai'
 import { handleError, Logger, MicdropServer } from '@micdrop/server'
 import { FastifyInstance } from 'fastify'
 import { checkParams } from './params'
@@ -40,14 +41,25 @@ export default async (app: FastifyInstance) => {
 
       // const agent = new MockAgent()
 
-      const agent = new OpenaiAgent({
-        apiKey: process.env.OPENAI_API_KEY || '',
+      // OpenAI version
+      // const agent = new OpenaiAgent({
+      //   apiKey: process.env.OPENAI_API_KEY || '',
+      //   systemPrompt: getSystemPrompt(lang),
+      //   autoEndCall: true,
+      //   autoSemanticTurn: true,
+      //   autoIgnoreUserNoise: true,
+      // })
+      // agent.logger = new Logger('OpenaiAgent')
+
+      // AI SDK version
+      const agent = new AiSdkAgent({
+        model: openai('gpt-4o'),
         systemPrompt: getSystemPrompt(lang),
         autoEndCall: true,
         autoSemanticTurn: true,
         autoIgnoreUserNoise: true,
       })
-      agent.logger = new Logger('OpenaiAgent')
+      agent.logger = new Logger('AiSdkAgent')
 
       // const agent = new MistralAgent({
       //   apiKey: process.env.MISTRAL_API_KEY || '',

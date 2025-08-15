@@ -11,7 +11,7 @@ export function HomepageCodeBlock() {
   const [activeTab, setActiveTab] = useState('client')
 
   return (
-    <div className="bg-ai-surface-100 dark:bg-ai-surface-800 rounded-xl animate-fade-in h-full flex flex-col shadow-glow">
+    <div className="bg-ai-surface-100 dark:bg-ai-surface-800 rounded-xl h-full flex flex-col shadow-glow">
       {/* Top Tabs */}
       <div className="flex">
         <button

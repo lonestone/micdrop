@@ -1,32 +1,40 @@
-# OpenAI
+# AI SDK
 
-OpenAI implementation for [@micdrop/server](../../server).
+AI SDK implementation for [@micdrop/server](../../server).
 
-This package provides AI agent and speech-to-text implementations using OpenAI's API.
+This package provides an AI agent implementation using the [Vercel AI SDK](https://sdk.vercel.ai/), allowing you to use any compatible language model provider.
 
 ## Installation
 
+Install AI SDK:
+
 ```bash
-npm install @micdrop/openai
+npm install @micdrop/ai-sdk
 ```
 
-## OpenAI Agent
+And install the provider you want to use, for example OpenAI:
+
+```bash
+npm install @ai-sdk/openai
+```
+
+## AI SDK Agent
 
 ### Usage
 
 ```typescript
-import { OpenaiAgent } from '@micdrop/openai'
+import { AiSdkAgent } from '@micdrop/ai-sdk'
 import { MicdropServer } from '@micdrop/server'
+import { openai } from '@ai-sdk/openai' // or any other provider
 
-const agent = new OpenaiAgent({
-  apiKey: process.env.OPENAI_API_KEY || '',
-  model: 'gpt-4o', // Default model
+const agent = new AiSdkAgent({
+  model: openai('gpt-4o'), // Use any AI SDK compatible model
   systemPrompt: 'You are a helpful assistant',
 
-  // Custom OpenAI settings (optional)
+  // Custom AI SDK settings (optional)
   settings: {
     temperature: 0.7,
-    max_output_tokens: 150,
+    maxTokens: 150,
   },
 })
 
@@ -37,56 +45,36 @@ new MicdropServer(socket, {
 })
 ```
 
+### Supported Providers
+
+The AI SDK Agent supports any provider compatible with the Vercel AI SDK:
+
+- **OpenAI**: `openai('gpt-4o')`, `openai('gpt-3.5-turbo')`
+- **Anthropic**: `anthropic('claude-3-5-sonnet-20241022')`
+- **Google**: `google('gemini-1.5-pro')`, `google('gemini-1.5-flash')`
+- **Mistral**: `mistral('mistral-large-latest')`
+- **And many more**: See [AI SDK Providers](https://sdk.vercel.ai/providers/ai-sdk-providers)
+
 ### Options
 
 | Option                | Type                                                                                                                              | Default     | Description                                                              |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------ |
-| `apiKey`              | `string`                                                                                                                          | Required    | Your OpenAI API key                                                      |
-| `model`               | `string`                                                                                                                          | `'gpt-4o'`  | OpenAI model to use                                                      |
+| `model`               | `LanguageModel`                                                                                                                   | Required    | Any AI SDK compatible language model                                     |
 | `systemPrompt`        | `string`                                                                                                                          | Required    | System prompt for the agent                                              |
 | `autoEndCall`         | `boolean \| string`                                                                                                               | `false`     | [Auto-detect when user wants to end call](../../server/auto-end-call)    |
 | `autoSemanticTurn`    | `boolean \| string`                                                                                                               | `false`     | [Handle incomplete user sentences](../../server/semantic-turn-detection) |
 | `autoIgnoreUserNoise` | `boolean \| string`                                                                                                               | `false`     | [Filter meaningless user sounds](../../server/user-noise-filtering)      |
 | `extract`             | [`ExtractJsonOptions`](../../server/extract#json-extraction) \| [`ExtractTagOptions`](../../server/extract#custom-tag-extraction) | `undefined` | Extract structured data from responses                                   |
-| `settings`            | `object`                                                                                                                          | `{}`        | Additional OpenAI API parameters                                         |
+| `settings`            | `CallSettings`                                                                                                                    | `{}`        | Additional AI SDK parameters                                             |
 
-The OpenAI Agent supports adding and removing custom tools to extend its capabilities. For detailed information about tool management, see the [Tools documentation](../../server/tools).
+The AI SDK Agent supports adding and removing custom tools to extend its capabilities. For detailed information about tool management, see the [Tools documentation](../../server/tools).
 
 ### Advanced Features
 
-The OpenAI Agent supports advanced features for improved conversation handling:
+The AI SDK Agent supports advanced features for improved conversation handling:
 
 - **[Auto End Call](../../server/auto-end-call)**: Automatically detect when users want to end the conversation
 - **[Semantic Turn Detection](../../server/semantic-turn-detection)**: Handle incomplete sentences for natural flow
 - **[User Noise Filtering](../../server/user-noise-filtering)**: Filter out meaningless sounds and filler words
 - **[Extract Value from Answer](../../server/extract)**: Extract structured data from responses
 - **[Tools](../../server/tools)**: Add custom tools to the agent
-
-## OpenAI STT (Speech-to-Text)
-
-### Usage
-
-```typescript
-import { OpenaiSTT } from '@micdrop/openai'
-import { MicdropServer } from '@micdrop/server'
-
-const stt = new OpenaiSTT({
-  apiKey: process.env.OPENAI_API_KEY || '',
-  model: 'whisper-1', // Default Whisper model
-  language: 'en', // Optional: specify language for better accuracy
-})
-
-// Use with MicdropServer
-new MicdropServer(socket, {
-  stt,
-  // ... other options
-})
-```
-
-### Options
-
-| Option     | Type     | Default       | Description                     |
-| ---------- | -------- | ------------- | ------------------------------- |
-| `apiKey`   | `string` | Required      | Your OpenAI API key             |
-| `model`    | `string` | `'whisper-1'` | Whisper model to use            |
-| `language` | `string` | Optional      | Language code for transcription |

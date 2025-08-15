@@ -1,79 +1,34 @@
-import { Agent, AgentOptions, MicdropAnswerMetadata } from '@micdrop/server'
-import OpenAI from 'openai'
-import { PassThrough } from 'stream'
-import { z } from 'zod'
 import {
+  Agent,
+  AgentOptions,
   createToolCallOutput,
   createToolSchema,
-  Tool,
   ToolCall,
   ToolCallOutput,
-} from './tools'
+} from '@micdrop/server'
+import OpenAI from 'openai'
+import { PassThrough } from 'stream'
 
 export interface OpenaiAgentOptions extends AgentOptions {
   apiKey: string
   model?: string
-  maxCalls?: number
+  maxRetry?: number
   settings?: Omit<
     OpenAI.Responses.ResponseCreateParamsStreaming,
     'input' | 'model'
   >
-
-  // Enable auto ending of the call when user asks to end the call
-  // You can provide a custom prompt to use instead of the default one by passing a string
-  autoEndCall?: boolean | string
-
-  // Enable detection of an incomplete sentence, and skip the answer (assistant waits)
-  // You can provide a custom prompt to use instead of the default one by passing a string
-  autoSemanticTurn?: boolean | string
-
-  // Ignore of the last user message when it's meaningless
-  // You can provide a custom prompt to use instead of the default one by passing a string
-  autoIgnoreUserNoise?: boolean | string
-
-  // Extract a value from the answer
-  // Value must be at the end of the answer, in JSON or between tags
-  extract?: ExtractJsonOptions | ExtractTagOptions
-}
-
-interface ExtractOptions {
-  callback?: (value: string) => void
-  saveInMetadata?: boolean
-}
-
-interface ExtractJsonOptions extends ExtractOptions {
-  json: true
-  callback?: (value: any) => void
-}
-
-interface ExtractTagOptions extends ExtractOptions {
-  startTag: string
-  endTag: string
 }
 
 const DEFAULT_MODEL = 'gpt-4o'
 const DEFAULT_MAX_CALLS = 5
 
-const AUTO_END_CALL_TOOL_NAME = 'end_call'
-const AUTO_END_CALL_PROMPT = 'Call this tool only if user asks to end the call'
-
-const AUTO_SEMANTIC_TURN_TOOL_NAME = 'semantic_turn'
-const AUTO_SEMANTIC_TURN_PROMPT =
-  'Call this tool only if last user message is obviously an incomplete sentence that you need to wait for the end before answering'
-
-const AUTO_IGNORE_USER_NOISE_TOOL_NAME = 'ignore_user_noise'
-const AUTO_IGNORE_USER_NOISE_PROMPT =
-  'Call this tool only if last user message is just an interjection or a sound that expresses emotion, hesitation, or reaction (ex: "Uh", "Ahem", "Hmm", "Ah") but doesn\'t carry any clear meaning like agreeing, refusing, or commanding'
-
 export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   private openai: OpenAI
-  private tools: Tool[]
   private abortController?: AbortController
 
   constructor(options: OpenaiAgentOptions) {
     super(options)
     this.openai = new OpenAI({ apiKey: options.apiKey })
-    this.tools = this.getDefaultTools()
   }
 
   answer() {
@@ -96,7 +51,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
     callCount = 0,
     toolInputs?: Array<ToolCall | ToolCallOutput>
   ): Promise<void> {
-    if (callCount >= (this.options.maxCalls || DEFAULT_MAX_CALLS)) {
+    if (callCount >= (this.options.maxRetry || DEFAULT_MAX_CALLS)) {
       console.error('[OpenaiAgent] Max calls reached')
       return
     }
@@ -179,8 +134,15 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
 
           case 'response.output_item.done':
             if (event.item.type === 'function_call') {
-              const result = await this.executeTool(event.item)
-              toolOutputs.push(result.toolCall, result.toolCallOutput)
+              const toolCall = event.item
+              const result = await this.executeTool(
+                toolCall.name,
+                toolCall.arguments
+              )
+              toolOutputs.push(
+                toolCall,
+                createToolCallOutput(toolCall, result.output)
+              )
               if (result.skipAnswer) {
                 skipAnswer = true
               }
@@ -201,147 +163,6 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
         console.error('[OpenaiAgent] Error answering:', error)
       }
     }
-  }
-
-  addTool<Schema extends z.ZodObject>(tool: Tool<Schema>) {
-    this.tools.push(tool)
-  }
-
-  removeTool(name: string) {
-    this.tools = this.tools.filter((tool) => tool.name !== name)
-  }
-
-  getTool(name: string): Tool | undefined {
-    return this.tools.find((tool) => tool.name === name)
-  }
-
-  private getDefaultTools() {
-    const tools: Tool[] = []
-    if (this.options.autoEndCall) {
-      tools.push({
-        name: AUTO_END_CALL_TOOL_NAME,
-        description:
-          typeof this.options.autoEndCall === 'string'
-            ? this.options.autoEndCall
-            : AUTO_END_CALL_PROMPT,
-        callback: () => this.endCall(),
-      })
-    }
-    if (this.options.autoSemanticTurn) {
-      tools.push({
-        name: AUTO_SEMANTIC_TURN_TOOL_NAME,
-        description:
-          typeof this.options.autoSemanticTurn === 'string'
-            ? this.options.autoSemanticTurn
-            : AUTO_SEMANTIC_TURN_PROMPT,
-        skipAnswer: true,
-        callback: () => this.skipAnswer(),
-      })
-    }
-    if (this.options.autoIgnoreUserNoise) {
-      tools.push({
-        name: AUTO_IGNORE_USER_NOISE_TOOL_NAME,
-        description:
-          typeof this.options.autoIgnoreUserNoise === 'string'
-            ? this.options.autoIgnoreUserNoise
-            : AUTO_IGNORE_USER_NOISE_PROMPT,
-        skipAnswer: true,
-        callback: () => this.cancelLastUserMessage(),
-      })
-    }
-    return tools
-  }
-
-  private async executeTool(toolCall: ToolCall) {
-    try {
-      const tool = this.getTool(toolCall.name)
-      if (!tool) {
-        throw new Error(`Tool not found "${toolCall.name}"`)
-      }
-
-      this.log('Executing tool:', toolCall.name, toolCall.arguments)
-      const args = JSON.parse(toolCall.arguments)
-      const result = tool.callback ? await tool.callback(args) : {}
-
-      // Emit output
-      if (tool.emitOutput) {
-        this.emit('ToolCall', {
-          name: toolCall.name,
-          parameters: args,
-          output: result,
-        })
-      }
-
-      return {
-        toolCall,
-        toolCallOutput: createToolCallOutput(toolCall, result || {}),
-        skipAnswer: tool.skipAnswer,
-      }
-    } catch (error: any) {
-      console.error('[OpenaiAgent] Error executing tool:', error)
-      return {
-        toolCall,
-        toolCallOutput: createToolCallOutput(toolCall, {
-          error: error.message,
-        }),
-      }
-    }
-  }
-
-  private getExtractOptions(): ExtractTagOptions | undefined {
-    const extract = this.options.extract
-    if (!extract) return undefined
-    if ('json' in extract && extract.json) {
-      return { ...extract, startTag: '{', endTag: '}' }
-    }
-    if ('startTag' in extract && 'endTag' in extract) {
-      return extract
-    }
-    return undefined
-  }
-
-  private extract(message: string) {
-    const extractOptions = this.getExtractOptions()
-    let metadata: MicdropAnswerMetadata | undefined = undefined
-
-    // Extract value?
-    if (extractOptions) {
-      const startTagIndex = message.indexOf(extractOptions.startTag)
-      if (startTagIndex !== -1) {
-        // Find end tag
-        let endTagIndex = message.lastIndexOf(extractOptions.endTag)
-        if (endTagIndex === -1) endTagIndex = message.length + 1
-        else endTagIndex += extractOptions.endTag.length
-        const extractedText = message.slice(startTagIndex, endTagIndex).trim()
-
-        // Parse extracted value
-        try {
-          const extractedValue =
-            'json' in extractOptions && extractOptions.json
-              ? JSON.parse(extractedText)
-              : extractedText
-
-          // Call callback
-          if (extractOptions.callback) {
-            extractOptions.callback(extractedValue)
-          }
-
-          // Save in metadata
-          if (extractOptions.saveInMetadata) {
-            metadata = { extracted: extractedValue }
-          }
-        } catch (error) {
-          console.error(
-            `[OpenaiAgent] Error parsing extracted value (${extractedText}):`,
-            error
-          )
-        }
-
-        // Remove extracted value from message
-        message = message.slice(0, startTagIndex).trimEnd()
-      }
-    }
-    return { message, metadata }
   }
 
   cancel() {

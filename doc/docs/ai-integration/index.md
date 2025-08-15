@@ -27,6 +27,7 @@ Ready-to-use implementations for popular AI services:
 
 **AI Agents (LLM):**
 
+- **[AI SDK](./provided-integrations/ai-sdk)** - Universal provider using Vercel AI SDK
 - **[OpenAI](./provided-integrations/openai)** - GPT models for conversation
 - **[Mistral](./provided-integrations/mistral)** - Open-source and commercial LLMs
 
@@ -113,6 +114,7 @@ new MicdropServer(socket, {
 
 | Provider             | Speed  | Quality   | Cost | Best For               |
 | -------------------- | ------ | --------- | ---- | ---------------------- |
+| **AI SDK**           | Varies | Varies    | Varies | Universal compatibility, any model |
 | **OpenAI GPT-4**     | Medium | Excellent | $$$  | Complex reasoning      |
 | **OpenAI GPT-3.5**   | Fast   | Good      | $    | Simple conversations   |
 | **Mistral Large 🇫🇷** | Fast   | Excellent | $$   | Cost-effective quality |

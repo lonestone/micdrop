@@ -1,7 +1,7 @@
 {
-  "name": "@micdrop/openai",
-  "version": "1.0.4",
-  "description": "OpenAI implementation for @micdrop/server",
+  "name": "@micdrop/ai-sdk",
+  "version": "1.0.0",
+  "description": "AI SDK implementation for @micdrop/server",
   "author": "Lonestone",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lonestone/micdrop.git",
-    "directory": "packages/openai"
+    "directory": "packages/ai-sdk"
   },
   "publishConfig": {
     "access": "public"
@@ -31,10 +31,10 @@
     "browser",
     "voice",
     "conversation",
-    "openai"
+    "ai-sdk"
   ],
   "dependencies": {
-    "openai": "^5.8.2"
+    "ai": "^5.0.14"
   },
   "peerDependencies": {
     "@micdrop/server": "*",

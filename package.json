@@ -10,7 +10,8 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "dev:demo": "turbo run dev --filter=@micdrop/demo-client --filter=@micdrop/demo-server",
+    "dev:main": "turbo run dev --filter=@micdrop/client --filter=@micdrop/server",
+    "dev:demo": "turbo run dev --filter=@micdrop/client --filter=@micdrop/server --filter=@micdrop/demo-client --filter=@micdrop/demo-server",
     "dev:client": "turbo run dev --filter=@micdrop/client",
     "dev:server": "turbo run dev --filter=@micdrop/server",
     "dev:doc": "turbo run dev --filter=@micdrop/doc",

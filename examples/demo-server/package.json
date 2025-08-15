@@ -12,9 +12,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.7",
     "@fastify/websocket": "^11.0.2",
     "@micdrop/elevenlabs": "*",
     "@micdrop/gladia": "*",
+    "@micdrop/ai-sdk": "*",
     "@micdrop/openai": "*",
     "@micdrop/server": "*",
     "dotenv": "^16.4.7",
