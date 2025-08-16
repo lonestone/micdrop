@@ -94,7 +94,10 @@ export abstract class Agent<
   }
 
   removeTool(name: string) {
-    this.tools = this.tools.filter((tool) => tool.name !== name)
+    const index = this.tools.findIndex((tool) => tool.name === name)
+    if (index !== -1) {
+      this.tools.splice(index, 1)
+    }
   }
 
   getTool(name: string): Tool | undefined {

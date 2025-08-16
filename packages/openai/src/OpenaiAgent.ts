@@ -6,16 +6,18 @@ import z, { toJSONSchema } from 'zod'
 export interface OpenaiAgentOptions extends AgentOptions {
   apiKey: string
   model?: string
-  maxRetry?: number
   settings?: Omit<
     OpenAI.Responses.ResponseCreateParamsStreaming,
     'input' | 'model'
   >
+  maxRetry?: number
+  maxSteps?: number
 }
 
 const DEFAULT_MODEL = 'gpt-4o'
-const DEFAULT_MAX_CALLS = 5
+const DEFAULT_MAX_STEPS = 5
 const DEFAULT_MAX_RETRIES = 3
+const DEFAULT_RETRY_DELAY = 500
 
 export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   private openai: OpenAI
@@ -43,16 +45,17 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
 
   private async generateAnswer(
     stream: PassThrough,
-    callCount = 0,
+    stepCount = 0,
     tryCount = 0
   ): Promise<void> {
-    if (callCount >= (this.options.maxRetry || DEFAULT_MAX_CALLS)) {
-      console.error('[OpenaiAgent] Max calls reached')
+    if (stepCount >= (this.options.maxSteps || DEFAULT_MAX_STEPS)) {
+      console.error('[OpenaiAgent] Max steps reached')
       return
     }
 
-    this.abortController = new AbortController()
-    const signal = this.abortController.signal
+    const abortController = new AbortController()
+    this.abortController = abortController
+    const signal = abortController.signal
 
     // Prepare extracting
     let extracting = false
@@ -65,22 +68,19 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
           model: this.options.model || DEFAULT_MODEL,
           input: this.buildInput(),
           tools: this.buildTools(),
-          temperature: 0.5,
-          max_output_tokens: 250,
           stream: true,
           ...this.options.settings,
         },
         { signal }
       )
-      let hasAnswer = false
       let skipAnswer = false
 
       // Handle response events
       for await (const event of response) {
+        if (abortController !== this.abortController) return
         switch (event.type) {
           case 'response.output_text.delta':
             this.log(`Answer chunk: "${event.delta}"`)
-            hasAnswer = true
 
             // Extracting value?
             if (extractOptions) {
@@ -110,8 +110,12 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
             const { message, metadata } = this.extract(event.text)
             this.addAssistantMessage(message, metadata)
             stream.end()
-            hasAnswer = true
-            break
+            // Stop query now that we have a complete answer
+            // Note: OpenAI can sometimes return multiple outputs.
+            // See https://community.openai.com/t/how-to-prevent-the-api-returning-multiple-outputs/1251365/28
+            // We can prompt it like this to avoid consuming too many tokens:
+            // `Return one complete answer and then stop`
+            return
 
           case 'response.output_item.done':
             if (event.item.type === 'function_call') {
@@ -133,16 +137,19 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
         }
       }
 
+      if (abortController !== this.abortController) return
+
       // Query again in case of tool call
-      if (!hasAnswer && !skipAnswer) {
-        await this.generateAnswer(stream, callCount + 1)
+      if (!skipAnswer) {
+        await this.generateAnswer(stream, stepCount + 1)
       }
     } catch (error) {
-      if (!(error instanceof OpenAI.APIUserAbortError)) {
-        console.error('[OpenaiAgent] Error answering:', error)
-        if (tryCount < (this.options.maxRetry || DEFAULT_MAX_RETRIES)) {
-          await this.generateAnswer(stream, callCount, tryCount + 1)
-        }
+      if (error instanceof OpenAI.APIUserAbortError) return
+      console.error('[OpenaiAgent] Error answering:', error)
+
+      if (tryCount < (this.options.maxRetry || DEFAULT_MAX_RETRIES)) {
+        await new Promise((resolve) => setTimeout(resolve, DEFAULT_RETRY_DELAY))
+        await this.generateAnswer(stream, stepCount, tryCount + 1)
       }
     }
   }

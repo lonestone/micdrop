@@ -12,14 +12,17 @@ export interface MistralAgentOptions extends AgentOptions {
   model?: string
   settings?: Omit<ChatCompletionStreamRequest, 'messages' | 'model'>
   maxRetry?: number
+  maxSteps?: number
 }
 
-const DEFAULT_MODEL = 'ministral-8b-latest'
+const DEFAULT_MODEL = 'mistral-large-latest'
 const DEFAULT_MAX_RETRY = 3
+const DEFAULT_MAX_STEPS = 5
+const DEFAULT_RETRY_DELAY = 500
 
 export class MistralAgent extends Agent<MistralAgentOptions> {
   private mistral: Mistral
-  private cancelled: boolean = false
+  private counter = 0
   private running: boolean = false
 
   constructor(options: MistralAgentOptions) {
@@ -29,15 +32,20 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
 
   answer() {
     this.log('Start answering')
-    this.cancelled = false
+    this.counter++
     const stream = new PassThrough()
     this.generateAnswer(stream)
     return stream
   }
 
-  private async generateAnswer(stream: Writable, callCount = 0, tryCount = 0) {
+  private async generateAnswer(stream: Writable, stepCount = 0, tryCount = 0) {
+    if (stepCount >= (this.options.maxSteps || DEFAULT_MAX_STEPS)) {
+      console.error('[MistralAgent] Max steps reached')
+      return
+    }
+
+    const counter = this.counter
     this.running = true
-    this.cancelled = false
 
     // Hack: Mistral needs a user message if there is only a system message
     if (this.conversation.length === 1) {
@@ -63,7 +71,7 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
 
       // Handle response events
       for await (const event of result) {
-        if (this.cancelled) return
+        if (counter !== this.counter) return
         const delta = event.data.choices[0]?.delta
         const chunk = delta?.content
         const toolCalls = delta?.toolCalls
@@ -105,6 +113,8 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
         }
       }
 
+      if (counter !== this.counter) return
+
       if (fullAnswer) {
         // Add full answer to conversation
         const { message, metadata } = this.extract(fullAnswer)
@@ -117,12 +127,13 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
         })
       } else {
         // Query again in case of tool call
-        await this.generateAnswer(stream, callCount + 1)
+        await this.generateAnswer(stream, stepCount + 1)
       }
     } catch (error: any) {
       console.error('[MistralAgent] Error:', error)
       if (tryCount < (this.options.maxRetry || DEFAULT_MAX_RETRY)) {
-        await this.generateAnswer(stream, callCount, tryCount + 1)
+        await new Promise((resolve) => setTimeout(resolve, DEFAULT_RETRY_DELAY))
+        await this.generateAnswer(stream, stepCount, tryCount + 1)
       }
     } finally {
       if (stream.writable) {
@@ -192,7 +203,9 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
   cancel() {
     if (!this.running) return
     this.log('Cancel')
-    this.cancelled = true
     this.running = false
+
+    // Increment counter to avoid processing messages from previous calls
+    this.counter++
   }
 }

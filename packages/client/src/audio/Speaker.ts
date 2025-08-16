@@ -54,6 +54,7 @@ export class Speaker extends EventEmitter<SpeakerEvents> {
     if (!this.isPlaying) return
     this.audioStream?.stopAudio()
   }
+
   async changeDevice(deviceId: string) {
     await this.setDevice(deviceId)
 

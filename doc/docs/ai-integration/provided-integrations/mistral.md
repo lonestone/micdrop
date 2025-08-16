@@ -20,7 +20,7 @@ import { MicdropServer } from '@micdrop/server'
 
 const agent = new MistralAgent({
   apiKey: process.env.MISTRAL_API_KEY || '',
-  model: 'ministral-8b-latest', // Default model
+  model: 'mistral-large-latest',
   systemPrompt: 'You are a helpful assistant',
 })
 
@@ -33,12 +33,18 @@ new MicdropServer(socket, {
 
 ### Options
 
-| Option         | Type     | Default                 | Description                          |
-| -------------- | -------- | ----------------------- | ------------------------------------ |
-| `apiKey`       | `string` | Required                | Your Mistral AI API key              |
-| `model`        | `string` | `'ministral-8b-latest'` | Mistral AI model to use              |
-| `systemPrompt` | `string` | Required                | System prompt for the agent          |
-| `settings`     | `object` | `{}`                    | Additional Mistral AI API parameters |
+| Option                | Type                                                                                                                              | Default                  | Description                                                              |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------ |
+| `apiKey`              | `string`                                                                                                                          | Required                 | Your Mistral AI API key                                                  |
+| `model`               | `string`                                                                                                                          | `'mistral-large-latest'` | Mistral AI model to use                                                  |
+| `systemPrompt`        | `string`                                                                                                                          | Required                 | System prompt for the agent                                              |
+| `maxRetry`            | `number`                                                                                                                          | `3`                      | Maximum number of retries on API failures                                |
+| `maxSteps`            | `number`                                                                                                                          | `5`                      | Maximum number of steps (for tool calls)                                 |
+| `autoEndCall`         | `boolean \| string`                                                                                                               | `false`                  | [Auto-detect when user wants to end call](../../server/auto-end-call)    |
+| `autoSemanticTurn`    | `boolean \| string`                                                                                                               | `false`                  | [Handle incomplete user sentences](../../server/semantic-turn-detection) |
+| `autoIgnoreUserNoise` | `boolean \| string`                                                                                                               | `false`                  | [Filter meaningless user sounds](../../server/user-noise-filtering)      |
+| `extract`             | [`ExtractJsonOptions`](../../server/extract#json-extraction) \| [`ExtractTagOptions`](../../server/extract#custom-tag-extraction) | `undefined`              | Extract structured data from responses                                   |
+| `settings`            | `object`                                                                                                                          | `{}`                     | Additional Mistral AI API parameters                                     |
 
 ### Available Models
 
