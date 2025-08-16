@@ -34,7 +34,15 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
     this.log('Start answering')
     this.counter++
     const stream = new PassThrough()
-    this.generateAnswer(stream)
+    this.running = true
+
+    this.generateAnswer(stream).then(() => {
+      if (stream.writable) {
+        stream.end()
+      }
+      this.running = false
+    })
+
     return stream
   }
 
@@ -45,7 +53,6 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
     }
 
     const counter = this.counter
-    this.running = true
 
     // Hack: Mistral needs a user message if there is only a system message
     if (this.conversation.length === 1) {
@@ -135,11 +142,6 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
         await new Promise((resolve) => setTimeout(resolve, DEFAULT_RETRY_DELAY))
         await this.generateAnswer(stream, stepCount, tryCount + 1)
       }
-    } finally {
-      if (stream.writable) {
-        stream.end()
-      }
-      this.running = false
     }
   }
 

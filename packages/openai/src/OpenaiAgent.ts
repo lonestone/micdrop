@@ -33,8 +33,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
     this.log('Start answering')
     const stream = new PassThrough()
 
-    this.generateAnswer(stream).finally(() => {
-      this.abortController = undefined
+    this.generateAnswer(stream).then(() => {
       if (stream.writable) {
         stream.end()
       }
@@ -109,7 +108,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
           case 'response.output_text.done':
             const { message, metadata } = this.extract(event.text)
             this.addAssistantMessage(message, metadata)
-            stream.end()
+            this.abortController = undefined
             // Stop query now that we have a complete answer
             // Note: OpenAI can sometimes return multiple outputs.
             // See https://community.openai.com/t/how-to-prevent-the-api-returning-multiple-outputs/1251365/28
@@ -143,6 +142,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
       if (!skipAnswer) {
         await this.generateAnswer(stream, stepCount + 1)
       }
+      this.abortController = undefined
     } catch (error) {
       if (error instanceof OpenAI.APIUserAbortError) return
       console.error('[OpenaiAgent] Error answering:', error)

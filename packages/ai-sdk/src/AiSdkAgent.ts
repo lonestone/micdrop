@@ -24,8 +24,7 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
     this.log('Start answering')
     const stream = new PassThrough()
 
-    this.generateAnswer(stream).finally(() => {
-      this.abortController = undefined
+    this.generateAnswer(stream).then(() => {
       if (stream.writable) {
         stream.end()
       }
@@ -94,6 +93,7 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
 
       // Emit message
       this.addAssistantMessage(message, metadata)
+      this.abortController = undefined
     } catch (error: any) {
       if (abortController === this.abortController) {
         console.error('[AiSdkAgent] Error answering:', error)
