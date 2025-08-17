@@ -19,21 +19,7 @@ export interface AiSdkAgentOptions extends AgentOptions {
 export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
   private abortController?: AbortController
 
-  answer() {
-    this.cancel()
-    this.log('Start answering')
-    const stream = new PassThrough()
-
-    this.generateAnswer(stream).then(() => {
-      if (stream.writable) {
-        stream.end()
-      }
-    })
-
-    return stream
-  }
-
-  private async generateAnswer(stream: PassThrough): Promise<void> {
+  protected async generateAnswer(stream: PassThrough): Promise<void> {
     const abortController = new AbortController()
     this.abortController = abortController
     const signal = this.abortController.signal

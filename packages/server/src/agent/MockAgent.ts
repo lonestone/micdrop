@@ -8,15 +8,10 @@ export class MockAgent extends Agent {
     super({ systemPrompt: '' })
   }
 
-  answer() {
-    const stream = new PassThrough()
-
-    // Answer message
+  protected async generateAnswer(stream: PassThrough): Promise<void> {
     const message = `Assistant Message ${this.i++}`
     this.addAssistantMessage(message)
     stream.write(message)
-    stream.end()
-    return stream
   }
 
   cancel() {}

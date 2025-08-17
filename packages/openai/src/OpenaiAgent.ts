@@ -28,21 +28,7 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
     this.openai = new OpenAI({ apiKey: options.apiKey })
   }
 
-  answer() {
-    this.cancel()
-    this.log('Start answering')
-    const stream = new PassThrough()
-
-    this.generateAnswer(stream).then(() => {
-      if (stream.writable) {
-        stream.end()
-      }
-    })
-
-    return stream
-  }
-
-  private async generateAnswer(
+  protected async generateAnswer(
     stream: PassThrough,
     stepCount = 0,
     tryCount = 0

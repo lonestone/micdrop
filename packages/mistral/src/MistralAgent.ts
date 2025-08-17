@@ -4,7 +4,7 @@ import {
   ChatCompletionStreamRequest,
   ChatCompletionStreamRequestMessages,
 } from '@mistralai/mistralai/models/components'
-import { PassThrough, Writable } from 'stream'
+import { Writable } from 'stream'
 import z, { toJSONSchema } from 'zod-v4'
 
 export interface MistralAgentOptions extends AgentOptions {
@@ -22,37 +22,23 @@ const DEFAULT_RETRY_DELAY = 500
 
 export class MistralAgent extends Agent<MistralAgentOptions> {
   private mistral: Mistral
-  private counter = 0
-  private running: boolean = false
 
   constructor(options: MistralAgentOptions) {
     super(options)
     this.mistral = new Mistral({ apiKey: options.apiKey })
   }
 
-  answer() {
-    this.log('Start answering')
-    this.counter++
-    const stream = new PassThrough()
-    this.running = true
-
-    this.generateAnswer(stream).then(() => {
-      if (stream.writable) {
-        stream.end()
-      }
-      this.running = false
-    })
-
-    return stream
-  }
-
-  private async generateAnswer(stream: Writable, stepCount = 0, tryCount = 0) {
+  protected async generateAnswer(
+    stream: Writable,
+    stepCount = 0,
+    tryCount = 0
+  ) {
     if (stepCount >= (this.options.maxSteps || DEFAULT_MAX_STEPS)) {
       console.error('[MistralAgent] Max steps reached')
       return
     }
 
-    const counter = this.counter
+    const answerCount = this.answerCount
 
     // Hack: Mistral needs a user message if there is only a system message
     if (this.conversation.length === 1) {
@@ -78,7 +64,7 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
 
       // Handle response events
       for await (const event of result) {
-        if (counter !== this.counter) return
+        if (answerCount !== this.answerCount) return
         const delta = event.data.choices[0]?.delta
         const chunk = delta?.content
         const toolCalls = delta?.toolCalls
@@ -120,7 +106,7 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
         }
       }
 
-      if (counter !== this.counter) return
+      if (answerCount !== this.answerCount) return
 
       if (fullAnswer) {
         // Add full answer to conversation
@@ -203,11 +189,11 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
   }
 
   cancel() {
-    if (!this.running) return
+    if (!this.answering) return
     this.log('Cancel')
-    this.running = false
+    this.answering = false
 
     // Increment counter to avoid processing messages from previous calls
-    this.counter++
+    this.answerCount++
   }
 }

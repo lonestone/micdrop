@@ -44,6 +44,7 @@ new MicdropServer(socket, {
 | `autoSemanticTurn`    | `boolean \| string`                                                                                                               | `false`                  | [Handle incomplete user sentences](../../server/semantic-turn-detection) |
 | `autoIgnoreUserNoise` | `boolean \| string`                                                                                                               | `false`                  | [Filter meaningless user sounds](../../server/user-noise-filtering)      |
 | `extract`             | [`ExtractJsonOptions`](../../server/extract#json-extraction) \| [`ExtractTagOptions`](../../server/extract#custom-tag-extraction) | `undefined`              | Extract structured data from responses                                   |
+| `onBeforeAnswer`      | `function`                                                                                                                        | `undefined`              | Hook called before answer generation - return `true` to skip generation  |
 | `settings`            | `object`                                                                                                                          | `{}`                     | Additional Mistral AI API parameters                                     |
 
 ### Available Models

@@ -65,6 +65,7 @@ The AI SDK Agent supports any provider compatible with the Vercel AI SDK:
 | `autoSemanticTurn`    | `boolean \| string`                                                                                                               | `false`     | [Handle incomplete user sentences](../../server/semantic-turn-detection) |
 | `autoIgnoreUserNoise` | `boolean \| string`                                                                                                               | `false`     | [Filter meaningless user sounds](../../server/user-noise-filtering)      |
 | `extract`             | [`ExtractJsonOptions`](../../server/extract#json-extraction) \| [`ExtractTagOptions`](../../server/extract#custom-tag-extraction) | `undefined` | Extract structured data from responses                                   |
+| `onBeforeAnswer`      | `function`                                                                                                                        | `undefined` | Hook called before answer generation - return `true` to skip generation  |
 | `settings`            | `CallSettings`                                                                                                                    | `{}`        | Additional AI SDK parameters                                             |
 
 The AI SDK Agent supports adding and removing custom tools to extend its capabilities. For detailed information about tool management, see the [Tools documentation](../../server/tools).

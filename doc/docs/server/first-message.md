@@ -46,11 +46,41 @@ new MicdropServer(socket, {
 
 ## Wake word
 
-If you want the assistant to speak only after the user has spoken specific word(s), you can handle it on the [Agent](../ai-integration/custom-integrations/custom-agent.md) level by reacting differently in the `answer` method.
+If you want the assistant to speak only after the user has spoken specific word(s), you can use the `onBeforeAnswer` hook in your agent configuration.
 
-**Pseudo-code example:**
+```typescript
+const WAKE_WORD = /Hello|Bonjour/
+const FIRST_MESSAGE = 'Hello! How can I help you today?'
 
-- If this is the first message
-  - If user says "Ok Micdrop" → answer
-  - Else → ignore and remove message (`cancelLastUserMessage` method)
-- Else → answer normally
+new OpenaiAgent({
+  apiKey: process.env.OPENAI_API_KEY,
+  systemPrompt: 'You are a helpful assistant.',
+  onBeforeAnswer(stream) {
+    // Process only first message
+    const isFirstAnswer = !this.conversation.some(
+      (message) => message.role === 'assistant'
+    )
+    if (!isFirstAnswer) return
+
+    // Get last user message
+    const lastUserMessage = this.conversation.findLast(
+      (message) => message.role === 'user'
+    ) as MicdropConversationMessage
+    if (!lastUserMessage) return
+
+    // Check for wake word(s)
+    if (!WAKE_WORD.test(lastUserMessage.content)) {
+      // Remove message without answering
+      this.cancelLastUserMessage()
+      // Skip normal answer generation
+      return true
+    }
+
+    // Send first assistant message
+    this.addAssistantMessage(FIRST_MESSAGE)
+    stream.write(FIRST_MESSAGE)
+    // Skip normal answer generation
+    return true
+  },
+})
+```

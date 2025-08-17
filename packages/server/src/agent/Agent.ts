@@ -1,5 +1,5 @@
 import { EventEmitter } from 'eventemitter3'
-import { Readable } from 'stream'
+import { PassThrough, Readable, Writable } from 'stream'
 import type { z } from 'zod'
 import { Logger } from '../Logger'
 import {
@@ -39,6 +39,13 @@ export interface AgentOptions {
   // Extract a value from the answer
   // Value must be at the end of the answer, in JSON or between tags
   extract?: ExtractJsonOptions | ExtractTagOptions
+
+  // Function called before any answer is generated
+  // Return true to skip generation
+  onBeforeAnswer?: (
+    this: Agent,
+    stream: Writable
+  ) => void | boolean | Promise<boolean>
 }
 
 export interface AgentEvents {
@@ -71,6 +78,8 @@ export abstract class Agent<
   public conversation: MicdropConversation
 
   protected tools: Tool[]
+  protected answerCount = 0
+  protected answering = false
 
   constructor(protected options: Options) {
     super()
@@ -78,8 +87,35 @@ export abstract class Agent<
     this.tools = this.getDefaultTools()
   }
 
-  abstract answer(): Readable
+  protected abstract generateAnswer(stream: PassThrough): Promise<void>
   abstract cancel(): void
+
+  answer(): Readable {
+    this.log('Start answering')
+    const answerCount = ++this.answerCount
+    const stream = new PassThrough()
+    this.answering = true
+
+    Promise.resolve()
+      // Call hook onBeforeAnswer
+      .then(() => this.options.onBeforeAnswer?.bind(this)(stream))
+      // Generate answer (if not skipped)
+      .then((skip) => {
+        if (skip) return
+        return this.generateAnswer(stream)
+      })
+      // End stream
+      .finally(() => {
+        if (stream.writable) {
+          stream.end()
+        }
+        if (answerCount === this.answerCount) {
+          this.answering = false
+        }
+      })
+
+    return stream
+  }
 
   addUserMessage(text: string, metadata?: MicdropAnswerMetadata) {
     this.addMessage('user', text, metadata)
@@ -104,7 +140,7 @@ export abstract class Agent<
     return this.tools.find((tool) => tool.name === name)
   }
 
-  protected addMessage(
+  addMessage(
     role: 'user' | 'assistant' | 'system',
     text: string,
     metadata?: MicdropAnswerMetadata
@@ -119,7 +155,7 @@ export abstract class Agent<
     this.emit('Message', message)
   }
 
-  protected addToolMessage(
+  addToolMessage(
     message: MicdropConversationToolCall | MicdropConversationToolResult
   ) {
     this.log('Adding tool message:', message)
