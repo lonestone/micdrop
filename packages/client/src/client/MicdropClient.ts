@@ -18,7 +18,7 @@ import {
 export interface MicdropEvents {
   EndCall: []
   Error: [MicdropClientError]
-  StateChange: [MicdropState]
+  StateChange: [MicdropState, MicdropState]
   ToolCall: [MicdropToolCall]
 }
 
@@ -61,6 +61,7 @@ export class MicdropClient
   private ws?: WebSocket
   private micStream?: MediaStream
   private startTime = 0
+  private lastNotifiedState = this.state
   private _isProcessing = false
   private _isPaused = false
 
@@ -508,7 +509,9 @@ export class MicdropClient
   }
 
   private notifyStateChange() {
-    this.emit('StateChange', this.state)
+    const state = this.state
+    this.emit('StateChange', state, this.lastNotifiedState)
+    this.lastNotifiedState = state
   }
 
   private log(...message: any[]) {

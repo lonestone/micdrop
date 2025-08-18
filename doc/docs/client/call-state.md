@@ -2,17 +2,17 @@
 
 Monitor and react to real-time conversation state changes during voice calls.
 
-## State Overview
+## `StateChange` Event
 
-The Micdrop client provides detailed state information about the conversation flow:
+The `StateChange` event is emitted whenever the client state changes. It provides both the current state and the previous state for comparison:
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
-
-// Listen for all state changes
-Micdrop.on('StateChange', (state) => {
-  console.log('Current state:', state)
-})
+Micdrop.on(
+  'StateChange',
+  (currentState: MicdropState, previousState: MicdropState) => {
+    // Handle state change
+  }
+)
 ```
 
 ## State Properties
@@ -42,19 +42,15 @@ The `MicdropState` object contains these properties:
 ### Starting a Call
 
 ```typescript
-Micdrop.on('StateChange', (state) => {
-  if (state.isStarting) {
+Micdrop.on('StateChange', (state, prevState) => {
+  if (state.isStarting && !prevState.isStarting) {
     console.log('🔄 Connecting...')
-    // Show loading indicator
   }
 
-  if (state.isStarted) {
+  if (state.isStarted && !prevState.isStarted) {
     console.log('✅ Connected and ready!')
-    // Hide loading, show active call UI
   }
 })
-
-await Micdrop.start({ url: 'ws://localhost:8081' })
 ```
 
 ### Conversation Flow
@@ -62,191 +58,73 @@ await Micdrop.start({ url: 'ws://localhost:8081' })
 The typical conversation flow follows this pattern:
 
 ```typescript
-Micdrop.on('StateChange', (state) => {
+Micdrop.on('StateChange', (state, prevState) => {
   // 1. Listening for user input
-  if (state.isListening) {
+  if (state.isListening && !prevState.isListening) {
     console.log('🎤 Listening...')
     // Show listening indicator
   }
 
   // 2. User starts speaking
-  if (state.isUserSpeaking) {
+  if (state.isUserSpeaking && !prevState.isUserSpeaking) {
     console.log('🗣️ User speaking...')
     // Show speaking indicator
   }
 
   // 3. Processing user input
-  if (state.isProcessing) {
+  if (state.isProcessing && !prevState.isProcessing) {
     console.log('⚡ Processing...')
     // Show processing indicator
   }
 
   // 4. Assistant responds
-  if (state.isAssistantSpeaking) {
+  if (state.isAssistantSpeaking && !prevState.isAssistantSpeaking) {
     console.log('🤖 Assistant speaking...')
     // Show assistant speaking indicator
   }
 })
 ```
 
-### Listening State Logic
+### With React
 
-The `isListening` state is `true` only when ALL these conditions are met:
+For React applications, use the `useMicdropState` hook to automatically subscribe to state changes.
 
-- Microphone is started (`isMicStarted`)
-- Call is not paused (`!isPaused`)
-- Not currently processing (`!isProcessing`)
-- Microphone is not muted (`!isMicMuted`)
-- User is not speaking (`!isUserSpeaking`)
-- Assistant is not speaking (`!isAssistantSpeaking`)
+First, install the React package:
 
-## Practical Examples
+```bash
+npm install @micdrop/react
+```
 
-### UI State Management
+Then use the hook:
 
 ```tsx
-function CallInterface() {
-  const [callState, setCallState] = useState(Micdrop.state)
+import { useMicdropState } from '@micdrop/react'
 
-  useEffect(() => {
-    const handleStateChange = (state) => setCallState(state)
-    Micdrop.on('StateChange', handleStateChange)
-    return () => Micdrop.off('StateChange', handleStateChange)
-  }, [])
+function CallInterface() {
+  const {
+    isStarting,
+    isListening,
+    isUserSpeaking,
+    isProcessing,
+    isAssistantSpeaking,
+    isPaused,
+  } = useMicdropState()
 
   return (
     <div className="call-interface">
-      {callState.isStarting && (
-        <div className="status connecting">Connecting...</div>
-      )}
-
-      {callState.isListening && (
-        <div className="status listening">🎤 Listening</div>
-      )}
-
-      {callState.isUserSpeaking && (
+      {isStarting && <div className="status connecting">Connecting...</div>}
+      {isListening && <div className="status listening">🎤 Listening</div>}
+      {isUserSpeaking && (
         <div className="status user-speaking">🗣️ You're speaking</div>
       )}
-
-      {callState.isProcessing && (
-        <div className="status processing">⚡ Processing</div>
-      )}
-
-      {callState.isAssistantSpeaking && (
+      {isProcessing && <div className="status processing">⚡ Processing</div>}
+      {isAssistantSpeaking && (
         <div className="status assistant-speaking">🤖 Assistant speaking</div>
       )}
-
-      {callState.isPaused && (
-        <div className="status paused">⏸️ Call paused</div>
-      )}
+      {isPaused && <div className="status paused">⏸️ Call paused</div>}
     </div>
   )
 }
 ```
 
-### Visual Indicators
-
-```tsx
-function CallStatusIndicator() {
-  const [state, setState] = useState(Micdrop.state)
-
-  useEffect(() => {
-    Micdrop.on('StateChange', setState)
-    return () => Micdrop.off('StateChange', setState)
-  }, [])
-
-  const getStatusColor = () => {
-    if (state.isUserSpeaking) return 'blue'
-    if (state.isAssistantSpeaking) return 'green'
-    if (state.isProcessing) return 'yellow'
-    if (state.isListening) return 'gray'
-    return 'red'
-  }
-
-  const getStatusText = () => {
-    if (state.isUserSpeaking) return 'Speaking'
-    if (state.isAssistantSpeaking) return 'Assistant'
-    if (state.isProcessing) return 'Processing'
-    if (state.isListening) return 'Listening'
-    if (state.isPaused) return 'Paused'
-    return 'Inactive'
-  }
-
-  return (
-    <div className={`status-indicator ${getStatusColor()}`}>
-      {getStatusText()}
-    </div>
-  )
-}
-```
-
-### State-Based Actions
-
-```typescript
-Micdrop.on('StateChange', (state) => {
-  // Auto-scroll conversation when assistant speaks
-  if (state.isAssistantSpeaking) {
-    scrollToBottom()
-  }
-
-  // Update page title based on state
-  if (state.isUserSpeaking) {
-    document.title = '🗣️ Speaking - Micdrop'
-  } else if (state.isAssistantSpeaking) {
-    document.title = '🤖 Assistant - Micdrop'
-  } else if (state.isListening) {
-    document.title = '🎤 Listening - Micdrop'
-  } else {
-    document.title = 'Micdrop'
-  }
-
-  // Log conversation state changes
-  if (state.conversation.length > previousLength) {
-    console.log('New message:', state.conversation.at(-1))
-    previousLength = state.conversation.length
-  }
-})
-```
-
-## State Debugging
-
-Enable debug logging to see detailed state transitions:
-
-```typescript
-await Micdrop.start({
-  url: 'ws://localhost:8081',
-  debugLog: true, // Enable debug logs
-})
-
-// Or log state changes manually
-Micdrop.on('StateChange', (state) => {
-  console.table({
-    isListening: state.isListening,
-    isProcessing: state.isProcessing,
-    isUserSpeaking: state.isUserSpeaking,
-    isAssistantSpeaking: state.isAssistantSpeaking,
-    isPaused: state.isPaused,
-  })
-})
-```
-
-## Performance Optimization
-
-State changes fire frequently, so optimize your UI updates:
-
-```typescript
-import { debounce } from 'lodash'
-
-// Debounce UI updates to avoid excessive re-renders
-const debouncedUpdate = debounce((state) => {
-  updateUI(state)
-}, 50)
-
-Micdrop.on('StateChange', debouncedUpdate)
-```
-
-## Next Steps
-
-- [**Pause/Resume Call**](./pause-resume-call) - Control conversation flow
-- [**Error Handling**](./error-handling) - Handle state-related errors
-- [**React Hooks**](./react-hooks) - React-specific state management
+More information about hooks in the [React hooks](./react-hooks) section.
