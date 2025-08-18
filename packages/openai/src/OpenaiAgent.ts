@@ -3,16 +3,18 @@ import OpenAI from 'openai'
 import { PassThrough } from 'stream'
 import z, { toJSONSchema } from 'zod'
 
-export interface OpenaiAgentOptions extends AgentOptions {
-  apiKey: string
-  model?: string
-  settings?: Omit<
-    OpenAI.Responses.ResponseCreateParamsStreaming,
-    'input' | 'model'
-  >
-  maxRetry?: number
-  maxSteps?: number
-}
+export type OpenaiAgentOptions = AgentOptions &
+  OpenaiOptions & {
+    model?: string
+    settings?: Omit<
+      OpenAI.Responses.ResponseCreateParamsStreaming,
+      'input' | 'model' | 'tools' | 'stream'
+    >
+    maxRetry?: number
+    maxSteps?: number
+  }
+
+export type OpenaiOptions = { apiKey: string } | { openai: OpenAI }
 
 const DEFAULT_MODEL = 'gpt-4o'
 const DEFAULT_MAX_STEPS = 5
@@ -25,7 +27,10 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
 
   constructor(options: OpenaiAgentOptions) {
     super(options)
-    this.openai = new OpenAI({ apiKey: options.apiKey })
+    this.openai =
+      'openai' in options
+        ? options.openai
+        : new OpenAI({ apiKey: options.apiKey })
   }
 
   protected async generateAnswer(
