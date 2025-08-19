@@ -408,7 +408,6 @@ export class MicdropClient
         const message = JSON.parse(
           event.data.substring(MicdropServerCommands.Message.length + 1)
         )
-        this._isProcessing = false
         this.addMessage(message)
       } catch (error) {
         console.error(
