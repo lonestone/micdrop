@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CustomCodeBlock } from './CustomCodeBlock'
+import { CustomCodeBlock } from '../CustomCodeBlock'
 
 function getTabStyle(active: boolean) {
   return active
@@ -7,7 +7,7 @@ function getTabStyle(active: boolean) {
     : 'tab-inactive text-ai-surface-700 dark:text-ai-surface-400 bg-ai-surface-200 dark:bg-ai-surface-700'
 }
 
-export function HomepageCodeBlock() {
+export function HomeCode() {
   const [activeTab, setActiveTab] = useState('client')
 
   return (
