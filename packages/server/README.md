@@ -73,6 +73,7 @@ Micdrop server has 3 main components:
 Micdrop provides ready-to-use implementations for the following AI providers:
 
 - [@micdrop/openai](https://micdrop.dev/docs/ai-integration/provided-integrations/openai)
+- [@micdrop/ai-sdk](https://micdrop.dev/docs/ai-integration/provided-integrations/ai-sdk)
 - [@micdrop/elevenlabs](https://micdrop.dev/docs/ai-integration/provided-integrations/elevenlabs)
 - [@micdrop/cartesia](https://micdrop.dev/docs/ai-integration/provided-integrations/cartesia)
 - [@micdrop/mistral](https://micdrop.dev/docs/ai-integration/provided-integrations/mistral)
