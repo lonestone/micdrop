@@ -152,6 +152,8 @@ interface MicdropState {
 }
 ```
 
+See [Call State](../call-state) for more details.
+
 ## Methods
 
 ### Core Methods

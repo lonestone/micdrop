@@ -15,6 +15,8 @@ Micdrop.on(
 )
 ```
 
+See [MicdropClient](./utility-classes/micdrop-client#state) for more details.
+
 ## State Properties
 
 The `MicdropState` object contains these properties:
@@ -37,9 +39,36 @@ The `MicdropState` object contains these properties:
 | `conversation`        | `MicdropConversation` | Message history                      |
 | `error`               | `MicdropClientError`  | Current error if any                 |
 
-## Call Flow States
+## State Diagram
 
-### Starting a Call
+```mermaid
+stateDiagram-v2
+    [*] --> isStarting: Start call
+    isStarting --> isStarted: Start mic and connection
+    isStarted --> [*]: Stop call
+
+    state isStarted {
+        [*] --> isProcessing
+        isListening --> isUserSpeaking : User speaks
+        isUserSpeaking --> isProcessing : User stops speaking
+        isProcessing --> isAssistantSpeaking : Generate and play answer
+        isProcessing --> isUserSpeaking : User interrupts
+        isProcessing --> isListening : No answer generated
+        isAssistantSpeaking --> isListening : Assistant finished
+        isAssistantSpeaking --> isUserSpeaking : User interrupts
+    }
+
+    isStarted --> isPaused : Pause call
+    isPaused --> isStarted : Resume call
+```
+
+**Notes:**
+
+- User can interrupt the assistant at any time by speaking during the `isProcessing` or `isAssistantSpeaking` states. This allows for natural conversation flow. To prevent interruptions during assistant responses, use the [`disableInterruption` setting](./utility-classes/micdrop-client#options).
+- When `isPaused` is true, `isStarted` stays true.
+- `isMicStarted` becomes true when we start the mic (with `Micdrop.startMic`) or start the call (with `Micdrop.start`).
+
+## Starting a Call
 
 ```typescript
 Micdrop.on('StateChange', (state, prevState) => {
@@ -53,7 +82,7 @@ Micdrop.on('StateChange', (state, prevState) => {
 })
 ```
 
-### Conversation Flow
+## Conversation Flow
 
 The typical conversation flow follows this pattern:
 
@@ -85,7 +114,7 @@ Micdrop.on('StateChange', (state, prevState) => {
 })
 ```
 
-### With React
+## With React
 
 For React applications, use the `useMicdropState` hook to automatically subscribe to state changes.
 
