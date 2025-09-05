@@ -164,7 +164,7 @@ Generates a streaming response based on the current conversation history.
 Add any type of message with content to the conversation and emit the `Message` event.
 
 ```typescript
-agent.addMessage('assistant', 'Hello there!', { extracted: { score: 0.95 } })
+agent.addMessage('assistant', 'Hello there!')
 ```
 
 ### `addUserMessage(text: string, metadata?: MicdropAnswerMetadata)`
@@ -246,6 +246,22 @@ agent.addToolMessage({
 })
 ```
 
+### `extract(message: string): { message: string; metadata?: MicdropAnswerMetadata }`
+
+Extracts structured data from a message based on the configured extraction options. Returns the cleaned message and any extracted metadata.
+
+```typescript
+// With JSON extraction
+const result = agent.extract('The answer is 42. {"score":42}')
+// Returns: { message: 'The answer is 42.', metadata: { extracted: { score: 42 } } }
+
+// With tag extraction
+const result = agent.extract('The answer is 42. <score>42</score>')
+// Returns: { message: 'The answer is 42.', metadata: { extracted: '42' } }
+```
+
+It is called automatically when the `extract` option is provided. It is public so that you can use it to extract data from the answer before adding it to the conversation, if you really need to.
+
 ### `destroy()`
 
 Cleans up the agent instance:
@@ -290,22 +306,6 @@ Executes a tool call and handles the result. This method:
 ### `getExtractOptions(): ExtractTagOptions | undefined`
 
 Returns the extraction options configured for the agent, converting JSON extraction to tag-based extraction.
-
-### `extract(message: string): { message: string; metadata?: MicdropAnswerMetadata }`
-
-Extracts structured data from a message based on the configured extraction options. Returns the cleaned message and any extracted metadata.
-
-```typescript
-// With JSON extraction
-const result = agent.extract(
-  'The answer is {"score": 0.95, "confidence": "high"}'
-)
-// Returns: { message: 'The answer is', metadata: { extracted: { score: 0.95, confidence: 'high' } } }
-
-// With tag extraction
-const result = agent.extract('The answer is <result>important data</result>')
-// Returns: { message: 'The answer is', metadata: { extracted: 'important data' } }
-```
 
 ### `log(...message: any[])`
 

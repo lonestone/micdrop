@@ -279,7 +279,7 @@ export abstract class Agent<
     return undefined
   }
 
-  protected extract(message: string) {
+  public extract(message: string) {
     const extractOptions = this.getExtractOptions()
     let metadata: MicdropAnswerMetadata | undefined = undefined
 
