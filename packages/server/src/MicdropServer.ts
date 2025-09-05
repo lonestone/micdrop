@@ -28,6 +28,10 @@ export class MicdropServer {
   private startTime = Date.now()
   private lastMessageSpeeched?: MicdropConversationItem
 
+  // Queue system for operations
+  private operationQueue: Array<() => Promise<void>> = []
+  private isProcessingQueue = false
+
   // When user is speaking, we're streaming chunks for STT
   private currentUserStream?: Duplex
 
@@ -72,9 +76,36 @@ export class MicdropServer {
     this.logger?.log(...message)
   }
 
-  private cancel() {
+  private async processQueue() {
+    if (this.isProcessingQueue || this.operationQueue.length === 0) return
+
+    this.isProcessingQueue = true
+
+    while (this.operationQueue.length > 0) {
+      const operation = this.operationQueue.shift()
+      if (operation) {
+        try {
+          await operation()
+        } catch (error) {
+          this.log('Error processing queued operation:', error)
+        }
+      }
+    }
+
+    this.isProcessingQueue = false
+  }
+
+  private queueOperation(operation: () => Promise<void>) {
+    this.operationQueue.push(operation)
+    this.processQueue()
+  }
+
+  public cancel() {
     this.config?.tts.cancel()
     this.config?.agent.cancel()
+    // Clear the queue
+    this.operationQueue = []
+    this.log('Operation queue cleared')
   }
 
   private onClose = () => {
@@ -112,13 +143,13 @@ export class MicdropServer {
 
       if (cmd === MicdropClientCommands.StartSpeaking) {
         // User started speaking
-        await this.onStartSpeaking()
+        this.onStartSpeaking()
       } else if (cmd === MicdropClientCommands.Mute) {
         // User muted the call
-        await this.onMute()
+        this.onMute()
       } else if (cmd === MicdropClientCommands.StopSpeaking) {
         // User stopped speaking
-        await this.onStopSpeaking()
+        this.onStopSpeaking()
       }
     }
 
@@ -129,13 +160,13 @@ export class MicdropServer {
     }
   }
 
-  private async onMute() {
+  private onMute() {
     this.currentUserStream?.end()
     this.currentUserStream = undefined
     this.cancel()
   }
 
-  private async onStartSpeaking() {
+  private onStartSpeaking() {
     if (!this.config) return
     this.currentUserStream?.end()
     this.currentUserStream = new PassThrough()
@@ -143,7 +174,7 @@ export class MicdropServer {
     this.cancel()
   }
 
-  private async onStopSpeaking() {
+  private onStopSpeaking() {
     this.currentUserStream?.end()
     this.currentUserStream = undefined
 
@@ -172,30 +203,30 @@ export class MicdropServer {
     }
   }
 
-  private async sendFirstMessage() {
+  private sendFirstMessage() {
     if (!this.config) return
-    try {
-      if (this.config.firstMessage) {
-        // Send first message
-        this.config.agent.addAssistantMessage(this.config.firstMessage)
-        await this.speak(this.config.firstMessage)
-      } else if (this.config.generateFirstMessage) {
-        // Generate first message
-        await this.answer()
-      } else {
-        // Skip answer if no first message is provided
-        // to avoid keeping the client in a processing state
-        this.socket?.send(MicdropServerCommands.SkipAnswer)
-      }
-    } catch (error) {
-      console.error('[MicdropServer]', error)
+    if (this.config.firstMessage) {
+      // Send first message
+      this.config.agent.addAssistantMessage(this.config.firstMessage)
+      this.speak(this.config.firstMessage)
+    } else if (this.config.generateFirstMessage) {
+      // Generate first message
+      this.answer()
+    } else {
+      // Skip answer if no first message is provided
+      // to avoid keeping the client in a processing state
       this.socket?.send(MicdropServerCommands.SkipAnswer)
     }
   }
 
-  private async answer() {
+  public answer() {
+    this.queueOperation(async () => {
+      await this._answer()
+    })
+  }
+
+  private async _answer() {
     if (!this.config) return
-    this.cancel()
 
     // Prevent answering twice
     const lastMessage =
@@ -211,15 +242,21 @@ export class MicdropServer {
       const stream = this.config.agent.answer()
 
       // TTS: Generate answer audio
-      await this.speak(stream)
+      await this._speak(stream)
     } catch (error) {
-      console.error('[MicdropServer]', error)
       this.socket?.send(MicdropServerCommands.SkipAnswer)
+      throw error
     }
   }
 
   // Run text-to-speech and send to client
-  private async speak(message: string | Readable) {
+  public speak(message: string | Readable) {
+    this.queueOperation(async () => {
+      await this._speak(message)
+    })
+  }
+
+  private async _speak(message: string | Readable) {
     if (!this.socket || !this.config) return
 
     // Convert message to stream if needed
@@ -237,26 +274,36 @@ export class MicdropServer {
     const audio = this.config.tts.speak(textStream)
 
     // Send audio to client
-    await this.sendAudio(audio)
+    await this._sendAudio(audio)
   }
 
-  private async sendAudio(audio: Readable) {
+  public sendAudio(audio: Readable) {
+    this.queueOperation(async () => {
+      await this._sendAudio(audio)
+    })
+  }
+
+  private async _sendAudio(audio: Readable) {
     if (!this.socket) return
     if (!audio.readable) {
       this.log('Non readable audio, skipping', audio)
       return
     }
 
-    // Stream audio
-    audio.on('data', (chunk) => {
-      this.log(`Send audio chunk (${chunk.byteLength} bytes)`)
-      this.socket?.send(chunk)
-    })
-    audio.on('error', (error) => {
-      this.log('Error in audio stream', error)
-    })
-    audio.on('end', () => {
-      this.log('Audio stream ended')
+    // Wait for audio stream to complete
+    await new Promise<void>((resolve, reject) => {
+      audio.on('data', (chunk) => {
+        this.log(`Send audio chunk (${chunk.byteLength} bytes)`)
+        this.socket?.send(chunk)
+      })
+      audio.on('error', (error) => {
+        this.log('Error in audio stream', error)
+        reject(error)
+      })
+      audio.on('end', () => {
+        this.log('Audio stream ended')
+        resolve()
+      })
     })
   }
 }

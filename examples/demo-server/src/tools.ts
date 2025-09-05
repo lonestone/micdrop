@@ -1,7 +1,7 @@
-import { Agent } from '@micdrop/server'
+import { Agent, MicdropServer } from '@micdrop/server'
 import { z } from 'zod'
 
-export function addTools(agent: Agent) {
+export function addTools(server: MicdropServer, agent: Agent) {
   // Get time
   agent.addTool({
     name: 'get_time',
@@ -27,6 +27,23 @@ export function addTools(agent: Agent) {
         temperature: `${data.current.temperature_2m}°C`,
         wind_speed: `${data.current.wind_speed_10m} km/h`,
       }
+    },
+  })
+
+  agent.addTool({
+    name: 'say_something_later',
+    description:
+      'Say something later (can be used as an alarm clock or reminder)',
+    inputSchema: z.object({
+      message: z.string().describe('The message to say'),
+      delay: z.number().describe('The delay in seconds'),
+    }),
+    execute: async ({ message, delay }) => {
+      setTimeout(() => {
+        agent.addAssistantMessage(message)
+        server.speak(message)
+      }, delay * 1000)
+      return { success: true }
     },
   })
 }

@@ -8,6 +8,8 @@ Use `addTool(tool: Tool)` to add custom functions that the agent can call during
 
 ```typescript
 import { z } from 'zod'
+import { OpenaiAgent } from '@micdrop/openai'
+import { MicdropServer } from '@micdrop/server'
 
 const agent = new OpenaiAgent({
   apiKey: process.env.OPENAI_API_KEY || '',
@@ -55,6 +57,26 @@ agent.addTool({
   },
   emitOutput: true, // Enable tool call events
 })
+
+// Add a tool that can interact with the server (e.g., delayed responses)
+function addTools(server: MicdropServer, agent: OpenaiAgent) {
+  agent.addTool({
+    name: 'say_something_later',
+    description:
+      'Say something later (can be used as an alarm clock or reminder)',
+    inputSchema: z.object({
+      message: z.string().describe('The message to say'),
+      delay: z.number().describe('The delay in seconds'),
+    }),
+    execute: async ({ message, delay }) => {
+      setTimeout(() => {
+        agent.addAssistantMessage(message)
+        server.speak(message)
+      }, delay * 1000)
+      return { success: true }
+    },
+  })
+}
 ```
 
 ## Tool Options

@@ -12,12 +12,9 @@ export default async (app: FastifyInstance) => {
       const { lang } = await checkParams(socket)
 
       // Select demo providers (see files agents.ts, speech2text.ts, text2speech.ts)
-      const agent = agents.mistral(lang)
+      const agent = agents.openai(lang)
       const stt = speech2text.gladia()
       const tts = text2speech.elevenlabs()
-
-      // Add tools
-      addTools(agent)
 
       // Start call
       const server = new MicdropServer(socket, {
@@ -30,6 +27,9 @@ export default async (app: FastifyInstance) => {
           console.log('Call ended', call)
         },
       })
+
+      // Add tools
+      addTools(server, agent)
 
       // Enable debug logs
       server.logger = new Logger('MicdropServer')
