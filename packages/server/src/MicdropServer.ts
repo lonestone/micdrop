@@ -105,7 +105,6 @@ export class MicdropServer {
     this.config?.agent.cancel()
     // Clear the queue
     this.operationQueue = []
-    this.log('Operation queue cleared')
   }
 
   private onClose = () => {
@@ -187,6 +186,7 @@ export class MicdropServer {
       this.log(
         'User stopped speaking and a transcript already exists, answering'
       )
+      this.cancel()
       this.answer()
     }
   }
@@ -199,6 +199,7 @@ export class MicdropServer {
     // Answer if user stopped speaking
     if (!this.currentUserStream) {
       this.log('User stopped speaking, answering')
+      this.cancel()
       this.answer()
     }
   }
