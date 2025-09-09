@@ -49,7 +49,7 @@ export class GladiaSTT extends STT {
     pcmStream.on('end', async () => {
       if (this.audioChunksPending.length === 0) return
       await this.initPromise
-      this.sendSilence(1)
+      this.sendSilence(2)
     })
   }
 
@@ -171,7 +171,7 @@ export class GladiaSTT extends STT {
     if (!this.socket) return
     const numSamples = Math.round(SAMPLE_RATE * durationSeconds)
     const bytesPerSample = BIT_DEPTH / 8
-    const silenceBuffer = Buffer.alloc(numSamples * bytesPerSample, 0)
+    const silenceBuffer = Buffer.alloc(numSamples * bytesPerSample)
     this.socket.send(silenceBuffer)
     this.audioChunksPending.push(silenceBuffer)
     this.log(
