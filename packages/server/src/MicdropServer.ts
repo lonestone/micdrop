@@ -34,6 +34,7 @@ export class MicdropServer {
 
   // When user is speaking, we're streaming chunks for STT
   private currentUserStream?: Duplex
+  private userSpeechChunks = 0
 
   constructor(socket: WebSocket, config: MicdropConfig) {
     this.socket = socket
@@ -154,12 +155,18 @@ export class MicdropServer {
 
     // Audio chunk
     else if (this.currentUserStream) {
-      this.log(`Received chunk (${message.byteLength} bytes)`)
-      this.currentUserStream.write(message)
+      this.onAudioChunk(message)
     }
   }
 
+  private onAudioChunk(chunk: Buffer) {
+    this.log(`Received chunk (${chunk.byteLength} bytes)`)
+    this.currentUserStream?.write(chunk)
+    this.userSpeechChunks++
+  }
+
   private onMute() {
+    this.userSpeechChunks = 0
     this.currentUserStream?.end()
     this.currentUserStream = undefined
     this.cancel()
@@ -167,6 +174,7 @@ export class MicdropServer {
 
   private onStartSpeaking() {
     if (!this.config) return
+    this.userSpeechChunks = 0
     this.currentUserStream?.end()
     this.currentUserStream = new PassThrough()
     this.config.stt.transcribe(this.currentUserStream)
@@ -174,8 +182,17 @@ export class MicdropServer {
   }
 
   private onStopSpeaking() {
+    const hasNoUserSpeech =
+      !this.currentUserStream || this.userSpeechChunks === 0
     this.currentUserStream?.end()
     this.currentUserStream = undefined
+    this.userSpeechChunks = 0
+
+    // If user is not speaking or no chunks were received, skip
+    if (hasNoUserSpeech) {
+      this.socket?.send(MicdropServerCommands.SkipAnswer)
+      return
+    }
 
     const conversation = this.config?.agent.conversation
     const lastMessage = conversation?.[conversation.length - 1]
