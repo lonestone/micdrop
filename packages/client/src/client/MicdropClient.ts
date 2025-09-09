@@ -214,7 +214,10 @@ export class MicdropClient
   }
 
   unmute = () => {
-    if (!this.isPaused) {
+    if (
+      !this.isPaused &&
+      !(this.options.disableInterruption && Speaker.isPlaying)
+    ) {
       this.micRecorder?.unmute()
     }
     this._isMuted = false
