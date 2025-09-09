@@ -15,6 +15,7 @@ const sidebars: SidebarsConfig = {
         'client/react-hooks',
         'client/start-stop-call',
         'client/pause-resume-call',
+        'client/mute-unmute-call',
         'client/call-state',
         'client/display-conversation-messages',
         'client/handling-tool-calls',

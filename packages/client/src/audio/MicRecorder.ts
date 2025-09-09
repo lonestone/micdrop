@@ -1,7 +1,7 @@
 import { EventEmitter } from 'eventemitter3'
 import { createDelayedStream } from './utils/delayedStream'
 import { stopStream } from './utils/stopStream'
-import { VAD } from './vad/VAD'
+import { VAD, VADStatus } from './vad/VAD'
 import { getVAD, VADConfig } from './vad/getVAD'
 
 const timeSlice = 100
@@ -82,7 +82,11 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       this.recorder.ondataavailable = this.onDataAvailable
 
       // Start speaking detection
-      await this.startSpeakingDetection(stream)
+      await this.vad.start(stream)
+      this.vad.on('StartSpeaking', this.onStartSpeaking)
+      this.vad.on('ConfirmSpeaking', this.onConfirmSpeaking)
+      this.vad.on('CancelSpeaking', this.onCancelSpeaking)
+      this.vad.on('StopSpeaking', this.onStopSpeaking)
 
       this.changeState({
         isStarting: false,
@@ -95,12 +99,26 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }
 
   mute = () => {
-    this.changeState({ isMuted: true, isSpeaking: false })
-    this.recorder?.stop()
+    if (this.state.isMuted) return
+
+    // Force stop speaking
+    if (this.state.isSpeaking) {
+      this.onStopSpeaking()
+    }
+    this.changeState({ isMuted: true })
   }
 
   unmute = () => {
+    if (!this.state.isMuted) return
     this.changeState({ isMuted: false })
+
+    // Start speaking if already speaking
+    if (this.vad.status === VADStatus.MaybeSpeaking) {
+      this.onStartSpeaking()
+    } else if (this.vad.status === VADStatus.Speaking) {
+      this.onStartSpeaking()
+      this.onConfirmSpeaking()
+    }
   }
 
   stop = () => {
@@ -112,11 +130,20 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     })
 
     try {
-      this.stopSpeakingDetection()
+      // Stop speaking detection
+      this.vad.stop()
+      this.vad.off('StartSpeaking', this.onStartSpeaking)
+      this.vad.off('ConfirmSpeaking', this.onConfirmSpeaking)
+      this.vad.off('CancelSpeaking', this.onCancelSpeaking)
+      this.vad.off('StopSpeaking', this.onStopSpeaking)
+
+      // Stop recorder
       if (this.recorder) {
         this.recorder.stop()
         this.recorder = undefined
       }
+
+      // Stop delayed stream
       if (this.delayedStream) {
         stopStream(this.delayedStream)
         this.delayedStream = undefined
@@ -126,30 +153,12 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     }
   }
 
-  private async startSpeakingDetection(stream: MediaStream) {
-    if (this.vad.isStarted) {
-      this.vad.stop()
-    }
-    this.vad.on('StartSpeaking', this.onStartSpeaking)
-    this.vad.on('ConfirmSpeaking', this.onConfirmSpeaking)
-    this.vad.on('CancelSpeaking', this.onCancelSpeaking)
-    this.vad.on('StopSpeaking', this.onStopSpeaking)
-    await this.vad.start(stream)
-  }
-
-  private async stopSpeakingDetection() {
-    this.vad.off('StartSpeaking', this.onStartSpeaking)
-    this.vad.off('ConfirmSpeaking', this.onConfirmSpeaking)
-    this.vad.off('CancelSpeaking', this.onCancelSpeaking)
-    this.vad.off('StopSpeaking', this.onStopSpeaking)
-    await this.vad.stop()
-  }
-
   private onStartSpeaking = async () => {
     if (!this.recorder || this.state.isMuted) return
     try {
       this.recorder.start(timeSlice)
       this.queuedChunks.length = 0
+      this.speakingConfirmed = false
     } catch (error) {
       console.error(error)
     }

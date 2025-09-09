@@ -7,6 +7,21 @@ export default function CallControls() {
   const { isStarted, isPaused, isMicStarted, isStarting, error } =
     useMicdropState()
 
+  const handleStartMic = () => {
+    Micdrop.startMic({ vad: ['silero', 'volume'], record: true })
+  }
+
+  const handleStart = () => {
+    Micdrop.start({
+      url: 'ws://localhost:8081/call',
+      params: {
+        authorization: '1234',
+        lang: navigator.language,
+      },
+      debugLog: true,
+    })
+  }
+
   useMicdropEndCall(() => {
     console.log('Call ended')
 
@@ -19,18 +34,6 @@ export default function CallControls() {
       }
     }, 5000)
   })
-
-  const handleStart = async () => {
-    await Micdrop.start({
-      url: 'ws://localhost:8081/call',
-      params: {
-        authorization: '1234',
-        lang: navigator.language,
-      },
-      vad: ['silero', 'volume'],
-      debugLog: true,
-    })
-  }
 
   return (
     <div className="flex items-center gap-2">
@@ -70,9 +73,7 @@ export default function CallControls() {
         <>
           <button
             className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            onClick={() =>
-              Micdrop.startMic({ vad: ['silero', 'volume'], record: true })
-            }
+            onClick={handleStartMic}
           >
             <FaMicrophone size={18} className="mr-2" />
             Start mic

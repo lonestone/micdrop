@@ -18,9 +18,10 @@ console.log('Call paused:', Micdrop.isPaused) // true
 When paused:
 
 - ⏸️ Microphone stops recording
-- ⏸️ Voice activity detection is disabled
 - ⏸️ No audio is sent to the server
 - ⏸️ Incoming audio is muted
+- ⏸️ Send event to server to stop processing
+- ✅ Voice activity detection stays enabled
 - ✅ WebSocket connection remains active
 
 ## Resume Call
@@ -38,7 +39,6 @@ console.log('Now listening:', Micdrop.isListening) // true
 When resumed:
 
 - ✅ Microphone starts recording again
-- ✅ Voice activity detection is re-enabled
 - ✅ Audio processing continues
 - ✅ Incoming audio plays normally
 

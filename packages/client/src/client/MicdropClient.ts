@@ -33,6 +33,7 @@ export interface MicdropOptions {
 export interface MicdropState {
   isStarting: boolean
   isStarted: boolean
+  isMuted: boolean
   isPaused: boolean
   isListening: boolean
   isProcessing: boolean
@@ -63,6 +64,7 @@ export class MicdropClient
   private startTime = 0
   private lastNotifiedState = this.state
   private _isProcessing = false
+  private _isMuted = false
   private _isPaused = false
 
   constructor(public options: MicdropOptions = {}) {
@@ -86,6 +88,10 @@ export class MicdropClient
 
   get isStarting(): boolean {
     return this.isWSStarting || this.micRecorder?.state.isStarting || false
+  }
+
+  get isMuted(): boolean {
+    return this._isMuted
   }
 
   get isPaused(): boolean {
@@ -143,6 +149,7 @@ export class MicdropClient
     return {
       isStarting: this.isStarting,
       isStarted: this.isStarted,
+      isMuted: this.isMuted,
       isPaused: this.isPaused,
       isListening: this.isListening,
       isProcessing: this.isProcessing,
@@ -167,6 +174,7 @@ export class MicdropClient
     this.startTime = Date.now()
     this.conversation = []
     this._isProcessing = true
+    this._isMuted = false
     this._isPaused = false
 
     // Start mic if not already started
@@ -178,6 +186,7 @@ export class MicdropClient
 
   stop = async () => {
     this._isProcessing = false
+    this._isMuted = false
     this._isPaused = false
     try {
       // Stop websocket
@@ -198,6 +207,20 @@ export class MicdropClient
     Speaker.stopAudio()
   }
 
+  mute = () => {
+    this.micRecorder?.mute()
+    this._isMuted = true
+    this.notifyStateChange()
+  }
+
+  unmute = () => {
+    if (!this.isPaused) {
+      this.micRecorder?.unmute()
+    }
+    this._isMuted = false
+    this.notifyStateChange()
+  }
+
   pause = () => {
     if (this.isPaused) return
     this.micRecorder?.mute()
@@ -210,7 +233,9 @@ export class MicdropClient
 
   resume = () => {
     if (!this.isPaused) return
-    this.micRecorder?.unmute()
+    if (!this.isMuted) {
+      this.micRecorder?.unmute()
+    }
     this._isPaused = false
     this.notifyStateChange()
   }
@@ -223,6 +248,7 @@ export class MicdropClient
     } = {}
   ) => {
     this.error = undefined
+    this._isMuted = false
     if (options.vad) {
       this.options.vad = options.vad
     }
@@ -481,7 +507,7 @@ export class MicdropClient
 
   private onSpeakerStartPlaying = () => {
     this.log('Speaker started')
-    if (this.options.disableInterruption && !this.isPaused) {
+    if (this.options.disableInterruption) {
       this.micRecorder?.mute()
     }
     this.notifyStateChange()
@@ -489,7 +515,7 @@ export class MicdropClient
 
   private onSpeakerStopPlaying = () => {
     this.log('Speaker stopped')
-    if (this.options.disableInterruption && !this.isPaused) {
+    if (this.options.disableInterruption && !this.isMuted) {
       this.micRecorder?.unmute()
     }
     this.notifyStateChange()

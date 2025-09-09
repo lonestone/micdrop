@@ -1,6 +1,6 @@
 import { Micdrop } from '@micdrop/client'
 import { useMicdropState } from '@micdrop/react'
-import { FaMicrophone, FaVolumeUp } from 'react-icons/fa'
+import { FaMicrophone, FaMicrophoneSlash, FaVolumeUp } from 'react-icons/fa'
 import MicVolume from './MicVolume'
 import SpeakerTestButton from './SpeakerTestButton'
 
@@ -11,13 +11,20 @@ export default function DevicesSettings() {
     micDevices,
     speakerDeviceId,
     speakerDevices,
+    isMuted,
   } = useMicdropState()
   if (!isMicStarted) return null
 
   return (
     <div className="p-4 rounded-lg border border-gray-200 shadow-sm">
       <div className="flex items-center gap-3">
-        <FaMicrophone className="text-gray-600 text-xl" />
+        <button onClick={isMuted ? Micdrop.unmute : Micdrop.mute}>
+          {isMuted ? (
+            <FaMicrophoneSlash className="text-gray-600 text-xl" />
+          ) : (
+            <FaMicrophone className="text-gray-600 text-xl" />
+          )}
+        </button>
         <select
           value={micDeviceId}
           className="flex-1 form-select min-w-0 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
