@@ -1,4 +1,4 @@
-import { convertToPCM, DeepPartial, STT } from '@micdrop/server'
+import { DeepPartial, STT } from '@micdrop/server'
 import { Readable } from 'stream'
 import WebSocket from 'ws'
 import { GladiaLiveSessionPayload } from './types'
@@ -12,15 +12,18 @@ import { GladiaLiveSessionPayload } from './types'
 export interface GladiaSTTOptions {
   apiKey: string
   settings?: DeepPartial<GladiaLiveSessionPayload>
+  transcriptionTimeout?: number
 }
 
 const SAMPLE_RATE = 16000
 const BIT_DEPTH = 16
+const DEFAULT_TRANSCRIPTION_TIMEOUT = 4000
 
 export class GladiaSTT extends STT {
   private socket?: WebSocket
   private initPromise: Promise<void>
   private reconnectTimeout?: NodeJS.Timeout
+  private transcriptionTimeout?: NodeJS.Timeout
   private audioChunksPending: ArrayBuffer[] = [] // Store audio chunks to send them again if reconnecting
 
   constructor(private options: GladiaSTTOptions) {
@@ -35,10 +38,8 @@ export class GladiaSTT extends STT {
   }
 
   transcribe(audioStream: Readable) {
-    const pcmStream = convertToPCM(audioStream, SAMPLE_RATE, BIT_DEPTH)
-
     // Read transformed stream and send to Gladia
-    pcmStream.on('data', async (chunk) => {
+    audioStream.on('data', async (chunk) => {
       await this.initPromise
       this.audioChunksPending.push(chunk)
       this.socket?.send(chunk)
@@ -46,10 +47,18 @@ export class GladiaSTT extends STT {
     })
 
     // Send silence when the stream ends to force Gladia to transcribe
-    pcmStream.on('end', async () => {
-      if (this.audioChunksPending.length === 0) return
+    audioStream.on('end', async () => {
       await this.initPromise
+      if (this.audioChunksPending.length === 0) return
       this.sendSilence(2)
+
+      // Timeout transcription if no transcript is received
+      this.transcriptionTimeout = setTimeout(() => {
+        this.transcriptionTimeout = undefined
+        this.log(`Transcription timeout`)
+        this.emit('Transcript', '')
+        this.audioChunksPending.length = 0
+      }, this.options.transcriptionTimeout || DEFAULT_TRANSCRIPTION_TIMEOUT)
     })
   }
 
@@ -58,6 +67,10 @@ export class GladiaSTT extends STT {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout)
       this.reconnectTimeout = undefined
+    }
+    if (this.transcriptionTimeout) {
+      clearTimeout(this.transcriptionTimeout)
+      this.transcriptionTimeout = undefined
     }
     this.socket?.removeAllListeners()
     if (this.socket?.readyState === WebSocket.OPEN) {
@@ -137,6 +150,11 @@ export class GladiaSTT extends STT {
           this.emit('Transcript', transcript)
           // Reset audio chunks and transcript flag to avoid sending them again if reconnecting
           this.audioChunksPending.length = 0
+
+          if (this.transcriptionTimeout) {
+            clearTimeout(this.transcriptionTimeout)
+            this.transcriptionTimeout = undefined
+          }
         }
       })
     })

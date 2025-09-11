@@ -1,5 +1,4 @@
 export * from './agent'
-export * from './audio-convert'
 export * from './errors'
 export * from './Logger'
 export * from './MicdropServer'

@@ -106,6 +106,8 @@ This integration will automatically track all OpenAI API calls, token usage, and
 
 ## OpenAI STT (Speech-to-Text)
 
+Real-time speech-to-text implementation using OpenAI's WebSocket-based real-time transcription API.
+
 ### Usage
 
 ```typescript
@@ -114,8 +116,10 @@ import { MicdropServer } from '@micdrop/server'
 
 const stt = new OpenaiSTT({
   apiKey: process.env.OPENAI_API_KEY || '',
-  model: 'whisper-1', // Default Whisper model
+  model: 'gpt-4o-transcribe', // Default real-time transcription model
   language: 'en', // Optional: specify language for better accuracy
+  prompt: 'Transcribe the incoming audio in real time.', // Optional: custom prompt
+  transcriptionTimeout: 4000, // Optional: timeout in ms for transcription
 })
 
 // Use with MicdropServer
@@ -127,8 +131,10 @@ new MicdropServer(socket, {
 
 ### Options
 
-| Option     | Type     | Default       | Description                     |
-| ---------- | -------- | ------------- | ------------------------------- |
-| `apiKey`   | `string` | Required      | Your OpenAI API key             |
-| `model`    | `string` | `'whisper-1'` | Whisper model to use            |
-| `language` | `string` | Optional      | Language code for transcription |
+| Option                 | Type     | Default                                         | Description                                              |
+| ---------------------- | -------- | ----------------------------------------------- | -------------------------------------------------------- |
+| `apiKey`               | `string` | Required                                        | Your OpenAI API key                                      |
+| `model`                | `string` | `'gpt-4o-transcribe'`                           | Real-time transcription model to use                     |
+| `language`             | `string` | `'en'`                                          | Language code for transcription                          |
+| `prompt`               | `string` | `'Transcribe the incoming audio in real time.'` | Custom prompt to guide transcription behavior            |
+| `transcriptionTimeout` | `number` | `4000`                                          | Timeout in milliseconds to wait for transcription result |

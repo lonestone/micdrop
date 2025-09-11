@@ -24,7 +24,7 @@ export abstract class STT extends EventEmitter<STTEvents> {
   public logger?: Logger
 
   // Transcribe audio stream to text (emits Transcript event)
-  transcribe(audioStream: Readable): void
+  abstract transcribe(audioStream: Readable): void
 
   // Cleanup
   destroy(): void
@@ -142,16 +142,8 @@ export class CustomRealtimeSTT extends STT {
 
   private processAudioChunk(chunk: Buffer) {
     if (this.socket?.readyState === WebSocket.OPEN) {
-      // Convert to required format if needed
-      const processedChunk = this.convertAudioFormat(chunk)
-      this.socket.send(processedChunk)
+      this.socket.send(chunk)
     }
-  }
-
-  private convertAudioFormat(chunk: Buffer): Buffer {
-    // Example: Convert to 16kHz PCM if needed
-    // Implementation depends on your audio processing requirements
-    return chunk
   }
 
   private handleMessage(message: any) {
@@ -219,90 +211,6 @@ export class CustomRealtimeSTT extends STT {
 // Create custom STT
 const stt = new CustomRealtimeSTT({
   apiKey: process.env.CUSTOM_STT_API_KEY || '',
-  language: 'en',
-})
-
-// Add logging
-stt.logger = new Logger('CustomSTT')
-
-// Create server with custom STT
-const server = new MicdropServer(socket, {
-  stt,
-  // ... other options
-})
-```
-
-### Creating a File-based STT Implementation
-
-For services that require complete audio files:
-
-```typescript
-import { FileSTT } from '@micdrop/server'
-
-export class CustomFileSTT extends FileSTT {
-  constructor(
-    private options: {
-      apiKey: string
-      model?: string
-      language?: string
-    }
-  ) {
-    super()
-  }
-
-  async transcribeFile(file: File): Promise<string> {
-    this.log(`Transcribing file: ${file.name} (${file.size} bytes)`)
-
-    try {
-      // Prepare request
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('model', this.options.model || 'whisper-1')
-
-      if (this.options.language) {
-        formData.append('language', this.options.language)
-      }
-
-      // Make API request
-      const response = await fetch(
-        'https://api.example.com/v1/audio/transcriptions',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.options.apiKey}`,
-          },
-          body: formData,
-        }
-      )
-
-      if (!response.ok) {
-        const error = await response.text()
-        throw new Error(`STT API error: ${response.status} ${error}`)
-      }
-
-      const result = await response.json()
-
-      if (!result.text) {
-        throw new Error('No transcription text in response')
-      }
-
-      this.log(`Transcription successful: "${result.text}"`)
-      return result.text
-    } catch (error) {
-      this.log('Transcription failed:', error)
-      throw error
-    }
-  }
-}
-```
-
-### Using CustomFileSTT with MicdropServer
-
-```typescript
-// Create custom STT
-const stt = new CustomFileSTT({
-  apiKey: process.env.CUSTOM_STT_API_KEY || '',
-  model: 'whisper-1',
   language: 'en',
 })
 

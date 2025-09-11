@@ -52,8 +52,8 @@ import { MicdropServer } from '@micdrop/server'
 
 const stt = new OpenaiSTT({
   apiKey: process.env.OPENAI_API_KEY || '',
-  model: 'whisper-1', // Default Whisper model
-  language: 'en', // Optional: specify language for better accuracy
+  model: 'gpt-4o-transcribe',
+  language: 'en',
 })
 
 // Use with MicdropServer

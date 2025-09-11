@@ -210,6 +210,13 @@ export class MicdropServer {
 
   private onTranscript = async (transcript: string) => {
     if (!this.config) return
+
+    // Skip answer if transcript is empty
+    if (transcript === '') {
+      this.socket?.send(MicdropServerCommands.SkipAnswer)
+      return
+    }
+
     this.log(`User transcript: "${transcript}"`)
     this.config.agent.addUserMessage(transcript)
 

@@ -1,9 +1,11 @@
-import { FileSTT } from './FileSTT'
+import { STT } from './STT'
 
-export class MockSTT extends FileSTT {
+export class MockSTT extends STT {
   private i = 0
 
-  async transcribeFile(file: File) {
-    return `User Message ${this.i++}`
+  async transcribe() {
+    setTimeout(() => {
+      this.emit('Transcript', `User Message ${this.i++}`)
+    }, 300)
   }
 }

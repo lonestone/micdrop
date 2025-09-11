@@ -1,10 +1,12 @@
 import { EventEmitter } from 'eventemitter3'
+import pcmProcessorWorklet from './pcm-processor-worklet?raw'
+import { audioContext } from './utils/audioContext'
 import { createDelayedStream } from './utils/delayedStream'
 import { stopStream } from './utils/stopStream'
 import { VAD, VADStatus } from './vad/VAD'
 import { getVAD, VADConfig } from './vad/getVAD'
 
-const timeSlice = 100
+const SAMPLE_RATE = 16000
 
 export interface MicRecorderState {
   isStarting: boolean
@@ -21,32 +23,34 @@ const defaultMicRecorderState: MicRecorderState = {
 }
 
 export interface MicRecorderEvents {
-  Chunk: [Blob]
+  Chunk: [Int16Array]
   StartSpeaking: void
   StopSpeaking: void
   StateChange: [MicRecorderState]
-}
-
-interface AudioInfo {
-  mimeType: string
-  ext: string
 }
 
 export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   public state: MicRecorderState
   public vad: VAD
 
-  private audioInfo = this.getAudioInfo()
-  private recorder: MediaRecorder | undefined
+  private source: MediaStreamAudioSourceNode | undefined
+  private workletNode: AudioWorkletNode | undefined
   private delayedStream: MediaStream | undefined
+  private workletUrl: string
   private speakingConfirmed = false
-  private queuedChunks: Blob[] = []
+  private queuedChunks: Int16Array[] = []
 
   constructor(vadConfig?: VADConfig) {
     super()
 
     // Set initial state
     this.state = defaultMicRecorderState
+
+    // Init worklet URL
+    const workletBlob = new Blob([pcmProcessorWorklet], {
+      type: 'application/javascript',
+    })
+    this.workletUrl = URL.createObjectURL(workletBlob)
 
     // Init VAD
     this.vad = getVAD(vadConfig)
@@ -63,6 +67,7 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
         isMuted: false,
         isSpeaking: false,
       })
+      this.speakingConfirmed = false
 
       // Create a delayed stream to avoid cutting after speech detection
       const delayedStream = createDelayedStream(
@@ -71,15 +76,21 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       )
       this.delayedStream = delayedStream
 
-      // Setup RTC recorder
-      if (this.recorder) {
-        this.recorder.stop()
-      }
-      this.recorder = new window.MediaRecorder(delayedStream, {
-        mimeType: this.audioInfo.mimeType,
-        audioBitsPerSecond: 128000,
+      // Load the worklet module
+      await audioContext.audioWorklet.addModule(this.workletUrl)
+
+      this.source = audioContext.createMediaStreamSource(delayedStream)
+      this.workletNode = new AudioWorkletNode(audioContext, 'pcm-processor')
+
+      this.workletNode.port.onmessage = this.onWorkletMessage
+      this.source.connect(this.workletNode)
+
+      // Send sample rate configuration to worklet
+      this.workletNode.port.postMessage({
+        type: 'configure',
+        sourceSampleRate: audioContext.sampleRate,
+        targetSampleRate: SAMPLE_RATE,
       })
-      this.recorder.ondataavailable = this.onDataAvailable
 
       // Start speaking detection
       await this.vad.start(stream)
@@ -137,10 +148,14 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       this.vad.off('CancelSpeaking', this.onCancelSpeaking)
       this.vad.off('StopSpeaking', this.onStopSpeaking)
 
-      // Stop recorder
-      if (this.recorder) {
-        this.recorder.stop()
-        this.recorder = undefined
+      // Stop Web Audio API
+      if (this.workletNode) {
+        this.workletNode.disconnect()
+        this.workletNode = undefined
+      }
+      if (this.source) {
+        this.source.disconnect()
+        this.source = undefined
       }
 
       // Stop delayed stream
@@ -154,62 +169,61 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }
 
   private onStartSpeaking = async () => {
-    if (!this.recorder || this.state.isMuted) return
-    try {
-      this.recorder.start(timeSlice)
-      this.queuedChunks.length = 0
-      this.speakingConfirmed = false
-    } catch (error) {
-      console.error(error)
-    }
+    if (this.state.isMuted) return
+    this.speakingConfirmed = false
+    this.queuedChunks.length = 0
+
+    // Start recording
+    this.workletNode?.port.postMessage({ type: 'start' })
   }
 
   private onConfirmSpeaking = async () => {
     if (this.state.isMuted) return
-    this.emit('StartSpeaking')
-    this.changeState({ isSpeaking: true })
     this.speakingConfirmed = true
+    this.changeState({ isSpeaking: true })
+    this.emit('StartSpeaking')
   }
 
   private onCancelSpeaking = async () => {
     if (this.state.isMuted) return
-    try {
-      this.recorder?.stop()
-    } catch (error) {
-      console.error(error)
-    }
     this.queuedChunks.length = 0
+
+    // Stop recording
+    this.workletNode?.port.postMessage({ type: 'stop' })
   }
 
   private onStopSpeaking = async () => {
     if (this.state.isMuted) return
-    try {
-      this.recorder?.stop()
-    } catch (error) {
-      console.error(error)
-    }
+    this.speakingConfirmed = false
     this.changeState({ isSpeaking: false })
     this.emit('StopSpeaking')
-    this.speakingConfirmed = false
+
+    // Stop recording
+    this.workletNode?.port.postMessage({ type: 'stop' })
   }
 
-  private onDataAvailable = async (blobEvent: BlobEvent) => {
+  private onWorkletMessage = (event: MessageEvent) => {
     if (this.state.isMuted) return
 
-    if (!this.speakingConfirmed) {
-      // Queue the chunk until speech is confirmed
-      this.queuedChunks.push(blobEvent.data)
-      return
-    }
+    const { type, data } = event.data
+    if (type === 'chunk') {
+      const pcmData = data as Int16Array
 
-    // Emit all queued chunks if there are any
-    for (const chunk of this.queuedChunks) {
-      this.emit('Chunk', chunk)
-    }
-    this.queuedChunks.length = 0
+      if (!this.speakingConfirmed) {
+        // Queue the chunk until speech is confirmed
+        this.queuedChunks.push(pcmData)
+        return
+      }
 
-    // Emit the last chunk
-    this.emit('Chunk', blobEvent.data)
+      // Emit all queued chunks if there are any
+      for (const chunk of this.queuedChunks) {
+        this.emit('Chunk', chunk)
+      }
+      this.queuedChunks.length = 0
+
+      // Emit the current chunk
+      this.emit('Chunk', pcmData)
+    }
   }
 
   private changeState(state: Partial<MicRecorderState>) {
@@ -221,16 +235,5 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     if (!hasChanged) return
     this.state = { ...this.state, ...state }
     this.emit('StateChange', this.state)
-  }
-
-  private getAudioInfo(): AudioInfo {
-    if (window.MediaRecorder.isTypeSupported('audio/ogg')) {
-      return { mimeType: 'audio/ogg', ext: 'ogg' }
-    } else if (window.MediaRecorder.isTypeSupported('audio/webm')) {
-      return { mimeType: 'audio/webm', ext: 'webm' }
-    } else if (window.MediaRecorder.isTypeSupported('audio/mp4')) {
-      return { mimeType: 'audio/mp4', ext: 'm4a' }
-    }
-    return { mimeType: 'audio/wav', ext: 'wav' }
   }
 }
