@@ -11,14 +11,12 @@ const SAMPLE_RATE = 16000
 export interface MicRecorderState {
   isStarting: boolean
   isStarted: boolean
-  isMuted: boolean
   isSpeaking: boolean
 }
 
 const defaultMicRecorderState: MicRecorderState = {
   isStarting: false,
   isStarted: false,
-  isMuted: false,
   isSpeaking: false,
 }
 
@@ -57,7 +55,6 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       // Update state to starting
       this.changeState({
         isStarting: true,
-        isMuted: false,
         isSpeaking: false,
       })
       this.stream = stream
@@ -76,10 +73,7 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       })
 
       // Create a delayed stream to avoid cutting after speech detection
-      const delayedStream = createDelayedStream(
-        stream,
-        this.vad.delay / 1000 + 0.05
-      )
+      const delayedStream = createDelayedStream(stream, this.vad.delay / 1000)
       this.delayedStream = delayedStream
 
       // Connect the source node to the worklet node
@@ -103,34 +97,10 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     }
   }
 
-  mute = () => {
-    if (this.state.isMuted) return
-
-    // Force stop speaking
-    if (this.state.isSpeaking) {
-      this.onStopSpeaking()
-    }
-    this.changeState({ isMuted: true })
-  }
-
-  unmute = () => {
-    if (!this.state.isMuted) return
-    this.changeState({ isMuted: false })
-
-    // Start speaking if already speaking
-    if (this.vad.status === VADStatus.MaybeSpeaking) {
-      this.onStartSpeaking()
-    } else if (this.vad.status === VADStatus.Speaking) {
-      this.onStartSpeaking()
-      this.onConfirmSpeaking()
-    }
-  }
-
   stop = () => {
     this.changeState({
       isStarting: false,
       isStarted: false,
-      isMuted: false,
       isSpeaking: false,
     })
     this.stream = undefined
@@ -180,7 +150,6 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }
 
   private onStartSpeaking = async () => {
-    if (this.state.isMuted) return
     this.speakingConfirmed = false
     this.queuedChunks.length = 0
 
@@ -189,14 +158,12 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }
 
   private onConfirmSpeaking = async () => {
-    if (this.state.isMuted) return
     this.speakingConfirmed = true
     this.changeState({ isSpeaking: true })
     this.emit('StartSpeaking')
   }
 
   private onCancelSpeaking = async () => {
-    if (this.state.isMuted) return
     this.queuedChunks.length = 0
 
     // Stop recording
@@ -204,7 +171,6 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }
 
   private onStopSpeaking = async () => {
-    if (this.state.isMuted) return
     this.speakingConfirmed = false
     this.changeState({ isSpeaking: false })
     this.emit('StopSpeaking')
@@ -214,8 +180,6 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }
 
   private onWorkletMessage = (event: MessageEvent) => {
-    if (this.state.isMuted) return
-
     const { type, data } = event.data
     if (type === 'chunk') {
       const pcmData = data as Int16Array

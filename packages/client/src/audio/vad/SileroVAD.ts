@@ -24,6 +24,7 @@ const defaultOptions: SileroVADOptions = {
 export class SileroVAD extends VAD {
   public options = defaultOptions
   private vad: MicVAD | undefined
+  private _isPaused = false
 
   constructor(options?: Partial<SileroVADOptions>) {
     super()
@@ -44,6 +45,10 @@ export class SileroVAD extends VAD {
 
   get isStarted(): boolean {
     return !!this.vad
+  }
+
+  get isPaused(): boolean {
+    return this._isPaused
   }
 
   async start(stream: MediaStream): Promise<void> {
@@ -67,6 +72,18 @@ export class SileroVAD extends VAD {
     if (!this.vad) return
     this.vad.destroy()
     this.vad = undefined
+  }
+
+  async pause(): Promise<void> {
+    if (!this.vad || this._isPaused) return
+    this._isPaused = true
+    this.vad.pause()
+  }
+
+  async resume(): Promise<void> {
+    if (!this.vad || !this._isPaused) return
+    this._isPaused = false
+    this.vad.start()
   }
 
   setOptions(options: Partial<SileroVADOptions>) {

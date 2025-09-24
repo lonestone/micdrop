@@ -37,6 +37,12 @@ export abstract class VAD extends EventEmitter<VADEvents> {
   abstract get isStarted(): boolean
 
   /**
+   * Checks if the VAD is paused
+   * @returns True if the VAD is paused, false otherwise
+   */
+  abstract get isPaused(): boolean
+
+  /**
    * Starts the VAD
    * @param stream - The stream to start the VAD on
    */
@@ -46,6 +52,16 @@ export abstract class VAD extends EventEmitter<VADEvents> {
    * Stops the VAD
    */
   abstract stop(): Promise<void>
+
+  /**
+   * Pauses the VAD
+   */
+  abstract pause(): Promise<void>
+
+  /**
+   * Resumes the VAD
+   */
+  abstract resume(): Promise<void>
 
   /**
    * Emits an event (overrides the default implementation)

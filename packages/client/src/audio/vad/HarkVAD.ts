@@ -16,6 +16,7 @@ const defaultOptions: HarkVADOptions = {
 export class HarkVAD extends VAD {
   public options = defaultOptions
   private hark: Harker | undefined
+  private _isPaused = false
 
   constructor(options: Partial<HarkVADOptions> = {}) {
     super()
@@ -24,6 +25,10 @@ export class HarkVAD extends VAD {
 
   get isStarted(): boolean {
     return !!this.hark
+  }
+
+  get isPaused(): boolean {
+    return this._isPaused
   }
 
   async start(stream: MediaStream): Promise<void> {
@@ -51,6 +56,18 @@ export class HarkVAD extends VAD {
     this.hark.off('stopped_speaking', () => this.emit('StopSpeaking'))
     this.hark.stop()
     this.hark = undefined
+  }
+
+  async pause(): Promise<void> {
+    if (!this.hark || this._isPaused) return
+    this._isPaused = true
+    this.hark.suspend()
+  }
+
+  async resume(): Promise<void> {
+    if (!this.hark || !this._isPaused) return
+    this._isPaused = false
+    this.hark.resume()
   }
 
   async setOptions(options: Partial<HarkVADOptions>): Promise<void> {

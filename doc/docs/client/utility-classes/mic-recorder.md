@@ -17,7 +17,6 @@ This flexibility allows you to either use the full voice conversation capabiliti
 - Voice activity detection (VAD)
 - Multiple audio format support (ogg, webm, mp4, wav)
 - Event-based architecture
-- Mute/unmute functionality
 - State management
 
 ## Usage Example
@@ -57,7 +56,6 @@ The recorder maintains a state object with the following properties:
 interface MicRecorderState {
   isStarting: boolean // Whether the recorder is in the process of starting
   isStarted: boolean // Whether the recorder is currently active
-  isMuted: boolean // Whether the recorder is muted
   isSpeaking: boolean // Whether speech is currently detected
 }
 ```
@@ -88,14 +86,6 @@ Starts the recorder with the provided audio stream.
 ### `stop(): void`
 
 Stops the recorder and cleans up resources.
-
-### `mute(): void`
-
-Mutes the recorder (stops recording while keeping the stream active).
-
-### `unmute(): void`
-
-Unmutes the recorder (resumes recording).
 
 ## VAD
 

@@ -1,6 +1,6 @@
 import { audioContext } from '../utils/audioContext'
 import { LocalStorageKeys } from '../utils/localStorage'
-import { VAD } from './VAD'
+import { VAD, VADStatus } from './VAD'
 
 export type VolumeVADOptions = {
   history: number
@@ -18,6 +18,7 @@ const defaultOptions: VolumeVADOptions = {
  */
 export class VolumeVAD extends VAD {
   public options = defaultOptions
+  private _isPaused = false
   private analyser: AnalyserNode | undefined
   private sourceNode: MediaStreamAudioSourceNode | undefined
   private fftBins: Float32Array | undefined
@@ -62,8 +63,12 @@ export class VolumeVAD extends VAD {
     return this.running
   }
 
+  get isPaused(): boolean {
+    return this._isPaused
+  }
+
   async start(stream: MediaStream): Promise<void> {
-    if (this.running) return
+    if (this.running || this._isPaused) return
 
     // Create audio context and nodes
     this.analyser = audioContext.createAnalyser()
@@ -142,12 +147,19 @@ export class VolumeVAD extends VAD {
     setTimeout(() => this.startLoop(), this.delay)
   }
 
+  private resetHistory(): void {
+    this.speaking = false
+    this.attemptSpeaking = false
+    for (let i = 0; i < this.speakingHistory.length; i++) {
+      this.speakingHistory[i] = 0
+    }
+  }
+
   async stop(): Promise<void> {
     if (!this.running) return
 
     this.running = false
-    this.speaking = false
-
+    this.resetHistory()
     if (this.sourceNode) {
       this.sourceNode.disconnect()
       this.sourceNode = undefined
@@ -159,6 +171,29 @@ export class VolumeVAD extends VAD {
     }
 
     this.fftBins = undefined
+  }
+
+  async pause(): Promise<void> {
+    if (!this.running || this._isPaused) return
+    this._isPaused = true
+    this.running = false
+    this.resetHistory()
+
+    switch (this.status) {
+      case VADStatus.Speaking:
+        this.emit('StopSpeaking')
+        break
+      case VADStatus.MaybeSpeaking:
+        this.emit('CancelSpeaking')
+        break
+    }
+  }
+
+  async resume(): Promise<void> {
+    if (!this._isPaused) return
+    this._isPaused = false
+    this.running = true
+    this.startLoop()
   }
 
   setOptions(options: Partial<VolumeVADOptions>) {

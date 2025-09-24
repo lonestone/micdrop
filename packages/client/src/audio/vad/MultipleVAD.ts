@@ -16,7 +16,11 @@ export class MultipleVAD extends VAD {
     return this.vads.some((vad) => vad.isStarted)
   }
 
-  async start(stream: MediaStream, threshold?: number): Promise<void> {
+  get isPaused(): boolean {
+    return this.vads.every((vad) => vad.isPaused)
+  }
+
+  async start(stream: MediaStream): Promise<void> {
     for (const vad of this.vads) {
       if (vad.isStarted) {
         continue
@@ -64,6 +68,18 @@ export class MultipleVAD extends VAD {
     for (const vad of this.vads) {
       vad.off('ChangeStatus', this.onStatusChange)
       await vad.stop()
+    }
+  }
+
+  async pause(): Promise<void> {
+    for (const vad of this.vads) {
+      await vad.pause()
+    }
+  }
+
+  async resume(): Promise<void> {
+    for (const vad of this.vads) {
+      await vad.resume()
     }
   }
 }
