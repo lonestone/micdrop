@@ -17,3 +17,11 @@ export function getVAD(vad?: VADConfig): VAD {
   }
   return vad
 }
+
+export function equalVADConfig(a?: VADConfig, b?: VADConfig): boolean {
+  if (a === b) return true
+  if (Array.isArray(a) && Array.isArray(b) && a.length === b.length) {
+    return a.every((item, index) => equalVADConfig(item, b[index]))
+  }
+  return false
+}

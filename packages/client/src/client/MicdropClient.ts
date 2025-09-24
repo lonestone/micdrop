@@ -178,7 +178,9 @@ export class MicdropClient
     this._isPaused = false
 
     // Start mic if not already started
-    await this.startMic({ record: true })
+    if (!this.micRecorder || options?.vad) {
+      await this.startMic({ vad: options?.vad })
+    }
 
     // Start websocket
     await this.startWS()
@@ -247,7 +249,6 @@ export class MicdropClient
     options: {
       vad?: VADConfig
       deviceId?: string
-      record?: boolean
     } = {}
   ) => {
     this.error = undefined
@@ -256,7 +257,15 @@ export class MicdropClient
       this.options.vad = options.vad
     }
     try {
-      if (!this.micRecorder) {
+      if (this.micRecorder) {
+        // Stop previous recorder
+        this.micRecorder.stop()
+
+        // Change VAD if needed
+        if (options.vad) {
+          this.micRecorder.changeVad(options.vad)
+        }
+      } else {
         this.micRecorder = new MicRecorder(this.options.vad)
 
         // Notify mic recorder state change
@@ -291,20 +300,12 @@ export class MicdropClient
         })
       }
 
-      // Stop recorder if it was running
-      const isRecorderStarted = this.micRecorder.state.isStarted
-      if (isRecorderStarted) {
-        this.micRecorder?.stop()
-      }
-
       // Start microphone
       const micStream = await Mic.start(options.deviceId)
       this.micStream = micStream
 
-      // Restart recorder if it was running
-      if (isRecorderStarted || options.record) {
-        await this.micRecorder.start(micStream)
-      }
+      // Start recorder
+      await this.micRecorder.start(micStream)
 
       // Get devices after starting mic
       // It's necessary for Firefox that return an empty list before any stream is started

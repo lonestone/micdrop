@@ -8,7 +8,7 @@ export default function CallControls() {
     useMicdropState()
 
   const handleStartMic = () => {
-    Micdrop.startMic({ vad: ['silero', 'volume'], record: true })
+    Micdrop.startMic({ vad: ['silero', 'volume'] })
   }
 
   const handleStart = () => {

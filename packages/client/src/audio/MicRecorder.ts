@@ -1,10 +1,10 @@
 import { EventEmitter } from 'eventemitter3'
-import pcmProcessorWorklet from './pcm-processor-worklet?raw'
 import { audioContext } from './utils/audioContext'
 import { createDelayedStream } from './utils/delayedStream'
 import { stopStream } from './utils/stopStream'
 import { VAD, VADStatus } from './vad/VAD'
-import { getVAD, VADConfig } from './vad/getVAD'
+import { equalVADConfig, getVAD, VADConfig } from './vad/getVAD'
+import { initPcmProcessor } from './pcm-processor'
 
 const SAMPLE_RATE = 16000
 
@@ -33,25 +33,18 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   public state: MicRecorderState
   public vad: VAD
 
+  private stream: MediaStream | undefined
   private source: MediaStreamAudioSourceNode | undefined
   private workletNode: AudioWorkletNode | undefined
   private delayedStream: MediaStream | undefined
-  private workletUrl: string
   private speakingConfirmed = false
   private queuedChunks: Int16Array[] = []
 
-  constructor(vadConfig?: VADConfig) {
+  constructor(private vadConfig?: VADConfig) {
     super()
 
     // Set initial state
     this.state = defaultMicRecorderState
-
-    // Init worklet URL
-    const workletBlob = new Blob([pcmProcessorWorklet], {
-      type: 'application/javascript',
-    })
-    this.workletUrl = URL.createObjectURL(workletBlob)
-
     // Init VAD
     this.vad = getVAD(vadConfig)
   }
@@ -67,7 +60,20 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
         isMuted: false,
         isSpeaking: false,
       })
+      this.stream = stream
       this.speakingConfirmed = false
+
+      // Create a worklet node with the PCM processor
+      await initPcmProcessor()
+      this.workletNode = new AudioWorkletNode(audioContext, 'pcm-processor')
+      this.workletNode.port.onmessage = this.onWorkletMessage
+
+      // Send sample rate configuration to worklet
+      this.workletNode.port.postMessage({
+        type: 'configure',
+        sourceSampleRate: audioContext.sampleRate,
+        targetSampleRate: SAMPLE_RATE,
+      })
 
       // Create a delayed stream to avoid cutting after speech detection
       const delayedStream = createDelayedStream(
@@ -76,21 +82,9 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       )
       this.delayedStream = delayedStream
 
-      // Load the worklet module
-      await audioContext.audioWorklet.addModule(this.workletUrl)
-
+      // Connect the source node to the worklet node
       this.source = audioContext.createMediaStreamSource(delayedStream)
-      this.workletNode = new AudioWorkletNode(audioContext, 'pcm-processor')
-
-      this.workletNode.port.onmessage = this.onWorkletMessage
       this.source.connect(this.workletNode)
-
-      // Send sample rate configuration to worklet
-      this.workletNode.port.postMessage({
-        type: 'configure',
-        sourceSampleRate: audioContext.sampleRate,
-        targetSampleRate: SAMPLE_RATE,
-      })
 
       // Start speaking detection
       await this.vad.start(stream)
@@ -139,6 +133,7 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       isMuted: false,
       isSpeaking: false,
     })
+    this.stream = undefined
 
     try {
       // Stop speaking detection
@@ -165,6 +160,22 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       }
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  changeVad = (vadConfig: VADConfig) => {
+    if (equalVADConfig(vadConfig, this.vadConfig)) return
+
+    const stream = this.stream
+    if (stream) {
+      this.stop()
+    }
+
+    this.vadConfig = vadConfig
+    this.vad = getVAD(vadConfig)
+
+    if (stream) {
+      this.start(stream)
     }
   }
 

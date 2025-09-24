@@ -188,7 +188,6 @@ resume(): void
 async startMic(params: {
   vad?: VADConfig
   deviceId?: string
-  record?: boolean
 }): Promise<void>
 ```
 
@@ -198,7 +197,6 @@ It can by usefull if you want to start the microphone before the call starts.
 
 - `vad`: VAD configuration (see [VAD](../vad) section)
 - `deviceId`: Device ID to use for the microphone
-- `record`: Boolean flag to enable/disable recording
 
 ### Devices Control
 
