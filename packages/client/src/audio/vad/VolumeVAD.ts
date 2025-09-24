@@ -160,6 +160,16 @@ export class VolumeVAD extends VAD {
 
     this.running = false
     this.resetHistory()
+
+    switch (this.status) {
+      case VADStatus.Speaking:
+        this.emit('StopSpeaking')
+        break
+      case VADStatus.MaybeSpeaking:
+        this.emit('CancelSpeaking')
+        break
+    }
+
     if (this.sourceNode) {
       this.sourceNode.disconnect()
       this.sourceNode = undefined
