@@ -6,6 +6,7 @@ export enum MicdropClientErrorCode {
   BadRequest = 'BadRequest',
   Unauthorized = 'Unauthorized',
   NotFound = 'NotFound',
+  ReconnectExhausted = 'ReconnectExhausted',
   Unknown = 'Unknown',
 }
 
