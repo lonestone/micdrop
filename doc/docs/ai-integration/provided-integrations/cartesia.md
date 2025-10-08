@@ -35,13 +35,14 @@ new MicdropServer(socket, {
 
 ### Options
 
-| Option     | Type                           | Default  | Description                   |
-| ---------- | ------------------------------ | -------- | ----------------------------- |
-| `apiKey`   | `string`                       | Required | Your Cartesia API key         |
-| `modelId`  | `string`                       | Required | Cartesia model ID to use      |
-| `voiceId`  | `string`                       | Required | Voice ID for speech synthesis |
-| `language` | `CartesiaLanguage`             | Optional | Language code for speech      |
-| `speed`    | `'fast' \| 'normal' \| 'slow'` | Optional | Speech speed                  |
+| Option       | Type                           | Default  | Description                                         |
+| ------------ | ------------------------------ | -------- | --------------------------------------------------- |
+| `apiKey`     | `string`                       | Required | Your Cartesia API key                               |
+| `modelId`    | `string`                       | Required | Cartesia model ID to use                            |
+| `voiceId`    | `string`                       | Required | Voice ID for speech synthesis                       |
+| `language`   | `CartesiaLanguage`             | Optional | Language code for speech                            |
+| `speed`      | `'fast' \| 'normal' \| 'slow'` | Optional | Speech speed                                        |
+| `retryDelay` | `number`                       | `500`    | Delay in milliseconds between reconnection attempts |
 
 ### Supported Languages
 

@@ -12,6 +12,7 @@ export interface MistralAgentOptions extends AgentOptions {
   model?: string
   settings?: Omit<ChatCompletionStreamRequest, 'messages' | 'model'>
   maxRetry?: number
+  retryDelay?: number
   maxSteps?: number
 }
 
@@ -125,7 +126,9 @@ export class MistralAgent extends Agent<MistralAgentOptions> {
     } catch (error: any) {
       console.error('[MistralAgent] Error:', error)
       if (tryCount < (this.options.maxRetry || DEFAULT_MAX_RETRY)) {
-        await new Promise((resolve) => setTimeout(resolve, DEFAULT_RETRY_DELAY))
+        await new Promise((resolve) =>
+          setTimeout(resolve, this.options.retryDelay || DEFAULT_RETRY_DELAY)
+        )
         await this.generateAnswer(stream, stepCount, tryCount + 1)
       }
     }

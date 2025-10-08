@@ -14,7 +14,10 @@ import { z } from 'zod'
 export interface AiSdkAgentOptions extends AgentOptions {
   model: LanguageModel
   settings?: CallSettings
+  maxRetry?: number
 }
+
+const DEFAULT_MAX_RETRY = 3
 
 export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
   private abortController?: AbortController
@@ -35,7 +38,7 @@ export class AiSdkAgent extends Agent<AiSdkAgentOptions> {
         model: this.options.model,
         messages: this.buildMessages(),
         tools: this.buildTools(),
-        maxRetries: 3,
+        maxRetries: this.options.maxRetry ?? DEFAULT_MAX_RETRY,
         stopWhen: stepCountIs(5),
         onStepFinish: (step) => {
           const tools = step.toolCalls.map((toolCall) =>

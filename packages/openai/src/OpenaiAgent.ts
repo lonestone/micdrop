@@ -10,6 +10,7 @@ export type OpenaiAgentOptions = AgentOptions &
       OpenAI.Responses.ResponseCreateParamsStreaming,
       'input' | 'model' | 'tools' | 'stream'
     >
+    retryDelay?: number
     maxRetry?: number
     maxSteps?: number
   }
@@ -19,7 +20,7 @@ export type OpenaiOptions = { apiKey: string } | { openai: OpenAI }
 const DEFAULT_MODEL = 'gpt-4o'
 const DEFAULT_MAX_STEPS = 5
 const DEFAULT_MAX_RETRIES = 3
-const DEFAULT_RETRY_DELAY = 500
+const DEFAULT_RETRY_DELAY = 1000
 
 export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
   private openai: OpenAI
@@ -138,8 +139,10 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
       if (error instanceof OpenAI.APIUserAbortError) return
       console.error('[OpenaiAgent] Error answering:', error)
 
-      if (tryCount < (this.options.maxRetry || DEFAULT_MAX_RETRIES)) {
-        await new Promise((resolve) => setTimeout(resolve, DEFAULT_RETRY_DELAY))
+      if (tryCount < (this.options.maxRetry ?? DEFAULT_MAX_RETRIES)) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, this.options.retryDelay ?? DEFAULT_RETRY_DELAY)
+        )
         await this.generateAnswer(stream, stepCount, tryCount + 1)
       }
     }

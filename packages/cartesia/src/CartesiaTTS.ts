@@ -14,7 +14,10 @@ export interface CartesiaTTSOptions {
   voiceId: string
   language?: CartesiaLanguage
   speed?: 'fast' | 'normal' | 'slow'
+  retryDelay?: number
 }
+
+const DEFAULT_RETRY_DELAY = 1000
 
 export class CartesiaTTS extends TTS {
   private socket?: WebSocket
@@ -196,7 +199,7 @@ export class CartesiaTTS extends TTS {
             this.log('Reconnection error:', error)
             reject(error)
           })
-      }, 1000)
+      }, this.options.retryDelay ?? DEFAULT_RETRY_DELAY)
     })
   }
 }

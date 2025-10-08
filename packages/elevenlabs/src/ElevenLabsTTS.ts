@@ -12,6 +12,7 @@ import {
 // API Reference: https://elevenlabs.io/docs/api-reference/text-to-speech/v-1-text-to-speech-voice-id-stream-input
 
 const WS_INACTIVITY_TIMEOUT = 180
+const DEFAULT_RETRY_DELAY = 1000
 
 export class ElevenLabsTTS extends TTS {
   private socket?: WebSocket
@@ -263,7 +264,7 @@ export class ElevenLabsTTS extends TTS {
             this.log('Reconnection error:', error)
             reject(error)
           })
-      }, 1000)
+      }, this.options.retryDelay ?? DEFAULT_RETRY_DELAY)
     })
   }
 }

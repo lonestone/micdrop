@@ -14,6 +14,7 @@ export interface OpenaiSTTOptions {
   language?: string
   prompt?: string
   transcriptionTimeout?: number
+  retryDelay?: number
 }
 
 const DEFAULT_MODEL = 'gpt-4o-transcribe'
@@ -21,6 +22,7 @@ const DEFAULT_LANGUAGE = 'en'
 const SAMPLE_RATE = 16000
 const BIT_DEPTH = 16
 const DEFAULT_TRANSCRIPTION_TIMEOUT = 4000
+const DEFAULT_RETRY_DELAY = 1000
 
 export class OpenaiSTT extends STT {
   private socket?: WebSocket
@@ -116,9 +118,24 @@ export class OpenaiSTT extends STT {
     )
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to create transcription session: ${response.status} ${response.text()}`
+      const status = response.status
+
+      // Don't retry on 4xx errors
+      if (status >= 400 && status < 500) {
+        throw new Error(
+          `Failed to create transcription session: ${status} ${response.statusText}`
+        )
+      }
+
+      // Retry on other errors
+      this.log('Error creating transcription session, retrying...', {
+        status,
+        text: response.statusText,
+      })
+      await new Promise((resolve) =>
+        setTimeout(resolve, this.options.retryDelay ?? DEFAULT_RETRY_DELAY)
       )
+      return this.createTranscriptionSession()
     }
 
     const data = (await response.json()) as { client_secret: { value: string } }
@@ -236,7 +253,7 @@ export class OpenaiSTT extends STT {
             this.log('Reconnection error:', error)
             reject(error)
           })
-      }, 1000)
+      }, this.options.retryDelay ?? DEFAULT_RETRY_DELAY)
     })
   }
 

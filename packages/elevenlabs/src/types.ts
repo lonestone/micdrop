@@ -1,4 +1,4 @@
-import {
+import type {
   TextToSpeechStreamRequestOutputFormat,
   VoiceSettings,
 } from '@elevenlabs/elevenlabs-js/api'
@@ -10,6 +10,7 @@ export interface ElevenLabsTTSOptions {
   language?: string
   outputFormat?: TextToSpeechStreamRequestOutputFormat
   voiceSettings?: VoiceSettings
+  retryDelay?: number
 }
 
 export const DEFAULT_MODEL_ID = 'eleven_turbo_v2_5'

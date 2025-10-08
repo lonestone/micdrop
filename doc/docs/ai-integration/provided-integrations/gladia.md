@@ -29,10 +29,12 @@ new MicdropServer(socket, {
 
 ## Options
 
-| Option     | Type                                    | Default  | Description                                    |
-| ---------- | --------------------------------------- | -------- | ---------------------------------------------- |
-| `apiKey`   | `string`                                | Required | Your Gladia API key                            |
-| `settings` | `DeepPartial<GladiaLiveSessionPayload>` | Optional | Advanced configuration for Gladia live session |
+| Option                 | Type                                    | Default  | Description                                         |
+| ---------------------- | --------------------------------------- | -------- | --------------------------------------------------- |
+| `apiKey`               | `string`                                | Required | Your Gladia API key                                 |
+| `settings`             | `DeepPartial<GladiaLiveSessionPayload>` | Optional | Advanced configuration for Gladia live session      |
+| `transcriptionTimeout` | `number`                                | `4000`   | Timeout in milliseconds to wait for transcription   |
+| `retryDelay`           | `number`                                | `1000`   | Delay in milliseconds between reconnection attempts |
 
 ## Configuration Settings
 
@@ -160,11 +162,3 @@ const stt = new GladiaSTT({
   },
 })
 ```
-
-## Error Handling
-
-The package includes automatic reconnection and error handling:
-
-- **Connection Loss**: Automatically reconnects with exponential backoff
-- **API Errors**: Proper error propagation and logging
-- **Audio Issues**: Graceful handling of audio stream interruptions

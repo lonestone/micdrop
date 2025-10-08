@@ -45,6 +45,7 @@ new MicdropServer(socket, {
 | `openai`              | `OpenAI`                                                                                                                          | Optional    | OpenAI instance (alternative to `apiKey`)                                |
 | `model`               | `string`                                                                                                                          | `'gpt-4o'`  | OpenAI model to use                                                      |
 | `systemPrompt`        | `string`                                                                                                                          | Required    | System prompt for the agent                                              |
+| `retryDelay`          | `number`                                                                                                                          | `500`       | Delay in milliseconds between retry attempts                             |
 | `maxRetry`            | `number`                                                                                                                          | `3`         | Maximum number of retries on API failures                                |
 | `maxSteps`            | `number`                                                                                                                          | `5`         | Maximum number of steps (for tool calls)                                 |
 | `autoEndCall`         | `boolean \| string`                                                                                                               | `false`     | [Auto-detect when user wants to end call](../../server/auto-end-call)    |
@@ -138,3 +139,4 @@ new MicdropServer(socket, {
 | `language`             | `string` | `'en'`                                          | Language code for transcription                          |
 | `prompt`               | `string` | `'Transcribe the incoming audio in real time.'` | Custom prompt to guide transcription behavior            |
 | `transcriptionTimeout` | `number` | `4000`                                          | Timeout in milliseconds to wait for transcription result |
+| `retryDelay`           | `number` | `500`                                           | Delay in milliseconds between reconnection attempts      |

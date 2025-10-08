@@ -13,11 +13,13 @@ export interface GladiaSTTOptions {
   apiKey: string
   settings?: DeepPartial<GladiaLiveSessionPayload>
   transcriptionTimeout?: number
+  retryDelay?: number
 }
 
 const SAMPLE_RATE = 16000
 const BIT_DEPTH = 16
 const DEFAULT_TRANSCRIPTION_TIMEOUT = 4000
+const DEFAULT_RETRY_DELAY = 1000
 
 export class GladiaSTT extends STT {
   private socket?: WebSocket
@@ -80,7 +82,7 @@ export class GladiaSTT extends STT {
   }
 
   // Register real-time transcription to get a WebSocket URL
-  private getURL = async () => {
+  private getURL = async (): Promise<string> => {
     const response = await fetch('https://api.gladia.io/v2/live', {
       method: 'POST',
       headers: {
@@ -107,9 +109,22 @@ export class GladiaSTT extends STT {
     })
 
     if (!response.ok) {
-      throw new Error(
-        `${response.status}: ${(await response.text()) || response.statusText}`
+      const status = response.status
+
+      // Don't retry on 4xx errors
+      if (status >= 400 && status < 500) {
+        throw new Error(`${status}: ${response.statusText}`)
+      }
+
+      // Retry on other errors
+      this.log('Error getting URL, retrying...', {
+        status,
+        text: response.statusText,
+      })
+      await new Promise((resolve) =>
+        setTimeout(resolve, this.options.retryDelay ?? DEFAULT_RETRY_DELAY)
       )
+      return this.getURL()
     }
 
     const { url } = (await response.json()) as { url: string }
@@ -181,7 +196,7 @@ export class GladiaSTT extends STT {
             this.log('Reconnection error:', error)
             reject(error)
           })
-      }, 1000)
+      }, this.options.retryDelay ?? DEFAULT_RETRY_DELAY)
     })
   }
 
@@ -191,7 +206,7 @@ export class GladiaSTT extends STT {
     const bytesPerSample = BIT_DEPTH / 8
     const silenceBuffer = Buffer.alloc(numSamples * bytesPerSample)
     this.socket.send(silenceBuffer)
-    this.audioChunksPending.push(silenceBuffer)
+    this.audioChunksPending.push(silenceBuffer.buffer)
     this.log(
       `Sent ${durationSeconds * 1000}ms of silence (${silenceBuffer.byteLength} bytes) after stream end`
     )

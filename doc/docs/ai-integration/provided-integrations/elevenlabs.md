@@ -39,14 +39,15 @@ new MicdropServer(socket, {
 
 ### Options
 
-| Option          | Type                                                                     | Default               | Description                       |
-| --------------- | ------------------------------------------------------------------------ | --------------------- | --------------------------------- |
-| `apiKey`        | `string`                                                                 | Required              | Your ElevenLabs API key           |
-| `voiceId`       | `string`                                                                 | Required              | ElevenLabs voice ID               |
-| `modelId`       | `'eleven_multilingual_v2' \| 'eleven_turbo_v2_5' \| 'eleven_flash_v2_5'` | `'eleven_turbo_v2_5'` | Model to use for speech synthesis |
-| `language`      | `string`                                                                 | Optional              | Language code (e.g., 'en', 'fr')  |
-| `outputFormat`  | `TextToSpeechStreamRequestOutputFormat`                                  | `'pcm_16000'`         | Audio output format               |
-| `voiceSettings` | `VoiceSettings`                                                          | Optional              | Voice customization settings      |
+| Option          | Type                                                                     | Default               | Description                                         |
+| --------------- | ------------------------------------------------------------------------ | --------------------- | --------------------------------------------------- |
+| `apiKey`        | `string`                                                                 | Required              | Your ElevenLabs API key                             |
+| `voiceId`       | `string`                                                                 | Required              | ElevenLabs voice ID                                 |
+| `modelId`       | `'eleven_multilingual_v2' \| 'eleven_turbo_v2_5' \| 'eleven_flash_v2_5'` | `'eleven_turbo_v2_5'` | Model to use for speech synthesis                   |
+| `language`      | `string`                                                                 | Optional              | Language code (e.g., 'en', 'fr')                    |
+| `outputFormat`  | `TextToSpeechStreamRequestOutputFormat`                                  | `'pcm_16000'`         | Audio output format                                 |
+| `voiceSettings` | `VoiceSettings`                                                          | Optional              | Voice customization settings                        |
+| `retryDelay`    | `number`                                                                 | `500`                 | Delay in milliseconds between reconnection attempts |
 
 ### Voice Settings
 
@@ -85,26 +86,6 @@ ElevenLabs supports 29+ languages including:
 | `nl` | Dutch    | `cs` | Czech    | `ar` | Arabic     |
 | `zh` | Chinese  | `ja` | Japanese | `hu` | Hungarian  |
 | `ko` | Korean   | `hi` | Hindi    | `fi` | Finnish    |
-
-## ElevenLabsFetchTTS (Non-Streaming)
-
-For simpler use cases where you don't need real-time streaming:
-
-```typescript
-import { ElevenLabsFetchTTS } from '@micdrop/elevenlabs'
-
-const tts = new ElevenLabsFetchTTS({
-  apiKey: process.env.ELEVENLABS_API_KEY || '',
-  voiceId: '21m00Tcm4TlvDq8ikWAM',
-  modelId: 'eleven_turbo_v2_5',
-})
-
-// This will wait for the complete text before generating audio
-new MicdropServer(socket, {
-  tts,
-  // ... other options
-})
-```
 
 ## Getting Started
 
