@@ -65,6 +65,9 @@ You can pass options to `MicdropClient` constructor or to the `start` method:
 - `vad`: VAD configuration (see [VAD](../vad) section)
 - `disableInterruption`: If true, disables automatic mic muting when the assistant is speaking (default: false)
 - `debugLog`: Boolean flag to enable/disable debug logging
+- `reconnect`: Automatic reconnection configuration
+  - `maxAttempts`: Maximum number of reconnection attempts (default: Infinity)
+  - `delayMs`: Delay between reconnection attempts in milliseconds (default: 1000)
 
 ## Events
 
@@ -110,6 +113,9 @@ interface MicdropState {
 
   // True if both WebSocket and microphone recording are active
   isStarted: boolean
+
+  // True if the client is attempting to reconnect after a connection loss
+  isReconnecting: boolean
 
   // True if the microphone is paused (muted by user)
   isPaused: boolean

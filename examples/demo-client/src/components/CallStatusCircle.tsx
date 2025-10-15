@@ -38,6 +38,7 @@ export default function CallStatusCircle({ size }: Props) {
 function getClassNames(state: MicdropState) {
   if (state.isListening) return 'border-2 border-green-500 animate-pulse'
   if (state.isProcessing) return 'bg-yellow-500 animate-bounce'
+  if (state.isReconnecting) return 'bg-orange-500 animate-bounce'
   if (state.isUserSpeaking) return 'bg-blue-500'
   if (state.isAssistantSpeaking) return 'bg-orange-500'
   return 'bg-gray-500'
@@ -51,7 +52,7 @@ function getSizeRatio(
   maxSpeakerVolume: number
 ) {
   if (state.isListening) return 0.6
-  if (state.isProcessing) return 0.4
+  if (state.isProcessing || state.isReconnecting) return 0.4
   if (state.isUserSpeaking) {
     return 0.2 + 0.8 * Math.max(0, (micVolume + 100) / (maxMicVolume + 100))
   }

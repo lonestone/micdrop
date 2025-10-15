@@ -42,6 +42,12 @@ await Micdrop.start({
 
   // Optional: Enable debug logging
   debugLog: true,
+
+  // Optional: Automatic reconnection configuration
+  reconnect: {
+    maxAttempts: 10, // Maximum reconnection attempts (default: Infinity)
+    delayMs: 500, // Delay between reconnection attempts in ms (default: 1000)
+  },
 })
 ```
 
@@ -85,13 +91,17 @@ Learn more about [Auth and parameters](../server/auth-and-parameters) on the ser
 Listen for state changes during startup:
 
 ```typescript
-Micdrop.on('StateChange', (state) => {
-  if (state.isStarting) {
+Micdrop.on('StateChange', (state, prevState) => {
+  if (state.isStarting && !prevState.isStarting) {
     console.log('Starting call...')
   }
 
-  if (state.isStarted) {
+  if (state.isStarted && !prevState.isStarted) {
     console.log('Call started! Ready for conversation.')
+  }
+
+  if (state.isReconnecting && !prevState.isReconnecting) {
+    console.log('Connection lost. Attempting to reconnect...')
   }
 })
 ```

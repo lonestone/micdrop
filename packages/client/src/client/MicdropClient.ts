@@ -11,6 +11,7 @@ import {
 } from '../types'
 import {
   getClientErrorFromWSCloseEvent,
+  isRecoverableError,
   MicdropClientError,
   MicdropClientErrorCode,
 } from './MicdropClientError'
@@ -22,13 +23,9 @@ export interface MicdropEvents {
   ToolCall: [MicdropToolCall]
 }
 
-export interface ReconnectOptions {
-  enabled?: boolean
+export interface MicdropReconnectOptions {
   maxAttempts?: number
-  initialDelayMs?: number
-  maxDelayMs?: number
-  factor?: number
-  jitterRatio?: number
+  delayMs?: number
 }
 
 export interface MicdropOptions {
@@ -37,7 +34,7 @@ export interface MicdropOptions {
   vad?: VADConfig
   disableInterruption?: boolean
   debugLog?: boolean
-  reconnect?: ReconnectOptions
+  reconnect?: MicdropReconnectOptions
 }
 
 export interface MicdropState {
@@ -45,13 +42,13 @@ export interface MicdropState {
   isStarted: boolean
   isMuted: boolean
   isPaused: boolean
+  isReconnecting: boolean
   isListening: boolean
   isProcessing: boolean
   isUserSpeaking: boolean
   isAssistantSpeaking: boolean
   isMicStarted: boolean
   isMicMuted: boolean
-  isReconnecting: boolean
   micDeviceId: string | undefined
   speakerDeviceId: string | undefined
   micDevices: MediaDeviceInfo[]
@@ -60,13 +57,9 @@ export interface MicdropState {
   error: MicdropClientError | undefined
 }
 
-const DEFAULT_RECONNECT_OPTIONS: Required<ReconnectOptions> = {
-  enabled: true,
+const DEFAULT_RECONNECT_OPTIONS: Required<MicdropReconnectOptions> = {
   maxAttempts: Infinity,
-  initialDelayMs: 1000,
-  maxDelayMs: 15000,
-  factor: 1.8,
-  jitterRatio: 0.2,
+  delayMs: 1000,
 }
 
 export class MicdropClient
@@ -87,7 +80,6 @@ export class MicdropClient
   private _isMuted = false
   private _isPaused = false
   private _isReconnecting = false
-  private shouldReconnect = false
   private reconnectAttempt = 0
   private reconnectTimer?: number
 
@@ -107,11 +99,21 @@ export class MicdropClient
   }
 
   get isStarted(): boolean {
-    return (this.isWSStarted && this.micRecorder?.state.isStarted) || false
+    return (
+      (this.isWSStarted || this._isReconnecting) &&
+      (this.micRecorder?.state.isStarted || false)
+    )
   }
 
   get isStarting(): boolean {
-    return this.isWSStarting || this.micRecorder?.state.isStarting || false
+    return (
+      (this.isWSStarting || this.micRecorder?.state.isStarting || false) &&
+      !this._isReconnecting
+    )
+  }
+
+  get isReconnecting(): boolean {
+    return this._isReconnecting
   }
 
   get isMuted(): boolean {
@@ -120,10 +122,6 @@ export class MicdropClient
 
   get isPaused(): boolean {
     return this._isPaused
-  }
-
-  get isReconnecting(): boolean {
-    return this._isReconnecting
   }
 
   get isProcessing(): boolean {
@@ -173,31 +171,11 @@ export class MicdropClient
     return Speaker.deviceId
   }
 
-  get reconnectConfig(): Required<ReconnectOptions> {
-    return {
-      enabled:
-        this.options.reconnect?.enabled ?? DEFAULT_RECONNECT_OPTIONS.enabled,
-      maxAttempts:
-        this.options.reconnect?.maxAttempts ??
-        DEFAULT_RECONNECT_OPTIONS.maxAttempts,
-      initialDelayMs:
-        this.options.reconnect?.initialDelayMs ??
-        DEFAULT_RECONNECT_OPTIONS.initialDelayMs,
-      maxDelayMs:
-        this.options.reconnect?.maxDelayMs ??
-        DEFAULT_RECONNECT_OPTIONS.maxDelayMs,
-      factor:
-        this.options.reconnect?.factor ?? DEFAULT_RECONNECT_OPTIONS.factor,
-      jitterRatio:
-        this.options.reconnect?.jitterRatio ??
-        DEFAULT_RECONNECT_OPTIONS.jitterRatio,
-    }
-  }
-
   get state(): MicdropState {
     return {
       isStarting: this.isStarting,
       isStarted: this.isStarted,
+      isReconnecting: this.isReconnecting,
       isMuted: this.isMuted,
       isPaused: this.isPaused,
       isListening: this.isListening,
@@ -208,7 +186,6 @@ export class MicdropClient
       isMicMuted: this.isMicMuted,
       conversation: this.conversation,
       error: this.error,
-      isReconnecting: this.isReconnecting,
       micDeviceId: this.micDeviceId,
       speakerDeviceId: this.speakerDeviceId,
       micDevices: this.micDevices,
@@ -216,11 +193,7 @@ export class MicdropClient
     }
   }
 
-  start = async (
-    options: MicdropOptions = {
-      reconnect: DEFAULT_RECONNECT_OPTIONS,
-    }
-  ) => {
+  start = async (options: MicdropOptions) => {
     this.error = undefined
     this.options = { ...this.options, ...options }
 
@@ -231,7 +204,6 @@ export class MicdropClient
     this._isMuted = false
     this._isPaused = false
     this._isReconnecting = false
-    this.shouldReconnect = true
     this.reconnectAttempt = 0
     if (this.reconnectTimer) {
       window.clearTimeout(this.reconnectTimer)
@@ -248,15 +220,15 @@ export class MicdropClient
   }
 
   stop = async () => {
-    this.shouldReconnect = false
-    if (this.reconnectTimer) {
-      window.clearTimeout(this.reconnectTimer)
-      this.reconnectTimer = undefined
-    }
     this._isProcessing = false
     this._isMuted = false
     this._isPaused = false
     this._isReconnecting = false
+    if (this.reconnectTimer) {
+      window.clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = undefined
+    }
+
     try {
       // Stop websocket
       this.stopWS()
@@ -483,6 +455,7 @@ export class MicdropClient
     this.log('WebSocket opened')
     this._isReconnecting = false
     this.reconnectAttempt = 0
+    this.error = undefined
     this.notifyStateChange()
 
     // Send params
@@ -558,23 +531,19 @@ export class MicdropClient
 
   private onWSClose = (event: CloseEvent) => {
     this.log('WebSocket closed', event)
-    // Only tear down the socket; keep mic/speaker running to avoid re-permission
-    this.stopWS()
-
     const error = getClientErrorFromWSCloseEvent(event)
     if (error) {
       this.setError(error)
     }
 
-    const config = this.reconnectConfig
-    const enabled = config.enabled
+    const config = { ...DEFAULT_RECONNECT_OPTIONS, ...this.options.reconnect }
     const canReconnect =
-      this.shouldReconnect && enabled && this.isRecoverableClose(event.code)
+      error && isRecoverableError(error) && config.maxAttempts > 0
 
     if (canReconnect) {
       this._isReconnecting = true
-      this.notifyStateChange()
-      this.scheduleReconnect()
+      this.stopWS()
+      this.scheduleReconnect(config)
     } else {
       this.stop()
     }
@@ -582,9 +551,6 @@ export class MicdropClient
 
   private onWSError = (event: Event) => {
     this.setError(new MicdropClientError(MicdropClientErrorCode.Connection))
-    try {
-      this.ws?.close()
-    } catch {}
   }
 
   private stopWS() {
@@ -599,66 +565,34 @@ export class MicdropClient
     this.notifyStateChange()
   }
 
-  /**
-   * Decide whether a WebSocket close should be treated as recoverable (retry) or terminal (stop).
-   * Non-recoverable: 1000 (normal closure), 1008 (policy violation).
-   * Recoverable: 1001 (going away), 1006 (abnormal), 1012 (service restart), 1013 (try again later), undefined (no code).
-   */
-  private isRecoverableClose(code?: number): boolean {
-    if (code === 1000 || code === 1008) return false
-    return (
-      code === 1001 ||
-      code === 1006 ||
-      code === 1012 ||
-      code === 1013 ||
-      code === undefined
-    )
-  }
-
-  private computeBackoff(attempt: number): number {
-    const config = this.reconnectConfig
-    const initial = config.initialDelayMs
-    const max = config.maxDelayMs
-    const factor = config.factor
-    const jitterRatio = config.jitterRatio
-    const base = Math.min(
-      max,
-      Math.round(initial * Math.pow(factor, Math.max(0, attempt - 1)))
-    )
-    const jitter = Math.round(base * jitterRatio * (Math.random() * 2 - 1))
-    return Math.max(0, base + jitter)
-  }
-
-  private scheduleReconnect() {
-    const config = this.reconnectConfig
-    const maxAttempts = config.maxAttempts
-
-    if (this.reconnectAttempt >= maxAttempts) {
-      this._isReconnecting = false
-      this.setError(
-        new MicdropClientError(MicdropClientErrorCode.ReconnectExhausted)
-      )
+  private scheduleReconnect(config: Required<MicdropReconnectOptions>) {
+    if (this.reconnectAttempt >= config.maxAttempts) {
       this.stop()
+      this.setError(new MicdropClientError(MicdropClientErrorCode.Connection))
       return
     }
 
-    const delay = this.computeBackoff(++this.reconnectAttempt)
-    this.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempt})`)
+    this.reconnectAttempt++
+    this.log(
+      `Reconnecting in ${config.delayMs}ms (attempt ${this.reconnectAttempt})`
+    )
 
     // Pause VAD while offline to avoid capturing audio that cannot be sent
     if (!this.isPaused && !this.isMuted) {
       this.vad?.pause?.()
     }
 
+    if (this.reconnectTimer) {
+      window.clearTimeout(this.reconnectTimer)
+    }
+
     this.reconnectTimer = window.setTimeout(async () => {
-      if (!this.shouldReconnect) return
-      if (!this.isMicStarted) return
       try {
         await this.startWS()
       } catch {
-        this.scheduleReconnect()
+        this.scheduleReconnect(config)
       }
-    }, delay)
+    }, config.delayMs)
   }
 
   private onSpeakerStartPlaying = () => {
