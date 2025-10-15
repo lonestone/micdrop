@@ -6,7 +6,6 @@ export enum MicdropClientErrorCode {
   BadRequest = 'BadRequest',
   Unauthorized = 'Unauthorized',
   NotFound = 'NotFound',
-  ReconnectExhausted = 'ReconnectExhausted',
   Unknown = 'Unknown',
 }
 
@@ -45,4 +44,12 @@ export function getClientErrorFromWSCloseEventCode(
   } else {
     return undefined
   }
+}
+
+export function isRecoverableError(error: MicdropClientError): boolean {
+  return (
+    error.code === MicdropClientErrorCode.Connection ||
+    error.code === MicdropClientErrorCode.InternalServer ||
+    error.code === MicdropClientErrorCode.Unknown
+  )
 }

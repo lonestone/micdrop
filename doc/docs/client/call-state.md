@@ -25,6 +25,7 @@ The `MicdropState` object contains these properties:
 | --------------------- | --------------------- | ------------------------------------ |
 | `isStarting`          | `boolean`             | Call is connecting and starting      |
 | `isStarted`           | `boolean`             | Call is active and ready             |
+| `isReconnecting`      | `boolean`             | Call is attempting to reconnect      |
 | `isPaused`            | `boolean`             | Call is paused (no audio processing) |
 | `isListening`         | `boolean`             | Ready to detect user speech          |
 | `isProcessing`        | `boolean`             | Processing user input on server      |
@@ -66,6 +67,7 @@ stateDiagram-v2
 
 - User can interrupt the assistant at any time by speaking during the `isProcessing` or `isAssistantSpeaking` states. This allows for natural conversation flow. To prevent interruptions during assistant responses, use the [`disableInterruption` setting](./utility-classes/micdrop-client#options).
 - When `isPaused` is true, `isStarted` stays true.
+- When `isReconnecting` is true, `isStarted` stays true.
 - `isMicStarted` becomes true when we start the mic (with `Micdrop.startMic`) or start the call (with `Micdrop.start`).
 
 ## Starting a Call
@@ -78,6 +80,10 @@ Micdrop.on('StateChange', (state, prevState) => {
 
   if (state.isStarted && !prevState.isStarted) {
     console.log('✅ Connected and ready!')
+  }
+
+  if (state.isReconnecting && !prevState.isReconnecting) {
+    console.log('🔄 Connection lost, reconnecting...')
   }
 })
 ```
@@ -132,6 +138,8 @@ import { useMicdropState } from '@micdrop/react'
 function CallInterface() {
   const {
     isStarting,
+    isStarted,
+    isReconnecting,
     isListening,
     isUserSpeaking,
     isProcessing,
@@ -141,7 +149,13 @@ function CallInterface() {
 
   return (
     <div className="call-interface">
-      {isStarting && <div className="status connecting">Connecting...</div>}
+      {isStarting && <div className="status starting">Starting...</div>}
+      {isStarted && <div className="status started">Started</div>}
+      {isReconnecting && (
+        <div className="status reconnecting">🔄 Reconnecting...</div>
+      )}
+      {isPaused && <div className="status paused">⏸️ Call paused</div>}
+      {isMuted && <div className="status muted">⏸️ Call muted</div>}
       {isListening && <div className="status listening">🎤 Listening</div>}
       {isUserSpeaking && (
         <div className="status user-speaking">🗣️ You're speaking</div>
@@ -150,7 +164,6 @@ function CallInterface() {
       {isAssistantSpeaking && (
         <div className="status assistant-speaking">🤖 Assistant speaking</div>
       )}
-      {isPaused && <div className="status paused">⏸️ Call paused</div>}
     </div>
   )
 }

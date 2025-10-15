@@ -226,6 +226,7 @@ function VoiceCallComponent() {
 
   const getStatusMessage = () => {
     if (state.isStarting) return 'Starting call...'
+    if (state.isReconnecting) return '🔄 Reconnecting...'
     if (state.isPaused) return '⏸️ Call paused'
     if (state.isListening) return '🎤 Listening for your voice'
     if (state.isProcessing) return '🤔 Processing your message'
@@ -333,6 +334,13 @@ function CallStatusIndicator() {
   const getStatus = () => {
     if (state.error) {
       return { icon: '❌', className: 'status-error', text: 'Error' }
+    }
+    if (state.isReconnecting) {
+      return {
+        icon: '🔄',
+        className: 'status-reconnecting',
+        text: 'Reconnecting',
+      }
     }
     if (state.isPaused) {
       return { icon: '⏸️', className: 'status-paused', text: 'Paused' }
