@@ -605,8 +605,13 @@ export class MicdropClient
 
   private onSpeakerStopPlaying = () => {
     this.log('Speaker stopped')
-    if (this.options.disableInterruption && !this.isMuted) {
-      this.vad?.resume()
+    if (this.options.disableInterruption) {
+      setTimeout(() => {
+        if (!this.isMuted) {
+          this.vad?.resume()
+        }
+        // Wait a bit to avoid recording the speaker output
+      }, 200)
     }
     this.notifyStateChange()
   }
