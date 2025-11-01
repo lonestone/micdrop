@@ -131,7 +131,7 @@ export class CartesiaTTS extends TTS {
 
   // Connect to Cartesia
   private async initWS() {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       const socket = new WebSocket(
         `wss://api.cartesia.ai/tts/websocket?api_key=${this.options.apiKey}&cartesia_version=2025-04-16`
       )
@@ -143,7 +143,7 @@ export class CartesiaTTS extends TTS {
       })
 
       socket.addEventListener('error', (error) => {
-        reject(error)
+        this.log('WebSocket error:', error)
       })
 
       socket.addEventListener('close', ({ code, reason }) => {

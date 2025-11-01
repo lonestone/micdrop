@@ -144,7 +144,7 @@ export class OpenaiSTT extends STT {
   }
 
   private async initWS(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       const socket = new WebSocket('wss://api.openai.com/v1/realtime', {
         headers: {
           Authorization: `Bearer ${this.ephemeralToken}`,
@@ -159,7 +159,7 @@ export class OpenaiSTT extends STT {
       })
 
       socket.addEventListener('error', (error: any) => {
-        reject(error)
+        this.log('WebSocket error:', error)
       })
 
       socket.addEventListener(

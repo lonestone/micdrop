@@ -1,6 +1,6 @@
 {
   "name": "@micdrop/gladia",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Gladia implementation for @micdrop/server",
   "author": "Lonestone",
   "license": "MIT",

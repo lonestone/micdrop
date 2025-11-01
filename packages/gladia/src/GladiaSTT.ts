@@ -133,7 +133,7 @@ export class GladiaSTT extends STT {
 
   // Connect to Gladia
   private initWS = async (url: string) => {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       const socket = new WebSocket(url)
       this.socket = socket
 
@@ -143,7 +143,7 @@ export class GladiaSTT extends STT {
       })
 
       socket.addEventListener('error', (error) => {
-        reject(error)
+        this.log('WebSocket error:', error)
       })
 
       socket.addEventListener('close', ({ code, reason }) => {

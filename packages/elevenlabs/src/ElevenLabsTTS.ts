@@ -113,7 +113,7 @@ export class ElevenLabsTTS extends TTS {
   }
 
   private initWS(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       // Build query params
       const params = new URLSearchParams()
       params.append('model_id', this.options.modelId ?? DEFAULT_MODEL_ID)
@@ -164,7 +164,7 @@ export class ElevenLabsTTS extends TTS {
       })
 
       socket.addEventListener('error', (error) => {
-        reject(error)
+        this.log('WebSocket error:', error)
       })
 
       socket.addEventListener('message', (event) => {
