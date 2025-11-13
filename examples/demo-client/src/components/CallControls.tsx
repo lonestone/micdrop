@@ -18,7 +18,7 @@ export default function CallControls() {
         authorization: '1234',
         lang: navigator.language,
       },
-      disableInterruption: true,
+      // disableInterruption: true,
       debugLog: true,
     })
   }

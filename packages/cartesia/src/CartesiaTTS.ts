@@ -32,6 +32,7 @@ export class CartesiaTTS extends TTS {
     // Setup WebSocket connection
     this.initPromise = this.initWS().catch((error) => {
       console.error('[CartesiaTTS] Connection error:', error)
+      this.reconnect()
     })
   }
 
@@ -182,14 +183,14 @@ export class CartesiaTTS extends TTS {
               break
           }
         } catch {
-          console.error('[CartesiaTTS] Error parsing message', event.data)
+          this.log('Error parsing message', event.data)
         }
       })
     })
   }
 
   private reconnect() {
-    this.initPromise = new Promise((resolve, reject) => {
+    this.initPromise = new Promise((resolve) => {
       this.log('Reconnecting...')
       this.reconnectTimeout = setTimeout(() => {
         this.reconnectTimeout = undefined
@@ -197,7 +198,7 @@ export class CartesiaTTS extends TTS {
           .then(resolve)
           .catch((error) => {
             this.log('Reconnection error:', error)
-            reject(error)
+            this.reconnect()
           })
       }, this.options.retryDelay ?? DEFAULT_RETRY_DELAY)
     })

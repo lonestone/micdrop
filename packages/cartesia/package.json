@@ -1,6 +1,6 @@
 {
   "name": "@micdrop/cartesia",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Cartesia implementation for @micdrop/server",
   "author": "Lonestone",
   "license": "MIT",

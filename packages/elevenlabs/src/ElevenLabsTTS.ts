@@ -31,6 +31,7 @@ export class ElevenLabsTTS extends TTS {
     // Setup WebSocket connection
     this.initPromise = this.initWS().catch((error) => {
       console.error('[ElevenLabsTTS] Connection error:', error)
+      this.reconnect()
     })
   }
 
@@ -172,8 +173,8 @@ export class ElevenLabsTTS extends TTS {
         try {
           this.onMessage(JSON.parse(event.data.toString()))
         } catch (error) {
-          console.error('[ElevenLabsTTS] Error:', error)
-          console.error('[ElevenLabsTTS] Event data during error:', event.data)
+          this.log('Error:', error)
+          this.log('Event data during error:', event.data)
         }
       })
 
@@ -254,7 +255,7 @@ export class ElevenLabsTTS extends TTS {
   }
 
   private reconnect() {
-    this.initPromise = new Promise((resolve, reject) => {
+    this.initPromise = new Promise((resolve) => {
       this.log('Reconnecting...')
       this.reconnectTimeout = setTimeout(() => {
         this.reconnectTimeout = undefined
@@ -262,7 +263,7 @@ export class ElevenLabsTTS extends TTS {
           .then(resolve)
           .catch((error) => {
             this.log('Reconnection error:', error)
-            reject(error)
+            this.reconnect()
           })
       }, this.options.retryDelay ?? DEFAULT_RETRY_DELAY)
     })

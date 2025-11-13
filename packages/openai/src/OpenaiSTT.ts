@@ -40,6 +40,7 @@ export class OpenaiSTT extends STT {
       .then(() => this.initWS())
       .catch((error) => {
         console.error('[OpenaiSTT] Connection error:', error)
+        this.reconnect()
       })
   }
 
@@ -224,7 +225,7 @@ export class OpenaiSTT extends STT {
         break
 
       case 'error':
-        console.error('[OpenaiSTT] Error:', message.error)
+        this.log('Error:', message.error)
         break
 
       default:
@@ -233,7 +234,7 @@ export class OpenaiSTT extends STT {
   }
 
   private reconnect() {
-    this.initPromise = new Promise((resolve, reject) => {
+    this.initPromise = new Promise((resolve) => {
       this.log('Reconnecting...')
       this.reconnectTimeout = setTimeout(() => {
         this.reconnectTimeout = undefined
@@ -251,7 +252,7 @@ export class OpenaiSTT extends STT {
           .then(resolve)
           .catch((error) => {
             this.log('Reconnection error:', error)
-            reject(error)
+            this.reconnect()
           })
       }, this.options.retryDelay ?? DEFAULT_RETRY_DELAY)
     })
