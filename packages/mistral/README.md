@@ -31,6 +31,28 @@ new MicdropServer(socket, {
 })
 ```
 
+## Mistral STT (Speech-to-Text)
+
+Real-time transcription with Voxtral.
+
+### Usage
+
+```typescript
+import { MistralSTT } from '@micdrop/mistral'
+import { MicdropServer } from '@micdrop/server'
+
+const stt = new MistralSTT({
+  apiKey: process.env.MISTRAL_API_KEY || '',
+  model: 'voxtral-mini-transcribe-realtime-2602', // Default model
+})
+
+// Use with MicdropServer
+new MicdropServer(socket, {
+  stt,
+  // ... other options
+})
+```
+
 ## Documentation
 
 Read full [documentation of the Mistral integration for Micdrop](https://micdrop.dev/docs/ai-integration/provided-integrations/mistral) on the [website](https://micdrop.dev).

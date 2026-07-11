@@ -1,13 +1,66 @@
 # Gradium
 
-Gradium TTS implementation for [@micdrop/server](../../server).
+Gradium STT and TTS implementation for [@micdrop/server](../../server).
 
-This package provides high-quality real-time text-to-speech implementation using Gradium's WebSocket streaming API.
+This package provides high-quality real-time speech-to-text and text-to-speech implementations using Gradium's WebSocket streaming API.
 
 ## Installation
 
 ```bash
 npm install @micdrop/gradium
+```
+
+## Gradium STT (Speech-to-Text)
+
+### Usage
+
+```typescript
+import { GradiumSTT } from '@micdrop/gradium'
+import { MicdropServer } from '@micdrop/server'
+
+const stt = new GradiumSTT({
+  apiKey: process.env.GRADIUM_API_KEY || '',
+  modelName: 'default', // Optional: model name
+  inputFormat: 'pcm_16000', // Optional: audio format
+  language: 'en', // Optional: language hint
+  region: 'eu', // Optional: 'eu' or 'us'
+})
+
+// Use with MicdropServer
+new MicdropServer(socket, {
+  stt,
+  // ... other options
+})
+```
+
+### Options
+
+| Option                 | Type                   | Default       | Description                                            |
+| ---------------------- | ---------------------- | ------------- | ------------------------------------------------------ |
+| `apiKey`               | `string`               | Required      | Your Gradium API key                                   |
+| `modelName`            | `string`               | `'default'`   | Model name to use for transcription                    |
+| `inputFormat`          | `GradiumInputFormat`   | `'pcm_16000'` | Audio input format of the incoming stream              |
+| `language`             | `string`               | Optional      | Language hint (shortcut for `jsonConfig.language`)     |
+| `region`               | `'eu' \| 'us'`         | `'eu'`        | API region (EU or US endpoint)                         |
+| `jsonConfig`           | `GradiumASRJsonConfig` | Optional      | Advanced transcription configuration                   |
+| `connectionTimeout`    | `number`               | `5000`        | Timeout in milliseconds for WebSocket connection       |
+| `transcriptionTimeout` | `number`               | `4000`        | Timeout in milliseconds to wait for transcription      |
+| `retryDelay`           | `number`               | `1000`        | Delay in milliseconds between reconnection attempts    |
+| `maxRetry`             | `number`               | `3`           | Maximum number of reconnection attempts before failing |
+
+### Advanced Transcription Configuration
+
+The `jsonConfig` option allows you to fine-tune the transcription:
+
+```typescript
+const stt = new GradiumSTT({
+  apiKey: 'your-api-key',
+  jsonConfig: {
+    language: 'en', // Language hint
+    target_language: 'fr', // Optional: translation target language
+    delay_in_frames: 16, // 0 to 80, each frame = 80ms
+  },
+})
 ```
 
 ## Gradium TTS (Text-to-Speech)

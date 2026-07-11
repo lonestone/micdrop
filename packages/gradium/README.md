@@ -2,7 +2,7 @@
 
 [Micdrop website](https://micdrop.dev) | [Documentation](https://micdrop.dev/docs/ai-integration/provided-integrations/gradium)
 
-Gradium TTS implementation for [@micdrop/server](https://micdrop.dev/docs/server).
+Gradium STT and TTS implementation for [@micdrop/server](https://micdrop.dev/docs/server).
 
 ## Installation
 
@@ -35,6 +35,31 @@ const tts = new GradiumTTS({
 // Use with MicdropServer
 new MicdropServer(socket, {
   tts,
+  // ... other options
+})
+```
+
+## Gradium STT (Speech-to-Text)
+
+Real-time transcription (ASR).
+
+### Usage
+
+```typescript
+import { GradiumSTT } from '@micdrop/gradium'
+import { MicdropServer } from '@micdrop/server'
+
+const stt = new GradiumSTT({
+  apiKey: process.env.GRADIUM_API_KEY || '',
+  modelName: 'default', // Optional: model name
+  inputFormat: 'pcm_16000', // Optional: audio format
+  language: 'en', // Optional: language hint
+  region: 'eu', // Optional: 'eu' or 'us'
+})
+
+// Use with MicdropServer
+new MicdropServer(socket, {
+  stt,
   // ... other options
 })
 ```

@@ -19,6 +19,8 @@ Ready-to-use implementations for popular AI services:
 
 - **[Gladia](./provided-integrations/gladia)** - Fast, accurate multilingual transcription
 - **[OpenAI Whisper](./provided-integrations/openai)** - High-quality speech recognition
+- **[Mistral Voxtral](./provided-integrations/mistral)** - Real-time transcription
+- **[Gradium](./provided-integrations/gradium)** - Real-time transcription
 
 **Text-to-Speech (TTS):**
 

@@ -2,7 +2,7 @@
 
 Mistral AI implementation for [@micdrop/server](../../server).
 
-This package provides AI agent implementation using Mistral AI's API for conversational AI applications.
+This package provides an AI agent implementation using Mistral AI's API and a real-time speech-to-text implementation using Mistral's Voxtral realtime transcription.
 
 ## Installation
 
@@ -84,3 +84,39 @@ The Mistral Agent supports advanced features for improved conversation handling:
 - **[User Noise Filtering](../../server/user-noise-filtering)**: Filter out meaningless sounds and filler words
 - **[Extract Value from Answer](../../server/extract)**: Extract structured data from responses
 - **[Tools](../../server/tools)**: Add custom tools to the agent
+
+## Mistral STT (Speech-to-Text)
+
+Real-time transcription using Mistral's Voxtral realtime models.
+
+### Usage
+
+```typescript
+import { MistralSTT } from '@micdrop/mistral'
+import { MicdropServer } from '@micdrop/server'
+
+const stt = new MistralSTT({
+  apiKey: process.env.MISTRAL_API_KEY || '',
+})
+
+// Use with MicdropServer
+new MicdropServer(socket, {
+  stt,
+  // ... other options
+})
+```
+
+### Options
+
+| Option                   | Type                   | Default                                   | Description                                            |
+| ------------------------ | ---------------------- | ----------------------------------------- | ------------------------------------------------------ |
+| `apiKey`                 | `string`               | Required                                  | Your Mistral AI API key                                |
+| `model`                  | `string`               | `'voxtral-mini-transcribe-realtime-2602'` | Realtime transcription model to use                    |
+| `encoding`               | `MistralAudioEncoding` | `'pcm_s16le'`                             | Audio encoding of the incoming stream                  |
+| `targetStreamingDelayMs` | `number`               | Optional                                  | Target streaming delay in milliseconds                 |
+| `connectionTimeout`      | `number`               | `5000`                                    | Timeout in milliseconds for WebSocket connection       |
+| `transcriptionTimeout`   | `number`               | `4000`                                    | Timeout in milliseconds to wait for transcription      |
+| `retryDelay`             | `number`               | `1000`                                    | Delay in milliseconds between reconnection attempts    |
+| `maxRetry`               | `number`               | `3`                                       | Maximum number of reconnection attempts before failing |
+
+The Micdrop client streams 16kHz PCM16 mono audio, which matches Voxtral's default input format, so no resampling is required.

@@ -4,9 +4,9 @@ import Link from '@docusaurus/Link'
 const providers = [
   {
     name: 'Mistral',
-    role: 'Agent (LLM)',
+    role: 'Agent (LLM) & Speech-to-Text',
     href: '/docs/ai-integration/provided-integrations/mistral',
-    description: 'French LLM for conversational AI',
+    description: 'French LLM and realtime transcription',
   },
   {
     name: 'Gladia',
@@ -16,9 +16,9 @@ const providers = [
   },
   {
     name: 'Gradium',
-    role: 'Text-to-Speech',
+    role: 'Speech-to-Text & Text-to-Speech',
     href: '/docs/ai-integration/provided-integrations/gradium',
-    description: 'French TTS with natural voices',
+    description: 'French STT and TTS with natural voices',
   },
 ]
 

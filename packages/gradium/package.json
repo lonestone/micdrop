@@ -1,6 +1,6 @@
 {
   "name": "@micdrop/gradium",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "Gradium TTS implementation for @micdrop/server",
   "author": "Lonestone",
   "license": "MIT",
@@ -32,6 +32,7 @@
     "voice",
     "conversation",
     "gradium",
+    "stt",
     "tts"
   ],
   "dependencies": {

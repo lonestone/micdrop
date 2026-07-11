@@ -1,6 +1,6 @@
 {
   "name": "@micdrop/mistral",
-  "version": "1.0.11",
+  "version": "1.1.0",
   "description": "Mistral implementation for @micdrop/server",
   "author": "Lonestone",
   "license": "MIT",
@@ -32,10 +32,12 @@
     "voice",
     "conversation",
     "mistral",
+    "stt",
     "tts"
   ],
   "dependencies": {
-    "@mistralai/mistralai": "^1.14.1"
+    "@mistralai/mistralai": "^1.14.1",
+    "ws": "^8.19.0"
   },
   "peerDependencies": {
     "@micdrop/server": "*",
@@ -43,6 +45,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.19.13",
+    "@types/ws": "^8.18.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3"
   }

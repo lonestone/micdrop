@@ -19,10 +19,18 @@ Micdrop intègre nativement trois fournisseurs français qui couvrent l'ensemble
 | Composant | Fournisseur | Rôle |
 |-----------|-------------|------|
 | **Agent (LLM)** | [Mistral](/docs/ai-integration/provided-integrations/mistral) | Modèle de langage français de classe mondiale |
-| **Speech-to-Text** | [Gladia](/docs/ai-integration/provided-integrations/gladia) | Transcription en temps réel, 90+ langues, excellent en français |
+| **Speech-to-Text** | [Gladia](/docs/ai-integration/provided-integrations/gladia), [Mistral](/docs/ai-integration/provided-integrations/mistral) ou [Gradium](/docs/ai-integration/provided-integrations/gradium) | Transcription en temps réel, plusieurs options françaises |
 | **Text-to-Speech** | [Gradium](/docs/ai-integration/provided-integrations/gradium) | Synthèse vocale naturelle avec des voix françaises |
 
 Ces trois entreprises sont françaises, hébergent leurs données en Europe et sont conformes au RGPD.
+
+Pour la transcription (STT), vous avez le choix entre trois fournisseurs souverains :
+
+- **Gladia** : plus de 90 langues, excellent en français, vocabulaire personnalisable
+- **Mistral** (Voxtral) : transcription temps réel via le même fournisseur que l'agent
+- **Gradium** : transcription temps réel via le même fournisseur que la synthèse vocale
+
+Regrouper l'agent et la transcription chez Mistral, ou la transcription et la synthèse chez Gradium, permet de réduire le nombre de fournisseurs à gérer.
 
 ## Mise en place
 
@@ -71,6 +79,20 @@ new MicdropServer(socket, {
   tts,
 })
 ```
+
+:::tip Autres options de transcription
+
+La transcription est aussi disponible avec `MistralSTT` (`@micdrop/mistral`) et `GradiumSTT` (`@micdrop/gradium`). Il suffit de remplacer l'instance `stt`, par exemple pour tout regrouper chez Mistral :
+
+```typescript
+import { MistralSTT } from '@micdrop/mistral'
+
+const stt = new MistralSTT({
+  apiKey: process.env.MISTRAL_API_KEY || '',
+})
+```
+
+:::
 
 ### Configuration du client
 
