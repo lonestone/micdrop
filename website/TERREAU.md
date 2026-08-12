@@ -63,8 +63,13 @@ développeurs et d'équipes techniques, on les nomme ainsi.
   `/docs/ai-integration/provided-integrations/<fournisseur>`, `/docs/client`, `/docs/server`, et
   `/docs/ai-integration/sovereign-voice-ai`. Ce sont les pages qui portent l'adoption : elles
   ciblent quelqu'un prêt à installer.
+- **Pages « alternative à »** : les articles de `/blog` qui comparent Micdrop à un concurrent nommé
+  (`/blog/alternative-to-pipecat` aujourd'hui), produits par `terreau-write-alternative`. Elles
+  vivent dans le blog par leur emplacement et jouent le rôle d'une page commerciale par leur
+  intention, puisqu'elles s'adressent à quelqu'un qui cherche déjà à changer d'outil. Elles portent
+  donc elles-mêmes les keywords transactionnels de la marque comparée.
 - **Pages informationnelles** : les articles de `/blog`, qui expliquent un concept, comparent des
-  approches ou déroulent un cas d'usage, et renvoient vers la page commerciale du thème.
+  approches techniques ou déroulent un cas d'usage, et renvoient vers la page commerciale du thème.
 
 **Action de conversion** (utilisée par `terreau-write-product-landing`) :
 
@@ -173,6 +178,13 @@ contenu qui traite le thème doit la lire avant de rédiger et lier vers elle.
 transactionnel pointe vers la page canonique du thème que l'article booste (le plus souvent
 `/docs/getting-started` ou la page d'intégration du fournisseur concerné).
 
+Une page « alternative à » fait exception et garde ses propres keywords transactionnels
+(`<concurrent> alternative`, `<concurrent> typescript`, `<concurrent> vs micdrop`, `<concurrent>
+nodejs`), parce qu'elle est elle-même la page d'atterrissage de cette intention. Elle lie vers
+`/docs/getting-started` sans lui céder son ciblage. Le cas est vérifié en Search Console sur
+`/blog/alternative-to-pipecat`, qui se classe entre la 3e et la 6e place sur `pipecat typescript`,
+`pipecat alternatives` et `pipecat alternative`, avec des clics à la clé.
+
 ---
 
 ## 6. Ciblage des mots-clés par type de page
@@ -184,9 +196,12 @@ transactionnel pointe vers la page canonique du thème que l'article booste (le 
   de ce site (produit open source destiné à des développeurs) :
   - `voice AI SDK`, `voice AI library`, `TypeScript voice AI`, `Node.js voice agent`
   - `open source voice agent framework`, `self-hosted voice AI`
-  - `alternative to <framework>`, `<framework> alternative`
   - `<provider> Node.js integration`, `<provider> TypeScript SDK`, `add voice to React app`
   - `npm install`, `getting started`, `quickstart` accolés au domaine voix
+- **Pages « alternative à »** : keywords transactionnels de la marque comparée,
+  `alternative to <framework>`, `<framework> alternative`, `<framework> typescript`,
+  `<framework> vs micdrop`. Ils restent sur l'article, ils ne remontent pas vers la page produit.
+  Tant que l'article n'existe pas, la seed se pose sur `/` et se repointe à la publication.
 
 Test : le chercheur est-il prêt à passer à l'action ? Si oui, bonne seed transactionnelle. S'il
 apprend un concept, c'est informationnel → blog.
