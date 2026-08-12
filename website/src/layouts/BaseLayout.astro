@@ -2,6 +2,7 @@
 import TopNav from '../components/TopNav.astro'
 import Footer from '../components/Footer.astro'
 import SocialPreview from '../components/SocialPreview.astro'
+import UmamiAnalytics from '../components/UmamiAnalytics.astro'
 import config from '../../website.config'
 import { getCanonicalPath } from '../utils/getCanonicalPath'
 import '../styles/global.css'
@@ -73,6 +74,7 @@ const canonicalUrl = absoluteUrl(canonicalPath)
       type={ogType}
       url={canonicalUrl}
     />
+    {import.meta.env.PROD && <UmamiAnalytics />}
     <!--
       Restore the visitor's theme before the first paint. The site is
       dark by default, matching the previous docs site, and the OS preference is
