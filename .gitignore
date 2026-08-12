@@ -6,3 +6,6 @@ build
 *.tgz
 *.log
 recording.json
+
+# Shared Terreau skills (symlinks to the terreau repo)
+.claude/skills/terreau-*
