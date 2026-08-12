@@ -1,0 +1,17 @@
+# Build output
+dist/
+.astro/
+.netlify/
+
+# Dependencies
+node_modules/
+
+# Local env
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/

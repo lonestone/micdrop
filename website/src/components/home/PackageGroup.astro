@@ -1,0 +1,22 @@
+---
+/**
+ * A family of packages. The `variant` picks the pill colour for every
+ * `<PackageLink>` inside, so the links themselves stay plain in the MDX file
+ * (see the `[data-packages]` rules in global.css).
+ */
+interface Props {
+  title: string
+  description: string
+  variant: 'core' | 'ai' | 'utility'
+}
+
+const { title, description, variant } = Astro.props
+---
+
+<div class="ai-card text-center">
+  <h3 class="mt-0 mb-4 text-xl font-bold dark:text-ai-primary-300">{title}</h3>
+  <p class="mt-0 mb-6 text-ai-surface-700 dark:text-ai-surface-300">{description}</p>
+  <div class="flex flex-wrap justify-center gap-2" data-packages={variant}>
+    <slot />
+  </div>
+</div>

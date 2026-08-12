@@ -1,7 +1,7 @@
 {
   "name": "@micdrop/demo-server",
   "version": "1.0.0",
-  "author": "Lonestone",
+  "author": "Godefroy de Compreignac",
   "license": "MIT",
   "main": "dist/index.js",
   "scripts": {

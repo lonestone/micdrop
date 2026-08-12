@@ -1,0 +1,11 @@
+---
+/** One package pill. Its colour comes from the surrounding `<PackageGroup>`. */
+interface Props {
+  name: string
+  href: string
+}
+
+const { name, href } = Astro.props
+---
+
+<a href={href}>{name}</a>

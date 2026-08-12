@@ -1,0 +1,19 @@
+---
+/** One stage of the pipeline, under the animated diagram. */
+interface Props {
+  title: string
+}
+
+const { title } = Astro.props
+---
+
+<div class="flex-1">
+  <h3
+    class="mt-0 mb-2 text-lg font-bold text-ai-primary-600 dark:text-ai-primary-400"
+  >
+    {title}
+  </h3>
+  <p class="mb-0 text-sm text-ai-surface-700 dark:text-ai-surface-300">
+    <slot />
+  </p>
+</div>

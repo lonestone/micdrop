@@ -1,0 +1,218 @@
+---
+/**
+ * The install + first-call snippets shown next to the hero, in two tabs.
+ * Both panels are rendered at build time and the script only flips which one is
+ * visible, so the code is highlighted server side and readable without JS.
+ */
+// The same highlighter as the documentation, so both use one theme and one
+// configuration (see `expressiveCode` in astro.config.ts). `frame="none"` drops
+// the chrome, since these snippets sit inside the card below.
+import { Code } from 'astro-expressive-code/components'
+
+const clientInstall = 'npm install @micdrop/client'
+
+const clientCode = `import { Micdrop } from '@micdrop/client'
+
+// Start a voice conversation
+Micdrop.start({
+  url: 'wss://your-server.com/'
+})
+
+// Listen for events
+Micdrop.on('StateChange', (state) => {
+  console.log('Conversation:', state.conversation)
+  console.log('isAssistantSpeaking:', state.isAssistantSpeaking)
+})
+
+Micdrop.on('EndCall', () => {
+  console.log('Call ended by assistant')
+})`
+
+const serverInstall = `npm install @micdrop/server \\
+  @micdrop/openai \\
+  @micdrop/gladia \\
+  @micdrop/elevenlabs`
+
+const serverCode = `import { MicdropServer } from '@micdrop/server'
+import { OpenaiAgent } from '@micdrop/openai'
+import { GladiaSTT } from '@micdrop/gladia'
+import { ElevenLabsTTS } from '@micdrop/elevenlabs'
+import { WebSocketServer } from 'ws'
+
+const wss = new WebSocketServer({ port: 443 })
+
+wss.on('connection', (socket) => {
+  // Handle voice conversation
+  new MicdropServer(socket, {
+    firstMessage: 'How can I help you today?',
+
+    agent: new OpenaiAgent({
+      apiKey: process.env.OPENAI_API_KEY,
+      systemPrompt: 'You are a helpful assistant'
+    }),
+
+    stt: new GladiaSTT({
+      apiKey: process.env.GLADIA_API_KEY
+    }),
+
+    tts: new ElevenLabsTTS({
+      apiKey: process.env.ELEVENLABS_API_KEY,
+      voiceId: process.env.ELEVENLABS_VOICE_ID
+    })
+  })
+})`
+
+const tabClass =
+  'flex-1 cursor-pointer px-6 py-3 font-mono text-sm font-medium transition-colors'
+
+// Kept in step with the two class sets the script swaps between.
+const activeTab =
+  'tab-active text-ai-primary-800 dark:text-ai-primary-200 bg-ai-surface-100 dark:bg-ai-surface-800'
+const inactiveTab =
+  'tab-inactive text-ai-surface-700 dark:text-ai-surface-400 bg-ai-surface-200 dark:bg-ai-surface-700'
+---
+
+<div
+  class="shadow-glow flex h-full flex-col rounded-xl bg-ai-surface-100 dark:bg-ai-surface-800"
+  data-home-code
+>
+  <div class="flex" role="tablist" aria-label="Micdrop quick start">
+    <button
+      type="button"
+      role="tab"
+      id="home-code-tab-client"
+      aria-controls="home-code-panel-client"
+      aria-selected="true"
+      data-tab="client"
+      class:list={[tabClass, activeTab, 'rounded-tl-xl']}
+    >
+      Client (browser)
+    </button>
+    <button
+      type="button"
+      role="tab"
+      id="home-code-tab-server"
+      aria-controls="home-code-panel-server"
+      aria-selected="false"
+      tabindex="-1"
+      data-tab="server"
+      class:list={[tabClass, inactiveTab, 'rounded-tr-xl']}
+    >
+      Server (Node.js)
+    </button>
+  </div>
+
+  <div class="tab-content flex flex-1 flex-col gap-6 rounded-b-xl p-6">
+    <div
+      class="flex flex-col gap-6"
+      role="tabpanel"
+      id="home-code-panel-client"
+      aria-labelledby="home-code-tab-client"
+      data-panel="client"
+    >
+      <Code code={clientInstall} lang="bash" frame="none" />
+      <Code code={clientCode} lang="typescript" frame="none" />
+    </div>
+    <div
+      class="hidden flex-col gap-6"
+      role="tabpanel"
+      id="home-code-panel-server"
+      aria-labelledby="home-code-tab-server"
+      data-panel="server"
+      hidden
+    >
+      <Code code={serverInstall} lang="bash" frame="none" />
+      <Code code={serverCode} lang="typescript" frame="none" />
+    </div>
+  </div>
+</div>
+
+<style>
+  /**
+   * The tab bar and the panel below it share a single glowing outline: the
+   * active tab opens into the panel by dropping its bottom edge, the panel
+   * drops its top edge to meet it, and an inactive tab keeps only the line
+   * running underneath. The script swaps `tab-active` and `tab-inactive` on
+   * elements this component renders, so Astro's scoping still matches them.
+   */
+  .tab-active,
+  .tab-inactive,
+  .tab-content {
+    border: 2px solid;
+    animation: var(--animate-border-glow);
+  }
+  .tab-active {
+    border-bottom: none;
+  }
+  .tab-inactive {
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+  .tab-content {
+    border-top: none;
+  }
+
+  /**
+   * The snippets are spaced by the panel's own gap, so they drop the bottom
+   * margin global.css gives code blocks. Everything else (surface, colours,
+   * radius) comes from the shared Expressive Code configuration.
+   */
+  [data-home-code] :global(.expressive-code) {
+    margin: 0;
+    text-align: left;
+  }
+</style>
+
+<script>
+  const root = document.querySelector('[data-home-code]')
+
+  if (root) {
+    const active =
+      'tab-active text-ai-primary-800 dark:text-ai-primary-200 bg-ai-surface-100 dark:bg-ai-surface-800'
+    const inactive =
+      'tab-inactive text-ai-surface-700 dark:text-ai-surface-400 bg-ai-surface-200 dark:bg-ai-surface-700'
+
+    const tabs = root.querySelectorAll<HTMLButtonElement>('[data-tab]')
+    const panels = root.querySelectorAll<HTMLElement>('[data-panel]')
+
+    const showTab = (name: string) => {
+      tabs.forEach((tab) => {
+        const on = tab.dataset.tab === name
+        tab.setAttribute('aria-selected', String(on))
+        // Only the selected tab is in the tab order; the arrow keys move
+        // between them, as expected of a tablist.
+        tab.tabIndex = on ? 0 : -1
+        tab.classList.remove(...active.split(' '), ...inactive.split(' '))
+        tab.classList.add(...(on ? active : inactive).split(' '))
+      })
+      panels.forEach((panel) => {
+        const on = panel.dataset.panel === name
+        panel.hidden = !on
+        panel.classList.toggle('hidden', !on)
+        panel.classList.toggle('flex', on)
+      })
+    }
+
+    function handleTabClick(event: MouseEvent) {
+      showTab((event.currentTarget as HTMLElement).dataset.tab!)
+    }
+
+    function handleTabKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+      event.preventDefault()
+      const list = Array.from(tabs)
+      const from = list.indexOf(event.currentTarget as HTMLButtonElement)
+      const step = event.key === 'ArrowRight' ? 1 : -1
+      const next = list[(from + step + list.length) % list.length]
+      showTab(next.dataset.tab!)
+      next.focus()
+    }
+
+    showTab('client')
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', handleTabClick)
+      tab.addEventListener('keydown', handleTabKeyDown)
+    })
+  }
+</script>

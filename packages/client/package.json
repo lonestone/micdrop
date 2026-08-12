@@ -2,7 +2,7 @@
   "name": "@micdrop/client",
   "version": "2.2.9",
   "description": "🖐️🎤 Micdrop: Real-Time Voice Conversations with AI",
-  "author": "Lonestone",
+  "author": "Godefroy de Compreignac",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

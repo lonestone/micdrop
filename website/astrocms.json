@@ -1,0 +1,6 @@
+{
+  "contentDir": "src/content",
+  "contentConfig": "src/content.config.ts",
+  "assetsDir": "src/assets",
+  "componentsDir": "src/components"
+}

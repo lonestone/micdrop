@@ -1,0 +1,27 @@
+---
+import BaseLayout from './BaseLayout.astro'
+
+interface Props {
+  title: string
+  description?: string
+  image?: ImageMetadata
+  keywords?: string[]
+}
+
+const { title, description, image, keywords } = Astro.props
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogType="article"
+  image={image}
+  keywords={keywords}
+>
+  <div class="w-full max-w-6xl px-6 py-16">
+    <div class="flex flex-col gap-8 md:flex-row lg:gap-12">
+      <slot />
+    </div>
+    <slot name="after" />
+  </div>
+</BaseLayout>

@@ -1,0 +1,48 @@
+---
+/**
+ * "On this page" rail, on the right of every doc. Lists the second and third
+ * level headings and highlights the one currently in view.
+ */
+import type { MarkdownHeading } from 'astro'
+
+interface Props {
+  headings: MarkdownHeading[]
+}
+
+const { headings } = Astro.props
+const items = headings.filter((heading) => heading.depth === 2 || heading.depth === 3)
+---
+
+{
+  items.length > 1 && (
+    <aside class="hidden w-56 shrink-0 lg:block">
+      <nav
+        class="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto py-8"
+        aria-labelledby="toc-title"
+        data-toc
+      >
+        <p id="toc-title" class="mb-3 font-semibold text-text-main">
+          On this page
+        </p>
+        <ul class="m-0 list-none p-0">
+          {items.map((heading) => (
+            <li class:list={['mb-1', heading.depth === 3 && 'pl-4']}>
+              <a
+                href={`#${heading.slug}`}
+                data-heading={heading.slug}
+                class="block py-1 text-sm leading-snug text-text-secondary no-underline transition-colors hover:text-text-main"
+              >
+                {heading.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </aside>
+  )
+}
+
+<script>
+  import { initToc } from '../scripts/toc'
+  initToc()
+</script>

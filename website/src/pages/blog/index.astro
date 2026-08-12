@@ -1,0 +1,26 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import BlogCard from '../../components/BlogCard.astro'
+import { getPosts } from '../../utils/blog'
+
+const posts = await getPosts()
+---
+
+<BaseLayout
+  title="Blog"
+  description="Articles about building real-time voice AI on the web: architecture, providers, latency and data sovereignty."
+>
+  <div class="w-full max-w-6xl px-6 py-12">
+    <header class="mb-10">
+      <h1 class="mt-0 mb-3 text-4xl font-bold">Blog</h1>
+      <p class="mb-0 text-lg text-text-secondary">
+        Building real-time voice AI on the web: architecture, providers, latency and
+        data sovereignty.
+      </p>
+    </header>
+
+    <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      {posts.map((post) => <BlogCard post={post} />)}
+    </div>
+  </div>
+</BaseLayout>

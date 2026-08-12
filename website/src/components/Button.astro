@@ -1,0 +1,44 @@
+---
+interface Props {
+  label: string
+  href: string
+  variant?: 'primary' | 'secondary' | 'outline'
+  size?: 'sm' | 'md'
+  class?: string
+  targetBlank?: boolean
+}
+
+const {
+  label,
+  href,
+  variant = 'primary',
+  size = 'md',
+  class: className,
+  targetBlank = false,
+} = Astro.props
+
+const sizeClasses = {
+  sm: 'px-3 py-1.5 text-sm',
+  md: 'px-5 py-2.5',
+}
+
+const variantClasses = {
+  primary: 'bg-primary text-white hover:bg-primary-light',
+  secondary: 'bg-bg-elevated text-text-main hover:bg-border',
+  outline: 'border border-primary text-primary hover:bg-ai-primary-500/10',
+}
+---
+
+<a
+  href={href}
+  target={targetBlank ? '_blank' : undefined}
+  rel={targetBlank ? 'noopener noreferrer' : undefined}
+  class:list={[
+    'inline-block rounded-lg font-medium whitespace-nowrap no-underline transition-colors hover:no-underline',
+    sizeClasses[size],
+    variantClasses[variant],
+    className,
+  ]}
+>
+  {label}
+</a>

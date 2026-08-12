@@ -1,0 +1,43 @@
+---
+/**
+ * Base section. Constrains its content to `max-w-5xl` with horizontal
+ * padding. Variants let MDX callers opt into a colored banner without
+ * reaching for Tailwind classes themselves.
+ *
+ * Props:
+ *   - `fullWidth`: span the full visible document width (banners).
+ *   - `theme`: adds a card background with padding and rounding.
+ *   - `textAlign`: `'center'` for centered text inside the section.
+ */
+interface Props {
+  class?: string
+  fullWidth?: boolean
+  theme?: 'default' | 'surface' | 'accent'
+  textAlign?: 'left' | 'center'
+}
+
+const {
+  class: className,
+  fullWidth = false,
+  theme = 'default',
+  textAlign = 'left',
+} = Astro.props
+
+const themeClasses = {
+  default: '',
+  surface: 'bg-bg-secondary border border-border rounded-2xl p-8 md:p-12',
+  accent: 'bg-ai-primary-500/10 border border-ai-primary-500/30 rounded-2xl p-8 md:p-12',
+}
+---
+
+<section
+  class:list={[
+    'mt-24 w-full',
+    !fullWidth && 'max-w-5xl px-6',
+    themeClasses[theme],
+    textAlign === 'center' && 'text-center',
+    className,
+  ]}
+>
+  <slot />
+</section>

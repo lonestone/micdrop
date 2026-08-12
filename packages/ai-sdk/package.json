@@ -2,7 +2,7 @@
   "name": "@micdrop/ai-sdk",
   "version": "1.0.7",
   "description": "AI SDK implementation for @micdrop/server",
-  "author": "Lonestone",
+  "author": "Godefroy de Compreignac",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

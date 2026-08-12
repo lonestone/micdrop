@@ -1,0 +1,485 @@
+@import 'tailwindcss';
+@import '@docsearch/css';
+
+/**
+ * Dark-first theme with emerald accents, carried over from the previous docs
+ * site. An inline script in `BaseLayout` stamps `data-theme` on `<html>` before
+ * the first paint, so the `dark:` variant keys off that attribute rather than
+ * the OS preference.
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono:
+    'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+
+  /* Emerald: the brand accent, on buttons, links and active states. */
+  --color-ai-primary-50: #ecfdf5;
+  --color-ai-primary-100: #d1fae5;
+  --color-ai-primary-200: #a7f3d0;
+  --color-ai-primary-300: #6ee7b7;
+  --color-ai-primary-400: #34d399;
+  --color-ai-primary-500: #10b981;
+  --color-ai-primary-600: #059669;
+  --color-ai-primary-700: #047857;
+  --color-ai-primary-800: #065f46;
+  --color-ai-primary-900: #064e3b;
+  --color-ai-primary-950: #022c22;
+
+  /* Sky: the secondary accent, on AI provider packages. */
+  --color-ai-accent-50: #f0f9ff;
+  --color-ai-accent-100: #e0f2fe;
+  --color-ai-accent-200: #bae6fd;
+  --color-ai-accent-300: #7dd3fc;
+  --color-ai-accent-400: #38bdf8;
+  --color-ai-accent-500: #0ea5e9;
+  --color-ai-accent-600: #0284c7;
+  --color-ai-accent-700: #0369a1;
+  --color-ai-accent-800: #075985;
+  --color-ai-accent-900: #0c4a6e;
+  --color-ai-accent-950: #082f49;
+
+  /* Slate: every surface, from the page background to the cards. */
+  --color-ai-surface-50: #f8fafc;
+  --color-ai-surface-100: #f1f5f9;
+  --color-ai-surface-200: #e2e8f0;
+  --color-ai-surface-300: #cbd5e1;
+  --color-ai-surface-400: #94a3b8;
+  --color-ai-surface-500: #64748b;
+  --color-ai-surface-600: #475569;
+  --color-ai-surface-700: #334155;
+  --color-ai-surface-800: #1e293b;
+  --color-ai-surface-900: #0f172a;
+  --color-ai-surface-950: #020617;
+
+  --animate-shadow-glow: shadow-glow 3s ease-in-out infinite;
+  --animate-border-glow: border-glow 2s ease-in-out infinite;
+  --animate-text-glow: text-glow 2s ease-in-out infinite;
+  --animate-fade-in: fade-in 0.6s ease-out;
+  --animate-slide-up: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-listening: listening 1.6s ease-in-out infinite;
+}
+
+/**
+ * Semantic tokens. `@theme inline` compiles `bg-bg-main` straight to
+ * `var(--bg-main)`, so a single attribute swap on `<html>` repaints the site.
+ */
+@theme inline {
+  --color-bg-main: var(--bg-main);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-text-main: var(--text-main);
+  --color-text-secondary: var(--text-secondary);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-code-bg: var(--code-bg);
+}
+
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-main: #020617;
+  --bg-secondary: #0f172a;
+  --bg-elevated: #1e293b;
+  --text-main: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --border: #1e293b;
+  --primary: #10b981;
+  --primary-light: #34d399;
+  --code-bg: #1e293b;
+  --callout-info: rgba(14, 165, 233, 0.12);
+  --callout-info-border: #38bdf8;
+  --callout-tip: rgba(16, 185, 129, 0.12);
+  --callout-tip-border: #34d399;
+  --callout-warning: rgba(245, 158, 11, 0.12);
+  --callout-warning-border: #fbbf24;
+  --callout-danger: rgba(239, 68, 68, 0.12);
+  --callout-danger-border: #f87171;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg-main: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-elevated: #f1f5f9;
+  --text-main: #0f172a;
+  --text-secondary: #334155;
+  --border: #e2e8f0;
+  --primary: #047857;
+  --primary-light: #059669;
+  --code-bg: #f1f5f9;
+  --callout-info: #e0f2fe;
+  --callout-info-border: #0ea5e9;
+  --callout-tip: #d1fae5;
+  --callout-tip-border: #10b981;
+  --callout-warning: #fef3c7;
+  --callout-warning-border: #f59e0b;
+  --callout-danger: #fee2e2;
+  --callout-danger-border: #ef4444;
+}
+
+@keyframes shadow-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.3);
+  }
+}
+
+@keyframes border-glow {
+  0%,
+  100% {
+    border-color: rgba(16, 185, 129, 0.8);
+  }
+  50% {
+    border-color: rgba(16, 185, 129, 0.4);
+  }
+}
+
+@keyframes text-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Pulsing ring on the demo microphone. */
+@keyframes listening {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+/* Faint grid, used behind the hero. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@utility glass {
+  background-color: rgba(148, 163, 184, 0.05);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+@utility text-glow {
+  animation: var(--animate-text-glow);
+}
+
+@utility shadow-glow {
+  animation: var(--animate-shadow-glow);
+}
+
+/* A 2px emerald border that breathes. Used on cards and code panels. */
+@utility border-glow {
+  border-width: 2px;
+  border-style: solid;
+  animation: var(--animate-border-glow);
+}
+
+@layer components {
+  .ai-card {
+    @apply rounded-2xl border-2 border-solid bg-ai-surface-100 p-8 backdrop-blur-sm dark:bg-ai-surface-800;
+    /* Both animations are declared here rather than through two utilities:
+       they share the `animation` property, so one would silently win. */
+    animation: var(--animate-slide-up), var(--animate-border-glow);
+  }
+
+  .ai-button {
+    @apply inline-flex items-center rounded-xl bg-gradient-to-r from-ai-primary-500 to-ai-primary-400 px-8 py-4 font-semibold text-white no-underline shadow-xl transition-all duration-300 dark:from-ai-primary-600 dark:to-ai-primary-500;
+  }
+  .ai-button:hover {
+    color: #fff;
+    text-decoration: none;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.4);
+  }
+
+  .ai-button-secondary {
+    @apply inline-flex items-center rounded-xl border-2 border-ai-primary-500 bg-transparent px-8 py-4 font-semibold text-ai-primary-700 no-underline transition-all duration-300 dark:text-ai-primary-400;
+  }
+  .ai-button-secondary:hover {
+    color: rgb(16 185 129);
+    background-color: rgba(16, 185, 129, 0.1);
+    border-color: rgb(16 185 129);
+    text-decoration: none;
+    transform: translateY(-2px);
+  }
+
+  /**
+   * Package pills, one gradient per family. Keyed on the group rather than on
+   * the link, so a `<PackageLink>` in MDX carries a name and an href only.
+   */
+  [data-packages] a {
+    @apply inline-flex items-center rounded-full bg-gradient-to-r px-4 py-2 text-sm font-semibold text-white no-underline shadow-lg transition-all duration-300;
+  }
+  [data-packages] a:hover {
+    color: #fff;
+    text-decoration: none;
+    transform: translateY(-2px) scale(1.02);
+  }
+  [data-packages='core'] a {
+    @apply from-ai-primary-500 to-ai-primary-400 dark:from-ai-primary-900 dark:to-ai-primary-800;
+  }
+  [data-packages='core'] a:hover {
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+  }
+  [data-packages='ai'] a {
+    @apply from-ai-accent-500 to-ai-accent-400 dark:from-ai-accent-900 dark:to-ai-accent-800;
+  }
+  [data-packages='ai'] a:hover {
+    box-shadow: 0 8px 25px rgba(14, 165, 233, 0.3);
+  }
+  [data-packages='utility'] a {
+    @apply from-ai-surface-600 to-ai-surface-500 dark:from-ai-surface-700 dark:to-ai-surface-600;
+  }
+  [data-packages='utility'] a:hover {
+    box-shadow: 0 8px 25px rgba(100, 116, 139, 0.3);
+  }
+}
+
+body {
+  @apply bg-bg-main text-text-main leading-relaxed antialiased;
+}
+
+/* Markdown prose styles, scoped to `.md` (added by rehype-md-class.ts) so
+   they never bleed into component markup. */
+h1.md {
+  @apply mt-10 mb-5 scroll-mt-24 text-4xl font-bold;
+}
+h2.md {
+  @apply mt-12 mb-4 scroll-mt-24 text-3xl font-semibold;
+}
+h3.md {
+  @apply mt-10 mb-3 scroll-mt-24 text-2xl font-semibold;
+}
+h4.md {
+  @apply mt-8 mb-3 scroll-mt-24 text-xl font-semibold;
+}
+p.md {
+  @apply mb-5 leading-relaxed;
+}
+ul.md {
+  @apply mb-5 list-disc pl-6;
+}
+ol.md {
+  @apply mb-5 list-decimal pl-6;
+}
+li.md {
+  @apply mb-1;
+}
+li.md > ul.md,
+li.md > ol.md {
+  @apply mt-1 mb-0;
+}
+code.md {
+  @apply rounded bg-code-bg px-1.5 py-0.5 text-inherit;
+}
+pre.md {
+  @apply mb-5 overflow-x-auto rounded-lg border border-border p-5 text-sm;
+}
+pre.md code {
+  @apply bg-transparent p-0 text-sm;
+}
+a.md {
+  @apply text-primary underline underline-offset-2;
+}
+a.md:hover {
+  @apply text-primary-light;
+}
+strong.md {
+  @apply font-semibold text-text-main;
+}
+hr.md {
+  @apply my-10 border-border;
+}
+blockquote.md {
+  @apply my-5 border-l-4 border-ai-primary-500 bg-bg-secondary p-4 text-lg italic text-text-secondary;
+}
+blockquote.md p:last-child {
+  @apply mb-0;
+}
+table.md {
+  @apply my-8 -mx-6 block max-w-[100vw] border-collapse overflow-x-auto px-6 sm:mx-0 sm:px-0;
+}
+th.md {
+  @apply border-b-2 border-border bg-bg-secondary px-4 py-3 text-left font-semibold;
+}
+td.md {
+  @apply border-b border-border px-4 py-3 align-top;
+}
+td.md code,
+th.md code {
+  @apply whitespace-nowrap;
+}
+img.md {
+  @apply my-6 max-w-full rounded-xl;
+}
+
+/**
+ * Expressive Code blocks carry no margin of their own: the space above them
+ * comes from the paragraph before. Mirror it below so the block sits evenly
+ * between the two.
+ */
+.expressive-code {
+  @apply mb-5;
+}
+
+/* Admonitions produced by remark-admonitions.ts */
+.admonition {
+  @apply my-6 rounded-r-lg border-l-4 py-4 pr-4 pl-4;
+  background-color: var(--callout-info);
+  border-left-color: var(--callout-info-border);
+}
+.admonition-title {
+  @apply mb-2 font-semibold;
+}
+.admonition > p:last-child {
+  @apply mb-0;
+}
+.admonition-tip {
+  background-color: var(--callout-tip);
+  border-left-color: var(--callout-tip-border);
+}
+.admonition-warning,
+.admonition-caution {
+  background-color: var(--callout-warning);
+  border-left-color: var(--callout-warning-border);
+}
+.admonition-danger {
+  background-color: var(--callout-danger);
+  border-left-color: var(--callout-danger-border);
+}
+
+/**
+ * Shiki ships both palettes as CSS variables (`defaultColor: false` in
+ * astro.config.ts). Pick one according to the active theme.
+ */
+.astro-code,
+.astro-code span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+[data-theme='dark'] .astro-code,
+[data-theme='dark'] .astro-code span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+
+/* Mermaid replaces the block's text with an SVG once it has rendered. */
+pre.mermaid {
+  @apply my-8 overflow-x-auto text-center;
+  /* Hidden until Mermaid runs, so the raw diagram source never flashes. */
+  visibility: hidden;
+}
+pre.mermaid[data-processed='true'] {
+  visibility: visible;
+}
+pre.mermaid svg {
+  @apply mx-auto h-auto max-w-full;
+}
+
+/**
+ * Algolia DocSearch. It already keys its dark palette off
+ * `html[data-theme='dark']`, so only the accent and the surfaces need to move
+ * onto the site's tokens.
+ */
+.DocSearch {
+  --docsearch-primary-color: var(--primary);
+  --docsearch-highlight-color: var(--primary);
+  --docsearch-text-color: var(--text-main);
+  --docsearch-muted-color: var(--text-secondary);
+  --docsearch-searchbox-background: var(--bg-elevated);
+  --docsearch-searchbox-focus-background: var(--bg-main);
+  --docsearch-modal-background: var(--bg-secondary);
+  --docsearch-footer-background: var(--bg-secondary);
+  --docsearch-hit-background: var(--bg-main);
+  --docsearch-hit-color: var(--text-main);
+  --docsearch-hit-active-color: #fff;
+  --docsearch-searchbox-shadow: inset 0 0 0 2px var(--primary);
+}
+
+/* Match the height and the border of the other header controls. */
+.DocSearch-Button {
+  height: 2.25rem;
+  margin: 0;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.DocSearch-Button:hover {
+  border-color: var(--primary);
+  box-shadow: none;
+  color: var(--text-main);
+}
+.DocSearch-Button .DocSearch-Search-Icon {
+  width: 1rem;
+  height: 1rem;
+}
+.DocSearch-Button-Keys {
+  min-width: auto;
+}
+.DocSearch-Button-Key {
+  background: transparent;
+  box-shadow: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 0;
+  width: 1.25rem;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}

@@ -2,7 +2,7 @@
   "name": "@micdrop/react",
   "version": "1.0.4",
   "description": "React hooks for Micdrop voice conversation client",
-  "author": "Lonestone",
+  "author": "Godefroy de Compreignac",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

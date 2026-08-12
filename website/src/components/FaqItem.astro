@@ -1,0 +1,22 @@
+---
+/**
+ * One question / answer pair. Renders a native `<details>` so the FAQ works
+ * without JS, with the question wrapped in an `<h3>` (semantic heading) and
+ * the answer marked with `.faq-answer` so a surrounding `<FaqList>` can
+ * extract it into a `FAQPage` JSON-LD block.
+ */
+interface Props {
+  question: string
+}
+
+const { question } = Astro.props
+---
+
+<details class="mb-2 rounded-lg border border-border bg-bg-secondary">
+  <summary class="p-4 cursor-pointer font-medium">
+    <h3 class="m-0 inline">{question}</h3>
+  </summary>
+  <div class="faq-answer px-4 pb-4 text-text-secondary">
+    <slot />
+  </div>
+</details>

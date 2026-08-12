@@ -1,0 +1,124 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import { getCollection, render } from 'astro:content'
+import BlogLayout from './BlogLayout.astro'
+import BlogSidebar from '../components/BlogSidebar.astro'
+import BlogCard from '../components/BlogCard.astro'
+import KeyTakeaways from '../components/KeyTakeaways.astro'
+import Breadcrumb from '../components/Breadcrumb.astro'
+import JsonLd from '../components/JsonLd.astro'
+import { mdxComponents } from '../components'
+import config from '../../website.config'
+import { getCanonicalPath } from '../utils/getCanonicalPath'
+import { formatDate, getAuthor, postSlug, type Post } from '../utils/blog'
+
+interface Props {
+  post: Post
+}
+
+const { post } = Astro.props
+const { Content, headings } = await render(post)
+const author = await getAuthor(post.data.author)
+
+const similarSlugs = post.data.similarPosts ?? []
+let similarPosts: Post[] = []
+if (similarSlugs.length > 0) {
+  const posts = await getCollection('blog', (entry) => !entry.data.draft)
+  similarPosts = similarSlugs
+    .map((slug) => posts.find((entry) => postSlug(entry.id) === slug))
+    .filter((entry): entry is CollectionEntry<'blog'> => Boolean(entry))
+}
+
+// `BlogPosting` schema for the article itself. The `BreadcrumbList` is emitted
+// separately by `<Breadcrumb>`.
+const articleSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.data.title,
+  description: post.data.summary,
+  inLanguage: 'en',
+  mainEntityOfPage: new URL(getCanonicalPath(Astro.url.pathname), Astro.site).href,
+  ...(post.data.image && { image: new URL(post.data.image.src, Astro.site).href }),
+  ...(post.data.date && { datePublished: post.data.date.toISOString() }),
+  ...(post.data.update && { dateModified: post.data.update.toISOString() }),
+  ...(author && {
+    author: {
+      '@type': 'Person',
+      name: author.name,
+      ...(author.url && { url: author.url }),
+    },
+  }),
+  publisher: {
+    '@type': 'Organization',
+    name: config.siteName,
+    url: `${config.site}/`,
+  },
+}
+---
+
+<BlogLayout
+  title={post.data.title}
+  description={post.data.summary}
+  image={post.data.image}
+  keywords={post.data.keywords}
+>
+  <JsonLd data={articleSchema} />
+  <article class="min-w-0 flex-1">
+    <header class="mb-10 border-b border-border pb-6">
+      <Breadcrumb
+        category="Blog"
+        categoryUrl="/blog"
+        title={post.data.title}
+        hideTitle
+        class="mb-3"
+      />
+      <h1 class="mb-4 text-3xl font-bold md:text-4xl lg:text-5xl">
+        {post.data.h1 ?? post.data.title}
+      </h1>
+      <p class="mb-4 text-lg text-text-secondary">{post.data.summary}</p>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
+        {post.data.date && <p class="mb-0">{formatDate(post.data.date)}</p>}
+        {
+          author &&
+            (author.url ? (
+              <a href={author.url} class="text-text-secondary underline">
+                {author.name}
+              </a>
+            ) : (
+              <p class="mb-0">{author.name}</p>
+            ))
+        }
+      </div>
+      {
+        post.data.update && (
+          <p class="mt-1 mb-0 text-sm text-text-secondary">
+            Updated on {formatDate(post.data.update)}
+          </p>
+        )
+      }
+    </header>
+    <KeyTakeaways items={post.data.takeaways} />
+    <div>
+      <Content components={mdxComponents} />
+    </div>
+  </article>
+  <aside class="md:w-80 md:shrink-0 lg:w-88">
+    <BlogSidebar
+      headings={headings}
+      image={post.data.image}
+      imageAlt={post.data.title}
+    />
+  </aside>
+  {
+    similarPosts.length > 0 && (
+      <section slot="after" class="mt-16 border-t border-border pt-10">
+        <h2 class="mt-0 mb-8 text-2xl font-semibold">Keep reading</h2>
+        <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {similarPosts.map((entry) => (
+            <BlogCard post={entry} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+</BlogLayout>

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# AI preferences.
+# search=yes:    allow inclusion in AI search results
+# ai-input=yes:  allow use as context at inference time
+# ai-train=yes:  allow use for model training (the docs are MIT licensed)
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+
+Sitemap: https://micdrop.dev/sitemap-index.xml

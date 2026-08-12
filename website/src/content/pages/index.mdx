@@ -1,0 +1,154 @@
+---
+title: 'Micdrop - Real-time voice conversations with AI in the browser'
+description: 'Integrate a powerful voice mode in your webapp with a few lines of code using Micdrop. Use provided AI integrations (agents, STT, TTS) or build your own. Build the best UX with our SDK.'
+fullWidth: true
+---
+
+<HomeHeader
+  tagline="Real-time voice conversations with AI in the browser"
+  description="Integrate a powerful voice mode in your webapp with a few lines of code using Micdrop. Use provided AI integrations (agents, STT, TTS) or build your own. Build the best UX with our SDK."
+  primaryLabel="Start Building (5 min)"
+  primaryHref="/docs/getting-started"
+  secondaryLabel="View on GitHub"
+  note="Free, open source (MIT). Bring your own API keys (BYOK)."
+/>
+
+<HomeMain>
+
+<ArchitectureSection
+  title="How It Works"
+  intro="Micdrop orchestrates a complete voice conversation pipeline. Watch how voice data flows through each component in real-time, from your microphone to AI responses and back to your speakers."
+>
+  <ArchitectureStep title="🎤 Voice Input">
+    Client captures microphone input, VAD detects speech, and audio chunks are
+    sent to the server for processing.
+  </ArchitectureStep>
+  <ArchitectureStep title="🤖 AI Processing">
+    Server orchestrates STT transcription, AI agent reasoning, tool calls, and
+    TTS generation for natural responses.
+  </ArchitectureStep>
+  <ArchitectureStep title="🔊 Voice Output">
+    Generated audio streams back to the client for playback, with full support
+    for interruptions and real-time interaction.
+  </ArchitectureStep>
+</ArchitectureSection>
+
+<PackagesSection
+  title="📦 Packages"
+  intro="Modular architecture with specialized packages for different use cases"
+>
+  <PackageGroup
+    title="Core Packages"
+    description="Essential packages for browser and server-side implementation"
+    variant="core"
+  >
+    <PackageLink name="@micdrop/client" href="/docs/client" />
+    <PackageLink name="@micdrop/server" href="/docs/server" />
+  </PackageGroup>
+
+<PackageGroup
+  title="AI Integrations"
+  description="Ready-to-use integrations with popular AI providers"
+  variant="ai"
+>
+  <PackageLink
+    name="@micdrop/openai"
+    href="/docs/ai-integration/provided-integrations/openai"
+  />
+  <PackageLink
+    name="@micdrop/ai-sdk"
+    href="/docs/ai-integration/provided-integrations/ai-sdk"
+  />
+  <PackageLink
+    name="@micdrop/elevenlabs"
+    href="/docs/ai-integration/provided-integrations/elevenlabs"
+  />
+  <PackageLink
+    name="@micdrop/cartesia"
+    href="/docs/ai-integration/provided-integrations/cartesia"
+  />
+  <PackageLink
+    name="@micdrop/gradium"
+    href="/docs/ai-integration/provided-integrations/gradium"
+  />
+  <PackageLink
+    name="@micdrop/mistral"
+    href="/docs/ai-integration/provided-integrations/mistral"
+  />
+  <PackageLink
+    name="@micdrop/gladia"
+    href="/docs/ai-integration/provided-integrations/gladia"
+  />
+</PackageGroup>
+
+  <PackageGroup
+    title="Utilities"
+    description="React hooks and utilities for seamless frontend integration"
+    variant="utility"
+  >
+    <PackageLink name="@micdrop/react" href="/docs/client/react-hooks" />
+  </PackageGroup>
+</PackagesSection>
+
+<QuoteSection
+  before="Just call"
+  code="start()"
+  after="and your app has complete voice AI."
+  note="Micdrop handles all the complexity for you."
+/>
+
+<FeaturesSection>
+  <FeatureCard title="Low Latency" icon="bolt">
+    Optimized for minimal delay with streaming audio processing, voice activity
+    detection (VAD), and efficient WebSocket communication for near real-time
+    voice interactions.
+  </FeatureCard>
+  <FeatureCard title="AI Provider Agnostic" icon="robot">
+    Choose the best AI providers for your use case. Mix and match OpenAI,
+    ElevenLabs, Cartesia, Mistral, Gladia, and more. Build custom integrations
+    using our abstract interfaces.
+  </FeatureCard>
+  <FeatureCard title="Developer Experience" icon="code">
+    Built with TypeScript for excellent DX. Comprehensive documentation, React
+    hooks, demo applications, and detailed examples to get you started quickly.
+  </FeatureCard>
+</FeaturesSection>
+
+<SovereignSection
+  title="Build Sovereign Voice AI"
+  intro="Micdrop is the perfect solution to build sovereign voice AI applications, especially in French. Combine European AI providers to keep your data and infrastructure fully within EU borders."
+  note="100% open-source stack. No data leaves the EU. Full GDPR compliance."
+  linkLabel="Learn more about sovereign voice AI"
+  linkHref="/docs/ai-integration/sovereign-voice-ai"
+>
+  <ProviderCard
+    name="Mistral"
+    role="Agent (LLM) & Speech-to-Text"
+    href="/docs/ai-integration/provided-integrations/mistral"
+  >
+    French LLM and realtime transcription
+  </ProviderCard>
+  <ProviderCard
+    name="Gladia"
+    role="Speech-to-Text"
+    href="/docs/ai-integration/provided-integrations/gladia"
+  >
+    French STT with 90+ languages
+  </ProviderCard>
+  <ProviderCard
+    name="Gradium"
+    role="Speech-to-Text & Text-to-Speech"
+    href="/docs/ai-integration/provided-integrations/gradium"
+  >
+    French STT and TTS with natural voices
+  </ProviderCard>
+</SovereignSection>
+
+<DemoSection
+  title="🎥 See it in Action"
+  intro="Watch the creator explain Micdrop and voice AI technology"
+  buttonLabel="Watch Demo Video ▶️"
+  buttonHref="https://www.youtube.com/watch?v=fcqVOvESQ8o"
+/>
+
+</HomeMain>

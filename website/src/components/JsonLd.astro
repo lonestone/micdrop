@@ -1,0 +1,15 @@
+---
+/**
+ * Generic JSON-LD emitter. Pass any schema.org object via the `data` prop
+ * and the component renders the corresponding `<script type="application/
+ * ld+json">` tag. Used by `FaqList` for FAQ aggregates, and available for
+ * any page-specific structured data.
+ */
+interface Props {
+  data: Record<string, unknown> | Array<Record<string, unknown>>
+}
+
+const { data } = Astro.props
+---
+
+<script is:inline type="application/ld+json" set:html={JSON.stringify(data)} />

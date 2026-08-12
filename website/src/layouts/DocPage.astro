@@ -1,0 +1,36 @@
+---
+import type { MarkdownHeading } from 'astro'
+import DocsLayout from './DocsLayout.astro'
+import Breadcrumb from '../components/Breadcrumb.astro'
+import DocNav from '../components/DocNav.astro'
+import type { DocsLink } from '../utils/docs-tree'
+
+interface Props {
+  title: string
+  description?: string
+  headings: MarkdownHeading[]
+  previous?: DocsLink
+  next?: DocsLink
+}
+
+const { title, description, headings, previous, next } = Astro.props
+---
+
+<DocsLayout title={title} description={description} headings={headings}>
+  <article>
+    <header class="mb-8">
+      <Breadcrumb
+        category="Documentation"
+        categoryUrl="/docs/getting-started"
+        title={title}
+        hideTitle
+        class="mb-3"
+      />
+      <h1 class="mt-0 text-4xl font-bold">{title}</h1>
+    </header>
+    <div>
+      <slot />
+    </div>
+    <DocNav previous={previous} next={next} />
+  </article>
+</DocsLayout>

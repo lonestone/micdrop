@@ -1,0 +1,28 @@
+---
+/**
+ * Responsive grid section. 1 column on mobile. Use the `cols` prop to
+ * pick the number of columns on md+ screens (default 2).
+ */
+interface Props {
+  class?: string
+  cols?: 2 | 3 | 4
+}
+
+const { class: className, cols = 2 } = Astro.props
+
+const colClasses: Record<number, string> = {
+  2: 'md:grid-cols-2',
+  3: 'md:grid-cols-3',
+  4: 'md:grid-cols-4',
+}
+---
+
+<section
+  class:list={[
+    'w-full max-w-5xl px-6 mt-24 grid grid-cols-1 gap-8',
+    colClasses[cols],
+    className,
+  ]}
+>
+  <slot />
+</section>

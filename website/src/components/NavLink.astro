@@ -1,0 +1,31 @@
+---
+interface Props {
+  path: string
+  exact?: boolean
+  code?: boolean
+  /** Section root used for the active state, when it differs from `path`. */
+  match?: string
+}
+
+const { path, exact = false, code = false, match } = Astro.props
+
+const currentPath = Astro.url.pathname.replace(/\.html$/, '')
+const section = match ?? path
+const active = exact
+  ? currentPath === path
+  : currentPath === section || currentPath.startsWith(`${section}/`)
+---
+
+<a
+  href={path}
+  aria-current={active ? 'page' : undefined}
+  class:list={[
+    'block rounded-md px-3 py-1.5 text-sm no-underline transition-colors hover:no-underline',
+    code ? 'font-mono' : 'font-medium',
+    active
+      ? 'bg-ai-primary-500/10 text-primary'
+      : 'text-text-secondary hover:bg-bg-elevated hover:text-text-main',
+  ]}
+>
+  <slot />
+</a>

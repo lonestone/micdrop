@@ -1,0 +1,47 @@
+---
+import config from '../../website.config'
+import { getCanonicalPath } from '../utils/getCanonicalPath'
+
+interface Props {
+  category: string
+  categoryUrl: string
+  title: string
+  hideTitle?: boolean
+  class?: string
+}
+
+const { category, categoryUrl, title, hideTitle = false, class: className } = Astro.props
+
+const linkClass = 'text-text-secondary hover:text-primary hover:underline transition-colors'
+const origin = Astro.site?.origin ?? config.site
+const breadcrumb = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: config.siteName, item: `${origin}/` },
+    { '@type': 'ListItem', position: 2, name: category, item: `${origin}${categoryUrl}` },
+    {
+      '@type': 'ListItem',
+      position: 3,
+      name: title,
+      item: `${origin}${getCanonicalPath(Astro.url.pathname)}`,
+    },
+  ],
+}
+---
+
+<nav class:list={['text-sm text-text-secondary', className]} aria-label="Breadcrumb">
+  <a href="/" class={linkClass}>{config.siteName}</a>
+  <span class="mx-1">›</span>
+  <a href={categoryUrl} class={linkClass}>{category}</a>
+  {
+    !hideTitle && (
+      <>
+        <span class="mx-1">›</span>
+        <span>{title}</span>
+      </>
+    )
+  }
+</nav>
+
+<script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumb)} />

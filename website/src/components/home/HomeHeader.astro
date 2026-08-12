@@ -1,0 +1,65 @@
+---
+import config from '../../../website.config'
+import HomeCode from './HomeCode.astro'
+
+interface Props {
+  tagline: string
+  description: string
+  primaryLabel: string
+  primaryHref: string
+  secondaryLabel: string
+  note: string
+}
+
+const { tagline, description, primaryLabel, primaryHref, secondaryLabel, note } =
+  Astro.props
+---
+
+<header class="bg-grid relative w-full py-16 text-center">
+  <div
+    class="absolute inset-0 bg-gradient-to-br from-ai-surface-50 via-ai-surface-100 to-ai-surface-50 dark:from-ai-surface-950 dark:via-ai-surface-900 dark:to-ai-surface-950"
+  >
+  </div>
+
+  <div class="relative z-10 container mx-auto px-4">
+    <div class="mx-auto grid max-w-6xl grid-cols-1 items-start gap-16 lg:grid-cols-2">
+      <div class="text-left lg:pt-16">
+        <h1
+          class="text-glow mt-0 mb-4 bg-gradient-to-r from-ai-primary-500 via-ai-primary-400 to-ai-accent-500 bg-clip-text text-5xl font-black text-transparent dark:from-ai-primary-400 dark:via-ai-primary-300 dark:to-ai-accent-400"
+        >
+          🖐️🎤 {config.siteName}
+        </h1>
+        <p class="mb-8 text-2xl text-ai-surface-700 dark:text-ai-surface-200">
+          {tagline}
+        </p>
+        <p class="mb-8 text-lg leading-relaxed text-ai-surface-700 dark:text-ai-surface-200">
+          {description}
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <a class="ai-button" href={primaryHref}>{primaryLabel}</a>
+          <a
+            class="ai-button-secondary"
+            href={config.github}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg
+              class="mr-2 h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.1.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.17 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0C17.3 4.55 18.3 4.87 18.3 4.87c.66 1.65.25 2.87.12 3.17.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.58A11.99 11.99 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"
+              />
+            </svg>
+            {secondaryLabel}
+          </a>
+        </div>
+        <p class="mt-4 text-sm text-ai-surface-500 dark:text-ai-surface-400">{note}</p>
+      </div>
+
+      <HomeCode />
+    </div>
+  </div>
+</header>

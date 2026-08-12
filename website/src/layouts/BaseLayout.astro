@@ -1,0 +1,99 @@
+---
+import TopNav from '../components/TopNav.astro'
+import Footer from '../components/Footer.astro'
+import SocialPreview from '../components/SocialPreview.astro'
+import config from '../../website.config'
+import { getCanonicalPath } from '../utils/getCanonicalPath'
+import '../styles/global.css'
+
+interface Props {
+  title: string
+  /**
+   * Meta description of the page, also reused for the social preview. Comes
+   * from the content: `summary` on a blog post, `description` on a doc or a
+   * `pages` entry.
+   */
+  description?: string
+  /** `article` on blog posts, `website` everywhere else. */
+  ogType?: 'website' | 'article'
+  image?: ImageMetadata
+  keywords?: string[]
+  /**
+   * Bottom padding on the main content area. Defaults to true so content pages
+   * breathe before the footer. Docs-style layouts with a side rail pass
+   * `false` so the sidebar stays flush.
+   */
+  bottomSpace?: boolean
+  /** Full-bleed pages (the homepage) opt out of the centered content column. */
+  fullWidth?: boolean
+}
+
+const {
+  title,
+  description = config.description,
+  ogType = 'website',
+  image,
+  keywords = [],
+  bottomSpace = true,
+  fullWidth = false,
+} = Astro.props
+
+// Index pages carry very short titles ("Blog", "Installation"), so the brand is
+// appended to give them a full document title. It is left out when the title
+// already names the brand, and when the suffix would push the title past the
+// ~60 characters a search result displays.
+const brandedTitle = `${title} | ${config.siteName}`
+const pageTitle =
+  title.includes(config.siteName) || brandedTitle.length > 60 ? title : brandedTitle
+
+const canonicalPath = getCanonicalPath(Astro.url.pathname)
+const absoluteUrl = (path: string) => new URL(path, Astro.site).href
+const canonicalUrl = absoluteUrl(canonicalPath)
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonicalUrl} />
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href={absoluteUrl(`${canonicalPath}.md`)}
+    />
+    <SocialPreview
+      title={pageTitle}
+      description={description}
+      image={image}
+      type={ogType}
+      url={canonicalUrl}
+    />
+    <!--
+      Restore the visitor's theme before the first paint. The site is
+      dark by default, matching the previous docs site, and the OS preference is
+      deliberately not consulted so the two look the same to everyone.
+    -->
+    <script is:inline>
+      const stored = localStorage.getItem('theme')
+      document.documentElement.dataset.theme = stored === 'light' ? 'light' : 'dark'
+    </script>
+  </head>
+  <body class="flex min-h-dvh flex-col">
+    <TopNav />
+    <main
+      class:list={[
+        'flex flex-1 flex-col',
+        !fullWidth && 'items-center',
+        bottomSpace && 'pb-24',
+      ]}
+    >
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

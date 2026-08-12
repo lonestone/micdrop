@@ -1,0 +1,37 @@
+---
+/**
+ * The European stack pitch. Providers come as `<ProviderCard>` children, the
+ * closing line and its link as props.
+ */
+interface Props {
+  title: string
+  intro: string
+  note: string
+  linkLabel: string
+  linkHref: string
+}
+
+const { title, intro, note, linkLabel, linkHref } = Astro.props
+---
+
+<section class="container mx-auto max-w-4xl px-4">
+  <div class="mb-10 text-center">
+    <div class="mb-4 text-4xl">
+      <span title="France">🇫🇷</span>
+      <span title="European Union">🇪🇺</span>
+    </div>
+    <h2 class="mt-0 mb-4 text-3xl font-bold">{title}</h2>
+    <p class="mx-auto mb-0 max-w-2xl text-lg text-ai-surface-700 dark:text-ai-surface-300">
+      {intro}
+    </p>
+  </div>
+
+  <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+    <slot />
+  </div>
+
+  <div class="text-center">
+    <p class="mb-4 text-ai-surface-600 dark:text-ai-surface-400">{note}</p>
+    <a href={linkHref} class="ai-button-secondary">{linkLabel}</a>
+  </div>
+</section>

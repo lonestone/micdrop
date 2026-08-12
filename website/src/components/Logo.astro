@@ -1,0 +1,21 @@
+---
+/**
+ * The brand mark. Micdrop's logo is the mic-drop emoji pair, so it is rendered
+ * as text: it stays crisp at any size and needs no asset.
+ */
+interface Props {
+  class?: string
+  /** Include the raised hand, as on the homepage hero. */
+  full?: boolean
+}
+
+const { class: className, full = false } = Astro.props
+---
+
+<span
+  class:list={['inline-flex items-center justify-center leading-none', className]}
+  role="img"
+  aria-label="Micdrop"
+>
+  {full ? '🖐️🎤' : '🎤'}
+</span>

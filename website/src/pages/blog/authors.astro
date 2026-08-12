@@ -1,0 +1,60 @@
+---
+/** The people writing on the blog, with what they published. */
+import { getCollection } from 'astro:content'
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import { formatDate, getPosts, postHref } from '../../utils/blog'
+
+const [authors, posts] = await Promise.all([getCollection('authors'), getPosts()])
+
+const withPosts = authors.map((author) => ({
+  ...author.data,
+  key: author.id,
+  posts: posts.filter((post) => post.data.author === author.id),
+}))
+---
+
+<BaseLayout title="Authors" description="The people writing on the Micdrop blog.">
+  <div class="w-full max-w-3xl px-6 py-12">
+    <h1 class="mt-0 mb-8 text-4xl font-bold">Authors</h1>
+
+    {
+      withPosts.map((author) => (
+        <section class="mb-10 border-b border-border pb-8 last:border-0">
+          <div class="flex items-center gap-4">
+            {author.imageUrl && (
+              <img
+                src={author.imageUrl}
+                alt=""
+                width="56"
+                height="56"
+                loading="lazy"
+                class="h-14 w-14 rounded-full"
+              />
+            )}
+            <div>
+              <h2 class="mt-0 mb-1 text-xl font-semibold">
+                {author.url ? <a href={author.url}>{author.name}</a> : author.name}
+              </h2>
+              {author.title && (
+                <p class="mb-0 text-sm text-text-secondary">{author.title}</p>
+              )}
+            </div>
+          </div>
+
+          <ul class="mt-4 mb-0 list-none p-0">
+            {author.posts.map((post) => (
+              <li class="mb-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-4">
+                {post.data.date && (
+                  <span class="shrink-0 text-sm text-text-secondary">
+                    {formatDate(post.data.date)}
+                  </span>
+                )}
+                <a href={postHref(post.id)}>{post.data.title}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+</BaseLayout>

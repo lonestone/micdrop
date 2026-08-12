@@ -1,0 +1,31 @@
+---
+/**
+ * Rich callout for MDX pages. Plain markdown files use the `:::tip` fences
+ * instead, which `remark-admonitions.ts` renders with the same styles.
+ */
+interface Props {
+  type?: 'info' | 'warning' | 'tip'
+  title?: string
+}
+
+const { type = 'info', title } = Astro.props
+
+const classes = {
+  info: 'admonition',
+  warning: 'admonition admonition-warning',
+  tip: 'admonition admonition-tip',
+}
+
+const emojis = { info: 'ℹ️', warning: '⚠️', tip: '💡' }
+---
+
+<div class={classes[type]}>
+  {
+    title && (
+      <div class="admonition-title">
+        <span aria-hidden="true">{emojis[type]}</span> {title}
+      </div>
+    )
+  }
+  <slot />
+</div>

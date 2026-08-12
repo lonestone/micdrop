@@ -1,0 +1,37 @@
+---
+import { Image } from 'astro:assets'
+import { formatDate, postHref, type Post } from '../utils/blog'
+
+interface Props {
+  post: Post
+}
+
+const { post } = Astro.props
+---
+
+<article
+  class="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-bg-secondary transition-colors hover:border-ai-primary-500"
+>
+  <a href={postHref(post.id)} class="no-underline hover:no-underline">
+    {
+      post.data.image && (
+        <Image
+          src={post.data.image}
+          alt={post.data.title}
+          class="aspect-video w-full object-cover"
+        />
+      )
+    }
+    <div class="p-5">
+      {
+        post.data.date && (
+          <p class="mb-2 text-sm text-text-secondary">{formatDate(post.data.date)}</p>
+        )
+      }
+      <h2 class="mt-0 mb-2 text-lg leading-snug font-semibold text-text-main">
+        {post.data.title}
+      </h2>
+      <p class="mb-0 text-sm text-text-secondary">{post.data.summary}</p>
+    </div>
+  </a>
+</article>

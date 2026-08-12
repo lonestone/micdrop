@@ -1,0 +1,45 @@
+---
+/**
+ * Previous and next page, under every doc. The order is the reading order of
+ * the sidebar, flattened in `src/utils/docs-tree.ts`.
+ */
+import type { DocsLink } from '../utils/docs-tree'
+
+interface Props {
+  previous?: DocsLink
+  next?: DocsLink
+}
+
+const { previous, next } = Astro.props
+
+const linkClass =
+  'flex flex-col gap-1 rounded-xl border border-border px-4 py-3 no-underline transition-colors hover:border-ai-primary-500 hover:no-underline'
+---
+
+{
+  (previous || next) && (
+    <nav
+      class="mt-16 grid gap-4 border-t border-border pt-8 sm:grid-cols-2"
+      aria-label="Documentation pages"
+    >
+      {previous ? (
+        <a href={previous.href} rel="prev" class={linkClass}>
+          <span class="text-xs text-text-secondary">Previous</span>
+          <span class="font-medium text-primary">← {previous.label}</span>
+        </a>
+      ) : (
+        <span />
+      )}
+      {next && (
+        <a
+          href={next.href}
+          rel="next"
+          class:list={[linkClass, 'text-right sm:col-start-2']}
+        >
+          <span class="text-xs text-text-secondary">Next</span>
+          <span class="font-medium text-primary">{next.label} →</span>
+        </a>
+      )}
+    </nav>
+  )
+}

@@ -1,0 +1,154 @@
+---
+/**
+ * Article side rail: cover image, table of contents that collapses into a
+ * `<select>` once it is stuck and taller than the viewport, and a nudge towards
+ * the docs.
+ */
+import type { ImageMetadata, MarkdownHeading } from 'astro'
+import { Image } from 'astro:assets'
+import Button from './Button.astro'
+
+interface Props {
+  headings: MarkdownHeading[]
+  image?: ImageMetadata
+  /** Alt text of the article thumbnail, normally the post title. */
+  imageAlt?: string
+}
+
+const { headings, image, imageAlt = '' } = Astro.props
+
+const stripLeadingNumber = (text: string) => text.replace(/^\d+\s*[\)\/\-\.·•]\s*/, '')
+const h2s = headings
+  .filter((heading) => heading.depth === 2)
+  .map((heading) => ({ ...heading, text: stripLeadingNumber(heading.text) }))
+---
+
+{
+  image && (
+    <Image
+      src={image}
+      alt={imageAlt}
+      class="mb-8 hidden aspect-video w-full rounded-2xl object-cover md:block"
+    />
+  )
+}
+
+<div id="toc-sentinel"></div>
+<div id="toc-sticky" class="grid gap-6 md:sticky md:top-20">
+  {
+    h2s.length > 0 && (
+      <div>
+        <nav
+          id="toc-nav"
+          class="space-y-1 overflow-hidden rounded-2xl border border-border bg-bg-secondary px-4 py-4 transition-all duration-300 ease-in-out"
+          data-toc
+        >
+          <p class="px-2 py-2 text-lg font-medium">On this page</p>
+          {h2s.map((heading, index) => (
+            <a
+              href={`#${heading.slug}`}
+              data-heading={heading.slug}
+              class="block px-2 py-2 text-base leading-snug text-text-secondary no-underline transition-colors hover:text-text-main"
+            >
+              {index + 1}. {heading.text}
+            </a>
+          ))}
+        </nav>
+        <select
+          id="toc-select"
+          class="block h-0 w-full overflow-hidden rounded-xl border-0 bg-bg-secondary px-4 text-base text-text-main opacity-0 transition-all duration-300 ease-in-out outline-none"
+        >
+          <option value="" disabled>
+            On this page
+          </option>
+          {h2s.map((heading, index) => (
+            <option value={heading.slug}>
+              {index + 1}. {heading.text}
+            </option>
+          ))}
+        </select>
+      </div>
+    )
+  }
+
+  <div class="rounded-2xl border border-border bg-bg-secondary p-6 text-base leading-relaxed">
+    <p class="font-medium">Build your own voice agent</p>
+    <p class="mt-3 text-text-secondary">
+      Micdrop handles the microphone, the streaming and the turn taking. Bring your own
+      API keys and ship a voice mode in an afternoon.
+    </p>
+    <div class="text-center">
+      <Button href="/docs/getting-started" label="Get started" class="mt-4" />
+    </div>
+  </div>
+</div>
+
+<script>
+  import { initToc } from '../scripts/toc'
+
+  initToc()
+
+  const nav = document.getElementById('toc-nav')
+  const select = document.getElementById('toc-select') as HTMLSelectElement | null
+  const sentinel = document.getElementById('toc-sentinel')
+  const sticky = document.getElementById('toc-sticky')
+
+  if (nav && select && sentinel && sticky) {
+    let isStuck = false
+
+    function collapse() {
+      nav!.style.opacity = '0'
+      nav!.style.maxHeight = '0'
+      nav!.style.paddingTop = '0'
+      nav!.style.paddingBottom = '0'
+      select!.style.opacity = '1'
+      select!.style.height = '3rem'
+    }
+
+    function expand() {
+      nav!.style.opacity = '1'
+      nav!.style.maxHeight = '9999px'
+      nav!.style.paddingTop = ''
+      nav!.style.paddingBottom = ''
+      select!.style.opacity = '0'
+      select!.style.height = '0'
+    }
+
+    // Collapse the table of contents into the compact <select> only while the
+    // sidebar is stuck AND its full height overflows the viewport. When the
+    // sidebar fits on screen the nav stays visible, so there is nothing to gain
+    // from collapsing it.
+    function render() {
+      // Expand first so scrollHeight reflects the full content, then apply the
+      // final state. Both style writes happen in the same frame, so the browser
+      // only paints the final one (no flicker).
+      expand()
+      const tallerThanWindow = sticky!.scrollHeight > window.innerHeight
+      if (isStuck && tallerThanWindow) collapse()
+    }
+
+    function handleSelectChange() {
+      const target = document.getElementById(select!.value)
+      if (target) target.scrollIntoView({ behavior: 'smooth' })
+    }
+
+    function handleResize() {
+      render()
+    }
+
+    select.addEventListener('change', handleSelectChange)
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isStuck = !entry.isIntersecting
+        render()
+      },
+      { threshold: 0, rootMargin: '-1px 0px 0px 0px' }
+    )
+
+    if (window.matchMedia('(min-width: 768px)').matches) {
+      observer.observe(sentinel)
+      window.addEventListener('resize', handleResize, { passive: true })
+    }
+  }
+</script>

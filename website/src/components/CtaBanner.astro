@@ -1,0 +1,36 @@
+---
+/**
+ * Self-contained call-to-action banner. Drop it at the end of a page; it brings
+ * its own section wrapper and spacing so MDX files stay free of layout classes.
+ */
+import Button from './Button.astro'
+
+interface Props {
+  title: string
+  primaryLabel: string
+  primaryHref: string
+  secondaryLabel?: string
+  secondaryHref?: string
+}
+
+const { title, primaryLabel, primaryHref, secondaryLabel, secondaryHref } = Astro.props
+---
+
+<section class="mt-24 w-full max-w-5xl px-6">
+  <div
+    class="flex flex-col items-center gap-8 rounded-2xl border border-ai-primary-500/30 bg-ai-primary-500/10 p-8 md:flex-row md:p-12"
+  >
+    <div>
+      <h2 class="mt-0 mb-0 text-xl font-bold md:text-2xl">{title}</h2>
+      <p class="mt-4 mb-0 text-text-secondary"><slot /></p>
+      <div class="mt-6 flex flex-wrap gap-4">
+        <Button href={primaryHref} label={primaryLabel} />
+        {
+          secondaryLabel && secondaryHref && (
+            <Button href={secondaryHref} variant="outline" label={secondaryLabel} />
+          )
+        }
+      </div>
+    </div>
+  </div>
+</section>

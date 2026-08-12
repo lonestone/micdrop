@@ -1,0 +1,62 @@
+---
+/**
+ * Wrapper around a series of `<FaqItem>` children that auto-emits a
+ * `FAQPage` JSON-LD block alongside the rendered list. Questions and
+ * answers are extracted from the rendered slot HTML so MDX stays the
+ * single source of truth: change a `<FaqItem>` and the structured data
+ * follows.
+ *
+ * The regex relies on the markup emitted by `FaqItem.astro`:
+ *   <details>
+ *     <summary><h3>question</h3></summary>
+ *     <div class="faq-answer">answer</div>
+ *   </details>
+ * If that markup changes, this regex needs to follow.
+ */
+import JsonLd from './JsonLd.astro'
+
+const slotHtml = await Astro.slots.render('default')
+
+interface FaqEntry {
+  question: string
+  answer: string
+}
+
+const items: FaqEntry[] = []
+const detailsRegex = /<details\b[\s\S]*?<h3\b[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<div\b[^>]*class="[^"]*faq-answer[^"]*"[^>]*>([\s\S]*?)<\/div>[\s\S]*?<\/details>/gi
+let match: RegExpExecArray | null
+const stripTags = (s: string) => s.replace(/<[^>]+>/g, ' ')
+const decode = (s: string) => s
+  .replace(/&amp;/g, '&')
+  .replace(/&lt;/g, '<')
+  .replace(/&gt;/g, '>')
+  .replace(/&quot;/g, '"')
+  .replace(/&#39;/g, "'")
+const clean = (s: string) => decode(stripTags(s)).replace(/\s+/g, ' ').trim()
+
+// eslint-disable-next-line no-cond-assign
+while ((match = detailsRegex.exec(slotHtml)) !== null) {
+  const question = clean(match[1])
+  const answer = clean(match[2])
+  if (question && answer)
+    items.push({ question, answer })
+}
+
+const faqPage = items.length > 0
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      'mainEntity': items.map(item => ({
+        '@type': 'Question',
+        'name': item.question,
+        'acceptedAnswer': {
+          '@type': 'Answer',
+          'text': item.answer,
+        },
+      })),
+    }
+  : null
+---
+
+<Fragment set:html={slotHtml} />
+{faqPage && <JsonLd data={faqPage} />}

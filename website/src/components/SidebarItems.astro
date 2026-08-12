@@ -1,0 +1,104 @@
+---
+/**
+ * One level of the docs sidebar, recursing into its groups. Split from
+ * `Sidebar` so a group can render its own children.
+ *
+ * A group whose folder holds an `index` page shows its title as a link, next to
+ * the chevron that collapses it, the way the previous docs site did.
+ */
+import { containsPath, type DocsNode } from '../utils/docs-tree'
+
+interface Props {
+  items: DocsNode[]
+  currentPath: string
+  depth?: number
+}
+
+const { items, currentPath, depth = 0 } = Astro.props
+
+const linkClass = (active: boolean) =>
+  [
+    'block rounded-md px-3 py-1.5 text-sm no-underline transition-colors hover:no-underline',
+    active
+      ? 'bg-ai-primary-500/10 font-medium text-primary'
+      : 'text-text-secondary hover:bg-bg-elevated hover:text-text-main',
+  ].join(' ')
+
+const groupLabelClass = (active: boolean) =>
+  [
+    'flex-1 rounded-md px-2 py-1.5 text-sm font-semibold no-underline transition-colors hover:no-underline',
+    active
+      ? 'bg-ai-primary-500/10 text-primary'
+      : 'text-text-main hover:bg-bg-elevated',
+  ].join(' ')
+---
+
+<ul class:list={['m-0 list-none p-0', depth > 0 && 'ml-2 border-l border-border pl-2']}>
+  {
+    items.map((item) =>
+      item.type === 'link' ? (
+        <li class="mb-0.5">
+          <a
+            href={item.href}
+            class={linkClass(currentPath === item.href)}
+            aria-current={currentPath === item.href ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        </li>
+      ) : (
+        <li class="mb-1">
+          <details open={containsPath(item, currentPath)} class="group/details">
+            <summary class="flex list-none items-center gap-1">
+              <span
+                class="shrink-0 cursor-pointer rounded p-1 text-text-secondary hover:bg-bg-elevated hover:text-text-main"
+                aria-hidden="true"
+              >
+                <svg
+                  class="h-3 w-3 transition-transform group-open/details:rotate-90"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </span>
+              {item.href ? (
+                <a
+                  href={item.href}
+                  class={groupLabelClass(currentPath === item.href)}
+                  aria-current={currentPath === item.href ? 'page' : undefined}
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <span class="flex-1 cursor-pointer px-2 py-1.5 text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                  {item.label}
+                </span>
+              )}
+            </summary>
+            <div class="mt-1">
+              <Astro.self
+                items={item.items}
+                currentPath={currentPath}
+                depth={depth + 1}
+              />
+            </div>
+          </details>
+        </li>
+      )
+    )
+  }
+</ul>
+
+<style>
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker,
+  summary::marker {
+    display: none;
+    content: '';
+  }
+</style>

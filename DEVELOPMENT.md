@@ -20,10 +20,10 @@ Run (watch) the demo server and client
 pnpm dev:demo
 ```
 
-Run (watch) the documentation server
+Run (watch) the website and its documentation
 
 ```bash
-pnpm dev:doc
+pnpm dev:website
 ```
 
 Run (watch) a specific package

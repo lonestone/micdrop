@@ -1,0 +1,32 @@
+---
+/**
+ * Every editorial page: one MDX file in `src/content/pages` per URL, with
+ * `index` serving the homepage.
+ */
+import { getCollection, render } from 'astro:content'
+import BaseLayout from '../layouts/BaseLayout.astro'
+import { mdxComponents } from '../components'
+
+export async function getStaticPaths() {
+  const entries = await getCollection('pages')
+  return entries
+    // `404` is rendered by its own route, which Astro serves on a miss.
+    .filter((entry) => entry.id !== '404')
+    .map((entry) => ({
+      params: { slug: entry.id === 'index' ? undefined : entry.id },
+      props: { entry },
+    }))
+}
+
+const { entry } = Astro.props
+const { Content } = await render(entry)
+---
+
+<BaseLayout
+  title={entry.data.title}
+  description={entry.data.description}
+  fullWidth={entry.data.fullWidth}
+  bottomSpace={!entry.data.fullWidth}
+>
+  <Content components={mdxComponents} />
+</BaseLayout>

@@ -1,0 +1,18 @@
+---
+/**
+ * Algolia DocSearch, the same index the previous docs site queried. DocSearch
+ * renders its own button and modal into the container below, so the markup here
+ * is only a placeholder.
+ *
+ * The crawler is configured on Algolia's side; nothing in this repository feeds
+ * it. The keys are search-only and meant to be public.
+ */
+import config from '../../website.config'
+---
+
+<div data-docsearch={JSON.stringify(config.algolia)}></div>
+
+<script>
+  import { mountDocSearch } from '../scripts/docsearch'
+  mountDocSearch()
+</script>

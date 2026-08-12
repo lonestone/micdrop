@@ -1,0 +1,23 @@
+---
+interface Props {
+  class?: string
+  align?: 'center' | 'start'
+}
+
+const { class: className, align = 'center' } = Astro.props
+
+const slotClass = 'flex-1 [&_h2.md]:text-3xl [&_h2.md]:md:text-4xl [&_h2.md]:font-bold [&_h2.md]:mt-0 [&_h2.md]:mb-0 [&>p.md]:mb-0 [&>p.md]:mt-4 [&_h2.md+p.md]:mt-6 [&>p.md]:text-lg [&_img]:rounded-full [&_img]:w-full [&_img]:max-w-md [&_img]:mx-auto [&_img]:aspect-square [&_img]:object-cover'
+---
+
+<section class:list={[
+  'w-full max-w-5xl px-6 mt-24 flex flex-col md:flex-row gap-12',
+  align === 'start' ? 'md:items-start' : 'items-center',
+  className,
+]}>
+  <div class={slotClass}>
+    <slot name="left" />
+  </div>
+  <div class={slotClass}>
+    <slot name="right" />
+  </div>
+</section>

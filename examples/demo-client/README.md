@@ -35,4 +35,4 @@ MIT
 
 ## Author
 
-[Lonestone](https://www.lonestone.io) ([GitHub](https://github.com/lonestone))
+[Godefroy de Compreignac](https://github.com/Godefroy)

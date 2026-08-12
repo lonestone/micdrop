@@ -1,0 +1,20 @@
+---
+interface Props {
+  items: string[]
+}
+
+const { items } = Astro.props
+---
+
+{
+  items.length > 0 && (
+    <div class="mb-10 rounded-2xl border border-border bg-bg-secondary p-6">
+      <p class="mb-3 text-lg font-semibold text-text-main">Key takeaways</p>
+      <ul class="mb-0 list-disc space-y-1 pl-5 leading-relaxed">
+        {items.map((item) => (
+          <li>{item}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}

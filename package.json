@@ -1,19 +1,20 @@
 {
   "name": "micdrop-monorepo",
-  "author": "Lonestone",
+  "author": "Godefroy de Compreignac",
   "license": "MIT",
   "workspaces": [
     "packages/*",
     "examples/*",
-    "doc"
+    "website"
   ],
   "scripts": {
     "build": "pnpm build:server && pnpm build:client && concurrently -n \"ai-sdk,cartesia,elevenlabs,gladia,gradium,mistral,openai,react\" -c \"blue,green,yellow,magenta,white,cyan,red,green\" \"pnpm --filter ai-sdk build\" \"pnpm --filter cartesia build\" \"pnpm --filter elevenlabs build\" \"pnpm --filter gladia build\" \"pnpm --filter gradium build\" \"pnpm --filter mistral build\" \"pnpm --filter openai build\" \"pnpm --filter react build\"",
     "build:server": "pnpm --filter server build",
     "build:client": "pnpm --filter client build",
     "build:demo": "pnpm --filter demo-server build && pnpm --filter demo-client build",
-    "build:doc": "pnpm --filter doc build",
+    "build:website": "pnpm --filter @micdrop/website build",
     "clean": "pnpm -r clean",
+    "dev:website": "pnpm --filter @micdrop/website dev",
     "dev:main": "concurrently -n \"server,client\" -c \"blue,green\" \"pnpm --filter server dev\" \"pnpm --filter client dev\"",
     "dev:demo": "concurrently -n \"demo-server,demo-client\" -c \"blue,yellow\" \"pnpm --filter demo-server dev\" \"pnpm --filter demo-client dev\"",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""

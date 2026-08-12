@@ -2,7 +2,7 @@
   "name": "@micdrop/openai",
   "version": "1.3.0",
   "description": "OpenAI implementation for @micdrop/server",
-  "author": "Lonestone",
+  "author": "Godefroy de Compreignac",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

@@ -1,0 +1,23 @@
+---
+/**
+ * A feature entry with an emoji on the left. `icon` is rendered as-is,
+ * so you can pass any emoji or short string: "🚀", "📊", "🔒", "⚡", etc.
+ */
+interface Props {
+  title: string
+  icon: string
+  class?: string
+}
+
+const { title, icon, class: className } = Astro.props
+---
+
+<div class:list={['flex gap-4', className]}>
+  <div class="shrink-0 w-10 h-10 rounded-lg bg-primary-light/10 flex items-center justify-center text-xl" aria-hidden="true">
+    {icon}
+  </div>
+  <div>
+    <h3 class="font-semibold text-base mt-0 mb-1">{title}</h3>
+    <p class="text-sm text-text-secondary mt-0 mb-0"><slot /></p>
+  </div>
+</div>

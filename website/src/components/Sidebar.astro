@@ -1,0 +1,22 @@
+---
+/**
+ * Docs navigation. The tree comes from the folder structure of
+ * `src/content/docs` (see `src/utils/docs-tree.ts`); groups are `<details>` so
+ * they collapse without any script, and the branch holding the current page is
+ * open on arrival.
+ */
+import { getDocsTree } from '../utils/docs-tree'
+import SidebarItems from './SidebarItems.astro'
+
+const tree = await getDocsTree()
+const currentPath = Astro.url.pathname.replace(/\.html$/, '')
+---
+
+<aside
+  class="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-68 min-w-68 overflow-y-auto border-r border-border bg-bg-secondary px-4 py-6 md:block"
+  data-sidebar
+>
+  <nav aria-label="Documentation">
+    <SidebarItems items={tree} currentPath={currentPath} />
+  </nav>
+</aside>
