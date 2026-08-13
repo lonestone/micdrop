@@ -51,7 +51,7 @@ While WebRTC is a powerful protocol for real-time communication, Micdrop uses a 
 
 - 🎯 **Focused on our use case**: WebRTC is designed for peer-to-peer communication, with features we don't need. Our client-server architecture is simpler.
 
-- 🔇 **Efficient audio transmission**: By using Voice Activity Detection (VAD) on the client side, we only send audio when the user is actually speaking. This reduces bandwidth usage and processing load compared to continuous streaming.
+- 🔇 **Efficient audio transmission**: By using [Voice Activity Detection (VAD)](../client/vad) on the client side, we only send audio when the user is actually speaking. This reduces bandwidth usage and processing load compared to continuous streaming.
 
 - 💡 **Simple implementation**: WebSocket provides a straightforward, reliable way to send both text and binary data. The protocol is easy to implement and debug on both client and server.
 

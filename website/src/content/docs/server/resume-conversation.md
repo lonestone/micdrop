@@ -1,6 +1,6 @@
 ---
 title: 'Resume a Conversation'
-description: 'Pick up a saved conversation where the user left off. Useful when the WebSocket drops mid-call, the user closes the tab, or the session is intentionally paused and…'
+description: 'Pick up a saved conversation where the user left off, after the WebSocket drops mid-call, the user closes the tab, or the session is paused on purpose.'
 order: 25
 ---
 

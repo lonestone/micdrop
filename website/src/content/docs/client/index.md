@@ -1,12 +1,12 @@
 ---
 title: 'Client (Browser)'
-description: 'Micdrop client handles real-time voice conversations in the browser with microphone input, speaker output, voice activity detection, and WebSocket communication.'
+description: 'Handle real-time voice conversations in the browser with microphone input, speaker output, voice activity detection and WebSocket streaming.'
 order: 2
 ---
 
 # Client (Browser)
 
-Micdrop client handles real-time voice conversations in the browser with microphone input, speaker output, voice activity detection, and WebSocket communication.
+Micdrop client handles real-time voice conversations in the browser with microphone input, speaker output, [voice activity detection](./vad), and WebSocket communication.
 
 ## Installation
 

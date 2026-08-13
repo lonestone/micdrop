@@ -1,0 +1,76 @@
+---
+/**
+ * Site-level structured data, called once from the homepage MDX.
+ *
+ * Emits the three entities that describe the project itself: the
+ * `Organization` behind it, the `WebSite` it publishes, and the
+ * `SoftwareApplication` the packages make up. Blog posts and docs carry their
+ * own `BlogPosting` / `BreadcrumbList` through their layouts, so this one stays
+ * out of their way.
+ *
+ * The `@id` anchors let the three reference each other instead of repeating the
+ * same publisher block, which is what search engines follow to tie a page back
+ * to the project.
+ *
+ * Every value comes from `website.config.ts`, so the MDX call takes no props
+ * and the page stays pure content. The script tag lands in the body rather than
+ * in the head, which search engines read all the same.
+ */
+import JsonLd from './JsonLd.astro'
+import config from '../../website.config'
+
+const orgId = `${config.site}/#organization`
+const siteId = `${config.site}/#website`
+
+const data = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': orgId,
+    name: config.siteName,
+    url: `${config.site}/`,
+    description: config.description,
+    foundingDate: '2025',
+    sameAs: [config.github],
+    founder: {
+      '@type': 'Person',
+      name: config.author.label,
+      url: config.author.href,
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': siteId,
+    name: config.siteName,
+    url: `${config.site}/`,
+    description: config.description,
+    inLanguage: 'en',
+    publisher: { '@id': orgId },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    '@id': `${config.site}/#software`,
+    name: config.siteName,
+    url: `${config.site}/`,
+    description: config.description,
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Web browser, Node.js',
+    programmingLanguage: 'TypeScript',
+    license: 'https://opensource.org/licenses/MIT',
+    codeRepository: config.github,
+    isAccessibleForFree: true,
+    author: { '@id': orgId },
+    // The packages are MIT and installed from npm, so the listed price is the
+    // real one. What the AI providers charge sits outside the library.
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'EUR',
+    },
+  },
+]
+---
+
+<JsonLd data={data} />

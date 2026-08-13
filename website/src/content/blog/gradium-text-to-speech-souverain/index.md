@@ -1,6 +1,6 @@
 ---
-title: 'Gradium : intégrer un text-to-speech souverain dans votre IA vocale'
-summary: 'Guide complet pour intégrer Gradium, le TTS français issu de Kyutai, dans une application web avec Micdrop. Souveraineté des données, conformité RGPD, qualité vocale et stratégie de fallback.'
+title: 'Text-to-speech français souverain avec Gradium et Micdrop'
+summary: 'Intégrez Gradium, le TTS français issu de Kyutai, dans une application web avec Micdrop. Vos données restent en Europe, avec une stratégie de fallback.'
 date: 2026-03-03
 author: godefroy
 image: ./thumbnail.jpg

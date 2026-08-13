@@ -1,11 +1,14 @@
 ---
-title: 'Micdrop: A TypeScript Alternative to Pipecat for Voice AI in Web Apps'
-summary: 'Comparing Micdrop and Pipecat for building real-time voice AI. Why TypeScript-native, WebSocket-based architecture with built-in fallback and semantic turn detection may be a better fit for web developers.'
+title: 'Pipecat Alternative for TypeScript and Node.js Web Apps'
+h1: 'Micdrop: A TypeScript Alternative to Pipecat for Voice AI in Web Apps'
+summary: 'Micdrop runs the whole voice AI pipeline in TypeScript, browser and Node.js side, with provider fallback and semantic turn detection built in.'
 date: 2026-03-03
 author: godefroy
 image: ./thumbnail.jpg
 keywords:
   - 'Pipecat alternative'
+  - 'Pipecat TypeScript'
+  - 'Pipecat Node.js'
   - 'voice AI framework'
   - 'Pipecat vs Micdrop'
   - 'real-time voice AI'

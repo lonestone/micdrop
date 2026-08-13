@@ -1,6 +1,6 @@
 ---
 title: 'Semantic Turn Detection'
-description: 'Semantic turn detection handles cases where users speak incomplete sentences, allowing for more natural conversation flow by waiting for complete thoughts before…'
+description: 'Wait for a complete thought before the agent replies, so the user can pause mid-sentence and keep the floor until they actually finish speaking.'
 order: 31
 ---
 
