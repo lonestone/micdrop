@@ -21,6 +21,8 @@ keywords:
   - 'voice AI open source'
   - 'Pipecat deployment'
   - 'WebRTC vs WebSocket voice'
+similarPosts:
+  - 'alternative-to-livekit-agents'
 ---
 
 [Pipecat](https://pipecat.ai) is a popular open-source framework for building real-time voice AI agents. With 10k+ GitHub stars and 60+ AI integrations, it's become a go-to choice for conversational AI. But if you're a web developer building voice features into a web application, Pipecat might not be the best fit.
@@ -235,6 +237,8 @@ npm install @micdrop/server @micdrop/client @micdrop/openai @micdrop/gladia @mic
 ```
 
 Check the [Getting Started guide](/docs/getting-started) for a complete walkthrough, or explore the [AI integrations](/docs/ai-integration/provided-integrations/openai) to choose your providers.
+
+If LiveKit Agents is the other framework on your shortlist, we ran the same comparison in [Micdrop as a TypeScript alternative to LiveKit Agents](/blog/alternative-to-livekit-agents).
 
 ---
 
