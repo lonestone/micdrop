@@ -1,0 +1,15 @@
+---
+/**
+ * One entry of a ranking, declared inside a `<RankingJsonLd>` wrapper. It
+ * renders a marker that the wrapper reads and then discards, so nothing
+ * reaches the page: the visible ranking is the article's own headings.
+ */
+interface Props {
+  name: string
+  url: string
+}
+
+const { name, url } = Astro.props
+---
+
+<span data-ranking-name={name} data-ranking-url={url}></span>

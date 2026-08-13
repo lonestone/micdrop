@@ -104,13 +104,23 @@ source) aux affirmations génériques.
    interruptions, filtrage du bruit, reprise de conversation, appels d'outils, gestion des
    périphériques. Preuve : les pages `/docs/server/semantic-turn-detection`,
    `/docs/server/noise-filtering`, `/docs/client/vad`.
+6. **Des produits tournent dessus en production.** Deux exemples citables, jamais présentés comme
+   la liste complète : [Raconte.ai](https://raconte.ai), des entretiens vocaux menés par une IA, et
+   [Cibli](https://cibli.fr), une plateforme de recrutement où les candidats répondent à la voix.
+   Les deux embarquent les packages navigateur et serveur ensemble. Écrire « des produits comme
+   Raconte et Cibli », jamais « les deux produits qui utilisent Micdrop » : compter les références
+   sous-estime l'usage réel et se périme au premier déploiement suivant. Raconte.ai est construit
+   par le mainteneur de Micdrop : le dire quand on cite la référence, sinon la preuve se retourne.
+   Cibli est porté par une autre équipe. Vérifiable dans les dépôts voisins `../raconte` et
+   `../cibli`, qui déclarent `@micdrop/client` et `@micdrop/server` en dépendances.
 
 Éléments à ne pas mettre en avant à tort :
 
 - Aucune promesse chiffrée de latence, de précision de transcription ou de coût par minute : ces
   chiffres appartiennent aux fournisseurs, pas à Micdrop, et varient avec le choix de stack.
-- Pas de revendication de production à grande échelle, de nombre d'utilisateurs, de clients
-  nommés, d'étoiles GitHub ou de niveau d'adoption : le projet est jeune (2025).
+- Pas de revendication de production à grande échelle, de nombre d'utilisateurs, d'étoiles GitHub
+  ou de niveau d'adoption : le projet est jeune (2025). Seule exception, les produits nommés
+  ci-dessus, qui se citent en exemple et jamais comme un portefeuille clients ni comme un décompte.
 - Pas de conformité présentée comme garantie (RGPD, HIPAA, SOC 2). Micdrop rend une architecture
   souveraine possible, la conformité reste celle du déploiement et des fournisseurs choisis.
 - Pas d'équipe, de société ni de support commercial : le projet est porté par un mainteneur.
@@ -314,14 +324,16 @@ référence en chemin relatif dans le frontmatter `image`, jamais dans `public/`
 
 ## 9. Screenshots
 
-- **Home de la marque** (réutilisable entre contenus) : https://micdrop.dev, à stocker dans le
-  dossier de l'article qui l'utilise le premier.
-- **Screenshots de concurrents pour un article** : dans le dossier de l'article
-  (`src/content/blog/<slug>/`), nommés d'après le produit (`pipecat.jpg`, `livekit.jpg`). Prendre
-  la page d'accueil du produit, sans cookie banner.
-- **Screenshots ponctuels** : toujours co-localisés avec le contenu qui les affiche. Le site n'a
-  pas de dossier d'assets partagé, `public/` ne contient que le favicon, `robots.txt` et
-  `_redirects`.
+- **Screenshots Micdrop partagés** entre plusieurs contenus : `src/assets/screenshots/`
+  (`micdrop-homepage.png`, source https://micdrop.dev), référencés depuis un MDX de blog par
+  `![...](../../../assets/screenshots/micdrop-homepage.png)`. Un nouveau screenshot Micdrop va dans
+  ce dossier, jamais dans le dossier d'un article.
+- **Screenshots de concurrents pour un article** : co-localisés avec le MDX dans
+  `src/content/blog/<slug>/<concurrent>.png`, nommés d'après le produit (`pipecat.png`,
+  `livekit-agents.png`) et référencés par `![...](./<concurrent>.png)`. Prendre la page d'accueil du
+  produit, sans cookie banner.
+- **Screenshots ponctuels** : co-localisés avec le contenu qui les affiche. `public/` ne contient
+  que le favicon, `robots.txt` et `_redirects`, jamais d'image d'article.
 
 ---
 

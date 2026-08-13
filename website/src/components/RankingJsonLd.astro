@@ -1,0 +1,62 @@
+---
+/**
+ * Emits an `ItemList` JSON-LD block from a series of `<RankingEntry>`
+ * children, in the order they are called. The slot is parsed and then
+ * dropped, so the component adds a script tag and no visible markup.
+ *
+ * The regex relies on the markup emitted by `RankingEntry.astro`:
+ *   <span data-ranking-name="…" data-ranking-url="…"></span>
+ * If that markup changes, this regex needs to follow.
+ *
+ * Keep the entries in the same order as the headings above them: the block
+ * is the machine-readable copy of the ranking a reader sees.
+ */
+import JsonLd from './JsonLd.astro'
+
+interface Props {
+  name: string
+  description?: string
+}
+
+const { name, description } = Astro.props
+
+const slotHtml = await Astro.slots.render('default')
+
+const entryRegex =
+  /data-ranking-name="([^"]*)"[^>]*?data-ranking-url="([^"]*)"/gi
+
+const decode = (s: string) =>
+  s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+
+const items: { name: string, url: string }[] = []
+let match: RegExpExecArray | null
+
+// eslint-disable-next-line no-cond-assign
+while ((match = entryRegex.exec(slotHtml)) !== null) {
+  items.push({ name: decode(match[1]), url: decode(match[2]) })
+}
+
+const itemList = items.length > 0
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      'name': name,
+      ...(description ? { description } : {}),
+      'numberOfItems': items.length,
+      'itemListOrder': 'https://schema.org/ItemListOrderAscending',
+      'itemListElement': items.map((item, index) => ({
+        '@type': 'ListItem',
+        'position': index + 1,
+        'name': item.name,
+        'url': item.url,
+      })),
+    }
+  : null
+---
+
+{itemList && <JsonLd data={itemList} />}
