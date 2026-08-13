@@ -40,7 +40,11 @@ const articleSchema = {
   mainEntityOfPage: new URL(getCanonicalPath(Astro.url.pathname), Astro.site).href,
   ...(post.data.image && { image: new URL(post.data.image.src, Astro.site).href }),
   ...(post.data.date && { datePublished: post.data.date.toISOString() }),
-  ...(post.data.update && { dateModified: post.data.update.toISOString() }),
+  // Freshness signal. An article that was never updated still needs a
+  // `dateModified`, so it falls back to the publication date.
+  ...((post.data.update ?? post.data.date) && {
+    dateModified: (post.data.update ?? post.data.date)!.toISOString(),
+  }),
   ...(author && {
     author: {
       '@type': 'Person',
