@@ -405,9 +405,10 @@ img.md {
   background-color: var(--shiki-dark-bg);
 }
 
-/* Mermaid replaces the block's text with an SVG once it has rendered. */
+/* Mermaid replaces the block's text with an SVG once it has rendered. The
+   diagram block also carries `.md`, so the code panel styling is undone. */
 pre.mermaid {
-  @apply my-8 overflow-x-auto text-center;
+  @apply my-8 overflow-x-auto border-0 bg-transparent p-0 text-center;
   /* Hidden until Mermaid runs, so the raw diagram source never flashes. */
   visibility: hidden;
 }

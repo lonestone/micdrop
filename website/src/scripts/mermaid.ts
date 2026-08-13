@@ -1,0 +1,47 @@
+export {}
+
+// Mermaid is only pulled in on pages that actually contain a diagram, and
+// re-rendered when the reader flips the theme.
+const blocks = document.querySelectorAll<HTMLElement>('pre.mermaid')
+
+if (blocks.length > 0) {
+  const sources = Array.from(blocks).map((block) => block.textContent ?? '')
+  const { default: mermaid } = await import('mermaid')
+
+  const render = async () => {
+    const dark = document.documentElement.dataset.theme !== 'light'
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      // Tuned to sit next to the code blocks: emerald accents on the site
+      // surfaces, in both themes.
+      themeVariables: {
+        fontFamily: 'var(--font-sans)',
+        background: dark ? '#0f172a' : '#f8fafc',
+        primaryColor: dark ? '#0f3d33' : '#d1fae5',
+        primaryTextColor: dark ? '#e2e8f0' : '#0f172a',
+        primaryBorderColor: dark ? '#10b981' : '#047857',
+        lineColor: dark ? '#64748b' : '#94a3b8',
+        secondaryColor: dark ? '#1e293b' : '#e2e8f0',
+        tertiaryColor: dark ? '#1e293b' : '#f1f5f9',
+        textColor: dark ? '#e2e8f0' : '#0f172a',
+        noteBkgColor: dark ? '#1e293b' : '#f1f5f9',
+        noteTextColor: dark ? '#e2e8f0' : '#0f172a',
+        noteBorderColor: dark ? '#334155' : '#cbd5e1',
+      },
+      securityLevel: 'strict',
+    })
+
+    for (const [index, block] of blocks.entries()) {
+      block.removeAttribute('data-processed')
+      block.textContent = sources[index]
+      await mermaid.run({ nodes: [block] })
+    }
+  }
+
+  await render()
+
+  new MutationObserver(() => void render()).observe(document.documentElement, {
+    attributeFilter: ['data-theme'],
+  })
+}

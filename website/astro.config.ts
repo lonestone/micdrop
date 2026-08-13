@@ -4,9 +4,11 @@ import mdx, { type MdxOptions } from '@astrojs/mdx'
 import netlify from '@astrojs/netlify'
 import sitemap from '@astrojs/sitemap'
 import expressiveCode from 'astro-expressive-code'
+import rehypeExternalLinks from 'rehype-external-links'
+import rehypeMermaid from 'rehype-mermaid'
 import { redirects } from './src/redirects'
 import rehypeMdClass from './src/utils/rehype-md-class'
-import rehypeMermaid from './src/utils/rehype-mermaid'
+import { getExternalLinkRel } from './src/utils/external-links'
 import remarkAdmonitions from './src/utils/remark-admonitions'
 import remarkDocLinks from './src/utils/remark-doc-links'
 import remarkStripTitle from './src/utils/remark-strip-title'
@@ -15,12 +17,17 @@ import config from './website.config'
 
 const { site } = config
 
-// Drives `.md` files. `rehypeMdClass` tags every markdown element with `.md`,
-// then `rehypeMermaid` reclaims the diagram blocks it would otherwise style as
-// code.
+// Drives `.md` files. `pre-mermaid` leaves a `<pre class="mermaid">` rendered
+// client-side by `src/scripts/mermaid.ts`, so no Playwright is needed at build
+// time. It runs before `rehypeMdClass` so the diagram `<pre>` also gets `.md`,
+// and before Expressive Code, which then finds no `<code>` left to highlight.
 const processor = unified({
   remarkPlugins: [remarkStripTitle, remarkAdmonitions, remarkDocLinks],
-  rehypePlugins: [rehypeMdClass, rehypeMermaid],
+  rehypePlugins: [
+    [rehypeMermaid, { strategy: 'pre-mermaid' }],
+    rehypeMdClass,
+    [rehypeExternalLinks, { target: '_blank', rel: getExternalLinkRel }],
+  ],
   gfm: true,
 })
 
@@ -39,9 +46,7 @@ export default defineConfig({
   markdown: { processor },
   integrations: [
     // Every code block on the site: the markdown fences and the `<Code>` of the
-    // hero. Mermaid fences carry a diagram rather than code, so they stay out
-    // of the highlighter and `rehypeMermaid` picks them up untouched.
-    // Options live in ec.config.mjs, which `<Code>` loads on its own.
+    // hero. Options live in ec.config.mjs, which `<Code>` loads on its own.
     expressiveCode(),
     // mdx@5 reads only its own options, so the pipeline is repeated here for
     // `.mdx` files. Reading it back off the processor is what matters: `unified()`
