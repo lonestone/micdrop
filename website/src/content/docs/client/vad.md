@@ -8,6 +8,8 @@ order: 12
 
 Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and send chunks of audio to the server only when speech is detected.
 
+For the concepts behind these options, how volume detection compares with a Silero model and how to tune latency against false positives, read [Voice Activity Detection in the Browser](/blog/voice-activity-detection-browser).
+
 ## Supported VAD Types
 
 Micdrop supports the following VADs by name:
