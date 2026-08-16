@@ -84,12 +84,16 @@ The rules below are the template's conventions, adapted to this repository.
 - URLs carry no language prefix. There is no `translations` collection and no
   `src/utils/i18n.ts`; UI strings are written directly in the components.
 - Collections are `docs`, `blog`, `authors` and `pages` (`src/content.config.ts`).
-- Docs: the file path is the URL (`docs/client/vad.md` → `/docs/client/vad`) and
-  each folder is a sidebar group whose `index.md` is the page it links to. The
+- Docs: the file path is the URL (`docs/client/vad.mdx` → `/docs/client/vad`) and
+  each folder is a sidebar group whose `index.mdx` is the page it links to. The
   tree is built in `src/utils/docs-tree.ts`.
 - `order` in the docs frontmatter is numbered once across the whole sidebar, not
   restarted per folder: a group sits where its first page sits.
-- Docs are plain `.md` and stay readable on GitHub. The build resolves relative
+- **Every content file is `.mdx`**, in all four collections. Never add a `.md`
+  under `src/content/`, so any page can call a component without being renamed.
+  MDX parses stricter than Markdown: outside code fences, `{` opens a JS
+  expression and `<` opens a tag, and HTML comments are invalid (use
+  `{/* … */}`). The build resolves relative
   links (`src/utils/remark-doc-links.ts`), turns `:::tip` fences into callouts
   (`remark-admonitions.ts`), renders ` ```mermaid ` blocks in the browser, and
   drops the leading `# Title` since the layout renders the frontmatter title

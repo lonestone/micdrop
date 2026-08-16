@@ -9,10 +9,10 @@ import { getCollection, type CollectionEntry } from 'astro:content'
  * - `order` in the frontmatter numbers pages across the whole sidebar. A group
  *   inherits the smallest order of the pages it contains, which places it right
  *   where its first page belongs among its siblings.
- * - a folder's `index.md` is the page the group links to, and gives it a title.
+ * - a folder's `index.mdx` is the page the group links to, and gives it a title.
  *   Folders without one get a title made from their name. The loader drops the
  *   `/index` suffix, so such an entry has the id of the folder itself
- *   (`client/index.md` → `client`).
+ *   (`client/index.mdx` → `client`).
  */
 
 export interface DocsLink {

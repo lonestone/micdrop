@@ -16,7 +16,7 @@ import config from '../../website.config'
  * than at a page, so it becomes a GitHub URL.
  */
 
-/** `/blog/<slug>/index.md` and `/docs/a/b.md` both reduce to their URL path. */
+/** `/blog/<slug>/index.mdx` and `/docs/a/b.mdx` both reduce to their URL path. */
 function pageUrl(filePath: string): { url: string; collection: string } | null {
   const match = filePath
     .replace(/\\/g, '/')

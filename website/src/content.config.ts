@@ -4,7 +4,7 @@ import { z } from 'astro/zod'
 
 /**
  * Documentation. Folders become sidebar groups and the file path becomes the
- * URL (`docs/client/vad.md` → `/docs/client/vad`), so the tree on disk is the
+ * URL (`docs/client/vad.mdx` → `/docs/client/vad`), so the tree on disk is the
  * tree in the navigation. See `src/utils/docs-tree.ts`.
  */
 const docs = defineCollection({
@@ -22,7 +22,7 @@ const docs = defineCollection({
   }),
 })
 
-// Blog: one folder per article (`<slug>/index.md`) with its images alongside.
+// Blog: one folder per article (`<slug>/index.mdx`) with its images alongside.
 const blog = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/blog' }),
   schema: ({ image }) =>
