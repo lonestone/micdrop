@@ -114,6 +114,12 @@ source) aux affirmations génériques.
    Cibli est porté par une autre équipe. Vérifiable dans les dépôts voisins `../raconte` et
    `../cibli`, qui déclarent `@micdrop/client` et `@micdrop/server` en dépendances.
 
+**Effort d'intégration** (chiffre réutilisable, à ne jamais réestimer au jugé) : brancher Micdrop
+dans une application existante se compte en heures, pas en jours. Le guide de démarrage donne un
+premier appel en cinq minutes. Ce qui prend plus longtemps est ce qu'une plateforme hébergée
+fournissait et qu'il faut désormais écrire soi-même, à savoir le stockage des transcriptions,
+l'historique d'appels et le tableau de bord.
+
 Éléments à ne pas mettre en avant à tort :
 
 - Aucune promesse chiffrée de latence, de précision de transcription ou de coût par minute : ces
@@ -147,6 +153,11 @@ cadrer un classement.
   Micdrop, orchestration d'un pipeline STT → LLM → TTS que l'on héberge soi-même. Ils couvrent des
   pipelines riches et souvent la téléphonie, majoritairement en Python ; ils ne couvrent pas une
   intégration TypeScript native côté navigateur et serveur avec des types partagés.
+- **Plateformes auto-hébergeables open source** (Dograh) : forme de plateforme plutôt que de
+  bibliothèque, avec constructeur de workflow visuel, téléphonie et déploiement Docker, sous licence
+  permissive. C'est la réponse à « alternative open source à Vapi / Retell », donc à citer chaque
+  fois qu'un contenu affirme ce qui existe en open source. Elles ne couvrent pas la conversation
+  vocale intégrée dans une webapp TypeScript existante.
 - **Plateformes d'agents vocaux hébergées** (Vapi, Retell AI, Bland) : couvrent la mise en
   production clés en main, le routage téléphonique et un tableau de bord, contre une facturation à
   la minute et l'exécution chez l'éditeur. Micdrop ne remplace pas une plateforme hébergée : il ne
@@ -195,6 +206,17 @@ nodejs`), parce qu'elle est elle-même la page d'atterrissage de cette intention
 `/blog/alternative-to-pipecat`, qui se classe entre la 3e et la 6e place sur `pipecat typescript`,
 `pipecat alternatives` et `pipecat alternative`, avec des clics à la clé.
 
+Pages « alternative à » publiées : `/blog/alternative-to-pipecat`, `/blog/alternative-to-livekit-agents`,
+`/blog/alternative-to-vapi`. Conventions du site pour ce format, en complément de la skill
+`terreau-write-alternative` :
+
+- Le concurrent est **lié** vers son site à la première mention (`[Vapi](https://vapi.ai)`), et
+  Micdrop est lié vers `/` à la sienne, pour que les deux produits soient traités pareil.
+- La miniature est une illustration générée selon la section 8, jamais la page d'accueil du
+  concurrent, qui mettrait son logo sur la carte de partage de l'article.
+- Le screenshot du concurrent est co-localisé dans le dossier de l'article (section 9), même si un
+  autre article en a déjà un : chaque article date le sien.
+
 ---
 
 ## 6. Ciblage des mots-clés par type de page
@@ -226,10 +248,15 @@ Le site est un Astro 6 + MDX + Tailwind v4, dans `website/` du monorepo `micdrop
 pas de backend.
 
 - **Collections éditoriales** (`website/src/content/`) :
-  - `docs/` : la documentation. Le chemin du fichier est l'URL (`docs/client/vad.md` →
-    `/docs/client/vad`), chaque dossier est un groupe de la sidebar dont `index.md` est la page
-    pointée. Fichiers `.md` volontairement lisibles sur GitHub.
-  - `blog/` : les articles, **un dossier par article** (`<slug>/index.md`) avec ses images
+  - `docs/` : la documentation. Le chemin du fichier est l'URL (`docs/client/vad.mdx` →
+    `/docs/client/vad`), chaque dossier est un groupe de la sidebar dont `index.mdx` est la page
+    pointée.
+
+  **Tout contenu est en `.mdx`**, dans les quatre collections, jamais en `.md` : n'importe quelle
+  page peut ainsi appeler un composant sans être renommée. MDX est plus strict que Markdown, donc
+  hors blocs de code `{` ouvre une expression JS, `<` ouvre une balise, et les commentaires HTML
+  sont invalides (utiliser `{/* … */}`).
+  - `blog/` : les articles, **un dossier par article** (`<slug>/index.mdx`) avec ses images
     co-localisées.
   - `pages/` : les pages éditoriales, un fichier par URL, `index` = la page d'accueil. MDX
     n'appelant que des composants.
@@ -342,12 +369,16 @@ référence en chemin relatif dans le frontmatter `image`, jamais dans `public/`
 Pages à garder factuellement à jour, avec leur cadence. La skill `terreau-update-evergreen`
 respecte la fenêtre de cooldown.
 
-**Trimestriel (1 refresh max par 90 jours)** — pages définitionnelles / conceptuelles :
+**Trimestriel (1 refresh max par 90 jours)** — pages définitionnelles / conceptuelles, et pages
+comparatives :
 
-- (aucune pour l'instant)
+- `/blog/voice-activity-detection-browser`
+- `/blog/open-source-voice-agent-frameworks`
+- `/blog/alternative-to-vapi`
+- `/blog/alternative-to-pipecat`
+- `/blog/alternative-to-livekit-agents`
 
-**Mensuel (1 refresh max par 30 jours)** — pages comparatives, ou dont les chiffres bougent
-souvent :
+**Mensuel (1 refresh max par 30 jours)** — pages dont les chiffres bougent très vite :
 
 - (aucune pour l'instant)
 
