@@ -169,6 +169,8 @@ Generates a streaming response based on the current conversation history.
 
 Add any type of message with content to the conversation and emit the `Message` event.
 
+A message whose text is empty or made of whitespace is ignored, so a turn where the LLM only called a tool leaves no empty message behind in the conversation.
+
 ```typescript
 agent.addMessage('assistant', 'Hello there!')
 ```

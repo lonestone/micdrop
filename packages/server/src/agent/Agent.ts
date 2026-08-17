@@ -148,6 +148,15 @@ export abstract class Agent<
     text: string,
     metadata?: MicdropAnswerMetadata
   ) {
+    // A turn can carry no text at all, typically when the LLM answered with a
+    // tool call only. Keeping it would send an empty message back to the LLM on
+    // the next turn, and emit a Message event that consumers store as an empty
+    // exchange in their transcripts.
+    if (text.trim() === '') {
+      this.log(`Skipping empty ${role} message`)
+      return
+    }
+
     this.log(`Adding ${role} message to conversation: ${text}`)
     const message: MicdropConversationMessage = {
       role,
