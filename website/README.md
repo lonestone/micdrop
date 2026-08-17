@@ -12,7 +12,7 @@ starter, reduced to a single language (no locale prefix in URLs).
 Run from the repository root or from this folder.
 
 ```bash
-pnpm --filter @micdrop/website dev        # http://localhost:4321
+pnpm --filter @micdrop/website dev        # http://localhost:6105
 pnpm --filter @micdrop/website build      # static build into dist/
 pnpm --filter @micdrop/website preview    # serve the build
 pnpm --filter @micdrop/website typecheck  # astro check

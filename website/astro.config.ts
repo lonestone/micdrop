@@ -43,6 +43,10 @@ export default defineConfig({
   trailingSlash: 'never',
   build: { format: 'file' },
   redirects,
+  server: {
+    // Fixed so several sites can run side by side on the same machine.
+    port: 6105,
+  },
   markdown: { processor },
   integrations: [
     // Every code block on the site: the markdown fences and the `<Code>` of the
