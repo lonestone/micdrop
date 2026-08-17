@@ -65,12 +65,16 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
         { signal }
       )
       let skipAnswer = false
+      let hasAnswer = false
 
       // Handle response events
       for await (const event of response) {
         if (abortController !== this.abortController) return
         switch (event.type) {
           case 'response.output_text.delta':
+            // Ignore extra outputs, we keep the first answer only
+            if (hasAnswer) break
+
             this.log(`Answer chunk: "${event.delta}"`)
 
             // Extracting value?
@@ -98,15 +102,21 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
             break
 
           case 'response.output_text.done':
-            const { message, metadata } = this.extract(event.text)
-            this.addAssistantMessage(message, metadata)
-            this.abortController = undefined
-            // Stop query now that we have a complete answer
+            // Keep the first answer only.
             // Note: OpenAI can sometimes return multiple outputs.
             // See https://community.openai.com/t/how-to-prevent-the-api-returning-multiple-outputs/1251365/28
             // We can prompt it like this to avoid consuming too many tokens:
             // `Return one complete answer and then stop`
-            return
+            if (hasAnswer) break
+
+            const { message, metadata } = this.extract(event.text)
+            this.addAssistantMessage(message, metadata)
+            hasAnswer = true
+            // Keep reading events instead of returning here: the API streams
+            // one output item at a time, so a function call the model made
+            // alongside its answer is only announced after the text is done.
+            // Returning dropped every tool call that came with an answer.
+            break
 
           case 'response.output_item.done':
             if (event.item.type === 'function_call') {
@@ -130,8 +140,9 @@ export class OpenaiAgent extends Agent<OpenaiAgentOptions> {
 
       if (abortController !== this.abortController) return
 
-      // Query again in case of tool call
-      if (!skipAnswer) {
+      // Query again when the model called a tool without answering, so the
+      // turn still produces something to say
+      if (!skipAnswer && !hasAnswer) {
         await this.generateAnswer(stream, stepCount + 1)
       }
       this.abortController = undefined
