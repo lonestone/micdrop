@@ -3,6 +3,7 @@ title: 'Pipecat Alternative for TypeScript and Node.js Web Apps'
 h1: 'Micdrop: A TypeScript Alternative to Pipecat for Voice AI in Web Apps'
 summary: 'Micdrop runs the whole voice AI pipeline in TypeScript, browser and Node.js side, with provider fallback and semantic turn detection built in.'
 date: 2026-03-03
+update: 2026-08-17
 author: godefroy
 image: ./thumbnail.jpg
 keywords:
@@ -23,9 +24,10 @@ keywords:
   - 'WebRTC vs WebSocket voice'
 similarPosts:
   - 'alternative-to-livekit-agents'
+  - 'open-source-voice-agent-frameworks'
 ---
 
-[Pipecat](https://pipecat.ai) is a popular open-source framework for building real-time voice AI agents. With 10k+ GitHub stars and 60+ AI integrations, it's become a go-to choice for conversational AI. But if you're a web developer building voice features into a web application, Pipecat might not be the best fit.
+[Pipecat](https://pipecat.ai) is a popular open-source framework for building real-time voice AI agents. With 14,000 GitHub stars, 293 contributors and more than 100 AI services in its catalogue, it's become a go-to choice for conversational AI. But if you're a web developer building voice features into a web application, Pipecat might not be the best fit.
 
 In this article, we'll compare Pipecat with [Micdrop](https://micdrop.dev), a TypeScript-native voice AI framework designed specifically for web applications, and explain when each tool makes more sense.
 
@@ -40,7 +42,7 @@ Pipecat's server is Python-only. If your web application runs on Node.js, Next.j
 
 ### 2. WebRTC requirement for production
 
-Pipecat's own documentation states that its WebSocket transport ["shouldn't be used in production for client-server, real-time media connections"](https://docs.pipecat.ai). For production, you need WebRTC, which means either using Daily.co's transport layer or setting up your own WebRTC infrastructure.
+Pipecat's own documentation still warns that WebSocket transports are ["best suited for prototyping and controlled network environments"](https://docs.pipecat.ai/api-reference/server/services/transport/websocket-server) and recommends WebRTC-based transports for production client-server applications. Getting there means Daily.co's transport layer, another managed media provider, or the self-hosted `SmallWebRTCTransport`, which still asks you for STUN servers and, on most corporate networks, TURN servers.
 
 WebRTC is designed for peer-to-peer communication and adds significant complexity: TURN/STUN servers, ICE negotiation, codec management, NAT traversal. For a client-to-server voice AI use case, this is unnecessary overhead.
 
@@ -62,9 +64,13 @@ pipeline = Pipeline([
 
 Every step requires understanding frames, processors, and how they chain together. Configuration of sample rates, audio codecs, and buffering strategies adds more complexity.
 
+Pipecat 1.0 landed in April 2026 and changed much of the API around that core: a universal `LLMContext` replaced the per-provider contexts, imports moved, and turn management was folded into the aggregator params. The frame pipeline itself came through intact, so the mental model to learn is the same one, on a stable API that is only a few months old.
+
 ### 4. Deployment burden
 
 A [detailed analysis](https://medium.com/@thom.leigh/pipecat-the-hardest-way-to-deploy-voice-and-multimodal-conversational-ai-0706ae7a21cd) describes Pipecat as "the hardest way to deploy voice AI." When self-hosting, you're responsible for server provisioning, GPU infrastructure, WebRTC connections, audio codecs, jitter buffers, and security patches. Small misconfigurations can lead to dropped calls and degraded audio.
+
+Daily now sells the way out of that work. Pipecat Cloud went generally available in January 2026 and hosts the agents from $0.01 to $0.03 per agent minute depending on the container size, with Daily PSTN at $0.018 a minute and one-to-one WebRTC voice included. Speech and model inference stays on your own keys. It is a real option, and it turns the deployment problem into a per-minute line on top of your provider bills.
 
 ## Micdrop: built for the web
 
@@ -100,10 +106,9 @@ new MicdropServer(socket, {
 And the client:
 
 ```typescript
-import { MicdropClient } from '@micdrop/client'
+import { Micdrop } from '@micdrop/client'
 
-const client = new MicdropClient({ url: 'wss://your-server.com/call' })
-await client.start()
+await Micdrop.start({ url: 'wss://your-server.com/call' })
 ```
 
 No frames, no pipeline assembly, no transport configuration.
@@ -121,21 +126,25 @@ For the client-to-server voice AI use case (as opposed to peer-to-peer video cal
 
 ## Features that matter in production
 
-Beyond the simpler architecture, Micdrop includes production-ready features that Pipecat doesn't offer out of the box.
+Beyond the simpler architecture, Micdrop turns several production behaviours into options you switch on. Pipecat covers most of the same ground since its 2026 releases, and the difference is how much you assemble yourself to get there.
 
 ### Semantic turn detection
 
 Most voice AI systems use silence duration to detect when a user has finished speaking. This leads to the assistant jumping in during natural pauses mid-sentence.
 
-Micdrop's `autoSemanticTurn` uses the LLM itself to determine whether the user's utterance is a complete thought. The result: fewer interruptions, more natural conversations.
+Both projects solve it, by different means. Micdrop's `autoSemanticTurn` asks the LLM already in the pipeline whether the user's utterance is a complete thought. The judgement follows your system prompt and the conversation so far rather than the audio signal, and it costs one small model call per turn.
+
+Pipecat bundles Smart Turn, an 8 MB ONNX classifier that reads intonation in the waveform, shipped inside the package under the same BSD-2-Clause licence as the framework and wired in as the default turn-stop strategy. It runs on CPU in a few milliseconds across 23 languages, which makes it the faster of the two and the one tied to a fixed list.
 
 ### Noise filtering
 
-The `autoIgnoreUserNoise` feature automatically filters filler sounds like "uh", "hmm", and throat clearing. These sounds would otherwise trigger unnecessary LLM calls and degrade conversation quality.
+Micdrop's `autoIgnoreUserNoise` filters filler sounds like "uh", "hmm", and throat clearing once they reach the transcript. These sounds would otherwise trigger unnecessary LLM calls and degrade conversation quality.
+
+Pipecat attacks the same problem from the audio side, with filters for RNNoise, Krisp VIVA, Picovoice Koala and ai-coustics, plus a Krisp strategy that tells a real interruption from a backchannel like "uh-huh". RNNoise is the only one of those that runs on open-source code alone. The other three need a vendor key and a second contract, and the pure-Python `NoisereduceFilter` was removed along the way.
 
 ### Built-in fallback strategies
 
-AI provider outages happen. Micdrop's `FallbackTTS` and `FallbackSTT` provide automatic failover between providers:
+AI provider outages happen. Micdrop's `FallbackTTS`, `FallbackSTT` and `FallbackAgent` provide automatic failover between providers:
 
 ```typescript
 import { FallbackTTS } from '@micdrop/server'
@@ -161,7 +170,9 @@ const tts = new FallbackTTS({
 })
 ```
 
-When the primary provider fails, text is buffered and replayed on the backup provider. The user experiences at most a brief pause, with no dropped calls and no errors.
+When the primary provider fails, text is buffered and replayed on the backup provider. The user experiences at most a brief pause, with no dropped calls and no errors. The same wiring exists for speech-to-text and for the agent, so every layer of the pipeline can carry a second provider.
+
+Pipecat has this too, through `ServiceSwitcher` and its failover strategy, which moves to the next usable service in the list when the active one reports a non-fatal error. It wraps the services in a parallel pipeline, so switching is a construct you assemble around the services rather than a property of the service you configure.
 
 ### Structured data extraction
 
@@ -189,21 +200,24 @@ function VoiceUI() {
 
 ## Head-to-head comparison
 
+These rows were checked in August 2026, and both projects move.
+
 | Aspect | Pipecat | Micdrop |
 |--------|---------|---------|
 | **Server language** | Python | TypeScript / Node.js |
 | **Client library** | JS SDK (transport only) | Full browser SDK (VAD, mic, speaker, state) |
 | **Architecture** | Frame pipeline | Simple 3-component (Agent + STT + TTS) |
 | **Transport** | WebRTC (production) / WebSocket (dev) | WebSocket (production-ready) |
-| **Infrastructure** | Requires Daily.co or WebRTC setup | Standard Node.js hosting |
+| **Infrastructure** | Daily.co, another provider or your own WebRTC | Standard Node.js hosting |
+| **Managed option** | Pipecat Cloud, from $0.01 per agent minute | None |
 | **React support** | React SDK | React hooks (state, volume, errors) |
-| **Semantic turn detection** | Not built-in | Built-in |
-| **Noise filtering** | Not built-in | Built-in |
-| **Provider fallback** | Not built-in | Built-in (FallbackSTT, FallbackTTS) |
-| **Data extraction** | Not built-in | Built-in |
-| **Tool calling** | Supported | Supported with Zod schemas |
-| **EU data sovereignty** | No specific support | Native French/EU provider integrations |
-| **LLM providers** | 60+ via Python adapters | Any via Vercel AI SDK + native adapters |
+| **Semantic turn detection** | Built-in, bundled ONNX classifier | Built-in, decided by the LLM |
+| **Noise filtering** | Audio filters, most needing a vendor key | Built-in at the transcript level |
+| **Provider fallback** | Built-in (ServiceSwitcher) | Built-in (FallbackSTT, FallbackTTS, FallbackAgent) |
+| **Data extraction** | Hand-rolled over function calling | Built-in (`extract` option) |
+| **Tool calling** | Supported, schema inferred from the signature | Supported with Zod schemas |
+| **EU data sovereignty** | European providers, no EU hosting of its own | Native French/EU provider integrations |
+| **AI services** | 100+ in the catalogue | Any via Vercel AI SDK + native adapters |
 | **Video support** | Yes | No (voice-focused) |
 | **Telephony (SIP/PSTN)** | Yes | No (web-focused) |
 | **License** | BSD-2-Clause | MIT |
@@ -216,7 +230,8 @@ Pipecat excels in scenarios Micdrop doesn't target:
 - **Video and multimodal**: If your use case involves video processing or multimodal AI (vision + voice), Pipecat handles it.
 - **IoT/embedded**: Pipecat has SDKs for ESP32 and other embedded devices.
 - **Python-native teams**: If your backend is already Python (Django, FastAPI), Pipecat fits naturally.
-- **Large community**: With 10k+ stars, Pipecat has more community resources, tutorials, and third-party integrations.
+- **A managed option**: Pipecat Cloud runs the agents and the phone layer for you, and Micdrop has no equivalent to offer.
+- **Large community**: With 14,000 stars and 293 contributors, Pipecat has more community resources, tutorials, and third-party integrations.
 
 ## When Micdrop is the better choice
 
@@ -224,9 +239,9 @@ Micdrop is designed for a specific, and very common, use case: **adding real-tim
 
 - **TypeScript/Node.js stack**: No Python service to deploy and maintain.
 - **Simple deployment**: Any Node.js hosting works. No WebRTC infrastructure.
-- **Production resilience**: Built-in fallback between providers, noise filtering, and semantic turn detection.
+- **Production resilience**: Fallback between providers on all three layers, noise filtering, and semantic turn detection, each a single option rather than a component to assemble.
 - **Cost control**: BYOK (Bring Your Own Keys). No per-minute platform fees. MIT licensed.
-- **EU data sovereignty**: Native integrations with [Mistral](/docs/ai-integration/provided-integrations/mistral) (LLM), [Gladia](/docs/ai-integration/provided-integrations/gladia) (STT), and [Gradium](/docs/ai-integration/provided-integrations/gradium) (TTS) for a fully sovereign French AI stack.
+- **EU data sovereignty**: Native integrations with [Mistral](/docs/ai-integration/provided-integrations/mistral) (LLM and STT), [Gladia](/docs/ai-integration/provided-integrations/gladia) (STT), and [Gradium](/docs/ai-integration/provided-integrations/gradium) (STT and TTS) for a fully sovereign French AI stack.
 - **Developer experience**: React hooks, TypeScript types, 10-line setup.
 
 ## Getting started
@@ -237,7 +252,7 @@ npm install @micdrop/server @micdrop/client @micdrop/openai @micdrop/gladia @mic
 
 Check the [Getting Started guide](/docs/getting-started) for a complete walkthrough, or explore the [AI integrations](/docs/ai-integration/provided-integrations/openai) to choose your providers.
 
-If LiveKit Agents is the other framework on your shortlist, we ran the same comparison in [Micdrop as a TypeScript alternative to LiveKit Agents](/blog/alternative-to-livekit-agents).
+If LiveKit Agents is the other framework on your shortlist, we ran the same comparison in [Micdrop as a TypeScript alternative to LiveKit Agents](/blog/alternative-to-livekit-agents), and the whole field sits side by side in our ranking of [open source voice agent frameworks](/blog/open-source-voice-agent-frameworks).
 
 ---
 
