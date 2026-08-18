@@ -1,6 +1,6 @@
 ---
 title: 'Text-to-speech français souverain avec Gradium et Micdrop'
-summary: 'Intégrez Gradium, le TTS français issu de Kyutai, dans une application web avec Micdrop. Vos données restent en Europe, avec une stratégie de fallback.'
+summary: 'Intégrez Gradium, le TTS français issu de Kyutai, dans une application web avec Micdrop. Vos données passent par des serveurs européens, avec un fallback.'
 date: 2026-03-03
 author: godefroy
 image: ./thumbnail.jpg
@@ -19,18 +19,17 @@ keywords:
   - 'voice AI France'
 ---
 
-La synthèse vocale est un maillon critique de toute IA vocale. Mais quand vos données transitent par des serveurs américains soumis au Cloud Act, la question de la souveraineté se pose. **Gradium**, startup française issue du laboratoire Kyutai, propose un TTS de nouvelle génération avec hébergement européen et conformité RGPD native.
+De toutes les briques d'une IA vocale, la synthèse vocale est celle qui envoie le plus de contenu chez un tiers, phrase après phrase, pendant toute la conversation. Quand ce contenu transite par des serveurs américains soumis au Cloud Act, la souveraineté devient un sujet concret. [Gradium](https://gradium.ai), startup française issue du laboratoire [Kyutai](https://kyutai.org), propose un TTS avec des serveurs européens.
 
-Dans cet article, nous verrons comment intégrer Gradium dans une application web avec Micdrop, pourquoi la souveraineté des données est un enjeu majeur pour les IA vocales, et comment mettre en place une stratégie de fallback pour garantir la résilience de votre service.
-
+Le package `@micdrop/gradium` fait la connexion, la région européenne est le réglage par défaut, et un fournisseur de secours prend le relais en cas de panne.
 
 ## Qu'est-ce que Gradium ?
 
-[Gradium](https://gradium.ai) est une startup parisienne fondée par d'anciens chercheurs de Meta, Google DeepMind, Google Brain et Jane Street. Issue du laboratoire de recherche français [Kyutai](https://kyutai.org), elle a levé 70 millions de dollars en seed fin 2025 auprès de FirstMark Capital, Eurazeo et d'investisseurs comme Eric Schmidt et Yann LeCun.
+Gradium est une startup parisienne fondée par d'anciens chercheurs de Meta, Google DeepMind, Google Brain et Jane Street. Elle a levé 70 millions de dollars en seed fin 2025 auprès de FirstMark Capital, Eurazeo et d'investisseurs comme Eric Schmidt et Yann LeCun.
 
 Gradium développe des **modèles de langage audio-natifs** pour le text-to-speech et le speech-to-text en temps réel.
 
-### Caractéristiques clés
+### Les caractéristiques de Gradium
 
 | Caractéristique | Détail |
 |---|---|
@@ -42,21 +41,20 @@ Gradium développe des **modèles de langage audio-natifs** pour le text-to-spee
 | **Latence** | < 300 ms (time-to-first-byte) |
 | **Code-switching** | Changement de langue en milieu de phrase |
 
-### Pourquoi Gradium pour la souveraineté ?
+### Gradium et la souveraineté des données
 
-C'est le point central : Gradium est une **entreprise française**, soumise au droit européen, qui héberge ses données en Europe. Contrairement à ElevenLabs (New York) ou Cartesia (San Francisco), Gradium offre :
+Le siège de Gradium est à Paris, celui d'ElevenLabs à New York et celui de Cartesia à San Francisco. La différence se joue sur quatre points :
 
-- **Hébergement EU-first** : les données restent dans l'Union Européenne
-- **Zéro rétention de données** sur les plans Enterprise
-- **Cloud privé** : déploiement on-premise possible
-- **Conformité RGPD native** : pas de transfert vers des pays tiers
-- **Pas de Cloud Act** : les autorités américaines ne peuvent pas exiger l'accès à vos données
+- l'hébergement est européen par défaut, les données restent dans l'Union
+- les plans Enterprise fonctionnent sans conservation des données
+- un déploiement en cloud privé ou sur site reste possible
+- Gradium relève du droit européen plutôt que du Cloud Act
 
-Pour les entreprises, administrations, établissements de santé et acteurs de l'éducation, c'est un avantage décisif.
+Pour une administration, un établissement de santé ou une école, l'hébergement européen décide souvent du fournisseur retenu.
 
 ## Intégration avec Micdrop
 
-[Micdrop](https://micdrop.dev) est un framework TypeScript open source pour ajouter des conversations vocales IA dans les applications web. L'intégration de Gradium se fait en quelques lignes grâce au package `@micdrop/gradium`.
+[Micdrop](/) est un framework TypeScript open source pour ajouter des conversations vocales IA dans les applications web. Vous branchez Gradium en quelques lignes avec le package `@micdrop/gradium`.
 
 ### Installation
 
@@ -80,15 +78,15 @@ const tts = new GradiumTTS({
 new MicdropServer(socket, {
   tts,
   agent, // Votre agent LLM
-  stt,   // Votre provider STT
+  stt,   // Votre fournisseur STT
 })
 ```
 
-La région `eu` est la valeur par défaut : vos données ne quittent jamais l'Union Européenne sans action explicite de votre part.
+La région `eu` est la valeur par défaut, et le trafic Gradium reste dans l'Union jusqu'à ce que vous choisissiez la région US.
 
 ### Configuration avancée de la voix
 
-Gradium permet un contrôle fin de la génération vocale :
+Trois réglages contrôlent le rendu de la voix :
 
 ```typescript
 const tts = new GradiumTTS({
@@ -106,13 +104,13 @@ const tts = new GradiumTTS({
 
 ## La stack souveraine complète
 
-L'intérêt de Gradium se décuple quand on l'associe aux autres fournisseurs français pour construire une **stack IA vocale entièrement souveraine** :
+Gradium couvre la sortie audio. Avec deux autres fournisseurs européens, il forme une stack vocale qui reste en Europe :
 
 | Composant | Fournisseur | Rôle |
 |-----------|-------------|------|
-| **Agent (LLM)** | [Mistral](https://mistral.ai) | Modèle de langage français de classe mondiale |
+| **Agent (LLM)** | [Mistral](https://mistral.ai) | Modèle de langage français, entraîné et hébergé en Europe |
 | **Speech-to-Text** | [Gladia](https://gladia.io) | Transcription temps réel, 90+ langues |
-| **Text-to-Speech** | [Gradium](https://gradium.ai) | Synthèse vocale naturelle |
+| **Text-to-Speech** | [Gradium](https://gradium.ai) | Synthèse vocale, serveurs EU |
 
 ### Exemple complet
 
@@ -145,11 +143,11 @@ const tts = new GradiumTTS({
 new MicdropServer(socket, { agent, stt, tts })
 ```
 
-Avec cette configuration, **aucune donnée ne quitte l'Union Européenne**. Pas de Cloud Act, pas de transfert vers des pays tiers, conformité RGPD totale.
+Avec cette configuration, l'audio et le texte de la conversation restent chez des fournisseurs européens, hors du champ du Cloud Act. La conformité RGPD de l'ensemble dépend encore de votre hébergement et de vos contrats, Micdrop rend l'architecture possible et s'arrête là.
 
 ## Stratégie de fallback pour la résilience
 
-En production, la fiabilité est non négociable. Micdrop intègre un mécanisme de **fallback automatique** entre fournisseurs TTS. Si Gradium rencontre un problème, le système bascule automatiquement vers un provider de secours sans interruption pour l'utilisateur.
+Un fournisseur finit toujours par tomber. Micdrop embarque un fallback entre fournisseurs TTS. Si Gradium répond en erreur, le serveur bascule sur un fournisseur de secours et la conversation continue.
 
 ### TTS avec fallback
 
@@ -160,7 +158,7 @@ import { ElevenLabsTTS } from '@micdrop/elevenlabs'
 
 const tts = new FallbackTTS({
   factories: [
-    // Provider principal : Gradium (souverain)
+    // Fournisseur principal : Gradium (souverain)
     () =>
       new GradiumTTS({
         apiKey: process.env.GRADIUM_API_KEY || '',
@@ -168,7 +166,7 @@ const tts = new FallbackTTS({
         region: 'eu',
         maxRetry: 2,
       }),
-    // Backup : ElevenLabs
+    // Secours : ElevenLabs
     () =>
       new ElevenLabsTTS({
         apiKey: process.env.ELEVENLABS_API_KEY || '',
@@ -181,13 +179,13 @@ const tts = new FallbackTTS({
 
 Le `FallbackTTS` fonctionne ainsi :
 
-1. Il utilise le premier provider (Gradium) par défaut
+1. Il utilise le premier fournisseur (Gradium) par défaut
 2. Si Gradium échoue après ses retries, il **bufferise le texte** en cours
-3. Il bascule automatiquement sur ElevenLabs
-4. Le texte bufferisé est **rejoué** sur le nouveau provider
-5. L'utilisateur ne perçoit qu'une micro-interruption
+3. Il bascule sur ElevenLabs
+4. Le texte bufferisé est **rejoué** sur le nouveau fournisseur
+5. L'utilisateur perçoit une micro-interruption, et rien de plus
 
-Cette approche vous permet de **privilégier la souveraineté** au quotidien tout en garantissant la disponibilité du service.
+Vous gardez donc Gradium au quotidien, et la conversation tient les jours de panne. Le secours choisi ici sort de l'Union pendant ce temps. Prendre un second fournisseur européen garde la chaîne entière en Europe, au prix d'un catalogue de voix plus court.
 
 ## Comparaison avec les alternatives
 
@@ -202,25 +200,25 @@ Cette approche vous permet de **privilégier la souveraineté** au quotidien tou
 | **Streaming WebSocket** | Oui | Oui | Oui |
 | **Tarification** | Par caractère | Par caractère | Par caractère |
 
-ElevenLabs reste supérieur en nombre de langues supportées. Cartesia offre un clonage vocal plus rapide. Mais **aucun des deux ne peut garantir que vos données restent en Europe**.
+ElevenLabs reste devant sur le nombre de langues et Cartesia clone une voix à partir d'un extrait plus court. Les deux traitent par défaut vos données aux États-Unis.
 
 ## Cas d'usage
 
 ### Service public et administration
 
-Les administrations françaises soumises aux recommandations de l'ANSSI et de la CNIL peuvent déployer un assistant vocal sans dépendance aux GAFAM. Les données des citoyens restent sur le sol européen.
+L'ANSSI et la CNIL poussent les administrations vers des fournisseurs relevant du droit européen. Un assistant vocal ouvert aux citoyens se déploie alors avec des données qui restent en Europe.
 
 ### Santé et HDS
 
-Les données de santé exigent un hébergement HDS (Hébergeur de Données de Santé). Avec Gradium en région EU et un hébergement conforme, les données vocales des patients ne quittent jamais la France.
+Les données de santé exigent un hébergement HDS (Hébergeur de Données de Santé). Gradium en région EU se combine avec un hébergeur certifié sans rompre la chaîne, là où un TTS américain oblige à documenter un transfert hors Union.
 
 ### Entreprise et confidentialité
 
-Les conversations internes, les interactions avec les clients, les données stratégiques : tout reste en Europe. Pas de risque d'accès par des autorités étrangères.
+Les conversations internes et les échanges commerciaux touchent au secret des affaires. Les garder chez un fournisseur européen simplifie la cartographie des traitements que réclament les grands comptes.
 
 ### Éducation
 
-Les établissements scolaires peuvent proposer des outils d'IA vocale sans exposer les données des élèves à des entreprises extra-européennes.
+Un établissement scolaire traite les données d'élèves souvent mineurs, ce qui durcit ses obligations. Un TTS européen épargne au dossier un transfert extra-européen de plus.
 
 ## Pour aller plus loin
 
@@ -231,4 +229,4 @@ Les établissements scolaires peuvent proposer des outils d'IA vocale sans expos
 
 ---
 
-La souveraineté des données n'est plus un luxe, c'est une nécessité. Avec Gradium et Micdrop, vous pouvez construire une IA vocale de qualité professionnelle sans compromis sur la conformité RGPD. Et grâce au système de fallback, vous ne sacrifiez jamais la résilience au profit de la souveraineté.
+Gradium et Micdrop suffisent à garder la synthèse vocale chez un fournisseur européen, avec le code sur votre infrastructure et vos propres clés API. Installez `@micdrop/gradium`, choisissez une voix dans le catalogue Gradium, et le premier appel tourne dans la foulée.

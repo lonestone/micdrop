@@ -1,6 +1,6 @@
 ---
 title: 'Voice Activity Detection in the Browser'
-summary: 'Voice activity detection decides when someone is speaking. How volume thresholds, WebRTC VAD and Silero compare, and how to run VAD in a browser voice agent.'
+summary: 'Voice activity detection decides when someone is speaking. This post compares volume thresholds, WebRTC VAD and Silero, and shows how to tune one.'
 date: 2026-08-13
 author: godefroy
 image: ./thumbnail.jpg
@@ -18,7 +18,7 @@ similarPosts:
   - 'alternative-to-pipecat'
   - 'alternative-to-livekit-agents'
 takeaways:
-  - 'Voice activity detection classifies audio frame by frame as speech or silence. It opens the recording, closes it, and gives the assistant something to interrupt on.'
+  - 'Voice activity detection classifies audio frame by frame as speech or silence. It opens the recording, closes it, and gives the user a way to cut the assistant off.'
   - 'A volume threshold costs nothing and breaks in a noisy room. Silero is a 309K-parameter model that scores a 32 ms frame in under a millisecond.'
   - 'Confirming speech in two stages, with the first chunks queued instead of sent, makes a false positive free.'
   - 'A VAD hears silence, not the end of a sentence. Turn detection is a separate layer that reads the transcript.'
@@ -32,11 +32,11 @@ Get it wrong and the symptoms are immediate. The agent answers a door slam, or i
 
 Without a VAD, the browser has two options, and both are bad. Stream the microphone continuously and you pay a transcription bill for every minute of silence while your server has no idea when a question ends. Ask the user to press and hold a button and you have a walkie-talkie rather than a conversation.
 
-A VAD gives you the boundaries. It watches the microphone stream and emits two things worth acting on: speech started, speech ended. Everything the pipeline does hangs off those two moments.
+A VAD gives you the boundaries. It watches the microphone stream and emits two events: speech started, speech ended. Everything the pipeline does hangs off those two moments.
 
 - Recording opens when speech starts, so audio leaves the machine only while someone is talking.
 - The server knows an utterance is complete when speech ends, which is its cue to transcribe and answer.
-- Playback of the assistant stops the instant speech starts, which is what makes interruption possible.
+- Playback of the assistant stops as soon as speech is confirmed, which is what makes interruption possible.
 
 In [Micdrop](/docs/client), the browser package runs the VAD locally, resamples the microphone to 16 kHz PCM and pushes chunks over a WebSocket only between those two events. The server never receives the silence.
 
@@ -52,21 +52,21 @@ Three approaches dominate, and they sit at very different points on the cost cur
 
 The cheapest VAD compares loudness against a threshold. Take the microphone stream, run it through a Web Audio `AnalyserNode`, read the frequency data, keep the loudest bin and compare it with a value in decibels. Above the line is speech, below is silence.
 
-Micdrop's `VolumeVAD` does exactly that, with a 512-point FFT, a default threshold of -55 dBFS and a check every 100 ms. It skips the first four frequency bins, where fan noise and desk bumps live, and it requires two of the last three checks to sit above the threshold before it confirms. Those two details matter more than the algorithm itself, because a single spike stays a spike.
+Micdrop's `VolumeVAD` does exactly that, with a 512-point FFT, a default threshold of -55 dBFS and a check every 100 ms. It skips the first four frequency bins, where fan noise and desk bumps live, and it requires two of the last three checks to sit above the threshold before it confirms. Skipping those bins and requiring a repeat matter more than the algorithm itself, because a single spike stays a spike.
 
-This works well in a quiet room, costs nothing, and needs no download. It also has no idea what speech sounds like. A dog barking, a keyboard, a colleague two desks away, all of it clears the threshold.
+This works well in a quiet room, costs nothing, and needs no download. It also has no idea what speech sounds like. A dog barking, a keyboard, a chair scraping, all of it clears the threshold.
 
 ### WebRTC VAD
 
 The VAD shipped inside the WebRTC stack is a Gaussian mixture model that scores six frequency bands against trained speech and noise distributions. It takes 16-bit mono PCM at 8, 16, 32 or 48 kHz, in frames of exactly 10, 20 or 30 ms, and exposes four aggressiveness modes from 0 to 3, where higher numbers reject more and skip more real speech along the way.
 
-It is fast, tiny and battle-tested, and it is C code living in browser internals rather than an API the page can call. Using it from JavaScript means a WebAssembly build of the original module. The bigger catch is its age. It predates the modern speech models by more than a decade, and on café-level background noise it starts labelling ambient chatter as speech.
+It is fast and battle-tested, and it is C code living in browser internals rather than an API the page can call. Using it from JavaScript means a WebAssembly build of the original module. The bigger catch is its age. It predates the modern speech models by more than a decade, and on café-level background noise it starts labelling ambient chatter as speech.
 
 ### Silero
 
 Silero VAD is a small neural network, around 309K parameters, that reads a 512-sample frame (32 ms at 16 kHz) and returns a speech probability between 0 and 1. An LSTM state carries across frames, so the model hears context rather than isolated slices. One frame scores in under a millisecond on a single CPU thread, the weights are a couple of megabytes, the license is MIT, and the training covers a very wide range of languages.
 
-That combination is why it became the default choice for voice agents. It separates a human voice from a television, a fan or a passing truck, which no energy threshold can do.
+That combination is why it became the default choice for voice agents. It separates a human voice from a television, a fan or a passing truck, which no volume threshold can do.
 
 | Approach | What it measures | Download | Per-frame cost | Noisy room |
 |---|---|---|---|---|
@@ -78,7 +78,7 @@ That combination is why it became the default choice for voice agents. It separa
 
 The browser path goes through [`@ricky0123/vad-web`](https://github.com/ricky0123/vad), which wraps the Silero ONNX model and runs it with [ONNX Runtime Web](https://github.com/microsoft/onnxruntime/tree/main/js/web). Microphone audio is resampled to 16 kHz, sliced into 512-sample frames and scored by the wasm backend, off the main thread. The model and the runtime download once and sit in the browser cache afterwards.
 
-In Micdrop that is one option:
+Micdrop turns Silero on with one option:
 
 ```typescript
 import { Micdrop } from '@micdrop/client'
@@ -89,7 +89,7 @@ await Micdrop.start({
 })
 ```
 
-The interesting part is the four numbers underneath, which Micdrop exposes as constructor options:
+Four numbers control the behaviour, and Micdrop exposes them as constructor options:
 
 ```typescript
 import { Micdrop, SileroVAD } from '@micdrop/client'
@@ -106,7 +106,7 @@ await Micdrop.start({ url: 'wss://your-app.com/call', vad })
 
 Frames are the unit, so translate them into time before tuning anything. At 32 ms per frame, 8 frames of speech is 256 ms before a confirmation, and 20 redemption frames is 640 ms of silence before the utterance closes. Those 640 ms are the single largest chunk of perceived latency you control from the browser.
 
-The thresholds are deliberately low here. The upstream library defaults to 0.5, and Micdrop uses 0.18 because soft-spoken users get cut out at the higher value. A lower threshold buys more misfires, which the two-stage confirmation below absorbs at no cost.
+The thresholds are deliberately low here. The upstream library defaults to 0.5, and Micdrop uses 0.18 because soft-spoken users get cut out at the higher value. A lower threshold buys more misfires, which the two-stage confirmation absorbs at no cost.
 
 <Callout type="warning" title="Serving the wasm assets">
 ONNX Runtime Web needs its `.wasm` files reachable at runtime. Micdrop loads the vad-web assets from jsDelivr and the ONNX runtime from unpkg, because the runtime's `dist` folder exceeds the jsDelivr size limit and every file 404s from there. Self-host both if you would rather keep the call free of third-party requests.
@@ -116,13 +116,13 @@ ONNX Runtime Web needs its `.wasm` files reachable at runtime. Micdrop loads the
 
 Every VAD setting trades one failure for another. Raise the threshold and you stop reacting to the air conditioning, and you also stop hearing a quiet user. Shorten the silence window and the agent feels snappy right up to the moment it interrupts someone drawing breath.
 
-Two mechanisms make that trade less painful, and both live in how the events are wired rather than in the model.
+Micdrop softens that trade in the wiring of the events rather than in the model.
 
-Confirming in two stages is the first. Micdrop's VADs emit `StartSpeaking` for a maybe, then either `ConfirmSpeaking` or `CancelSpeaking`. Recording begins on the maybe, and the resulting chunks are queued in memory instead of being sent. If the confirmation arrives, the queue flushes to the server with the first syllable intact. If the cancellation arrives, the queue is dropped and nothing ever left the machine. A false positive costs a few kilobytes of RAM.
+Speech is confirmed in two stages. Micdrop's VADs emit `StartSpeaking` for a maybe, then either `ConfirmSpeaking` or `CancelSpeaking`. Recording begins on the maybe, and the resulting chunks are queued in memory instead of being sent. If the confirmation arrives, the queue flushes to the server with the first syllable intact. If the cancellation arrives, the queue is dropped and nothing ever left the machine. A false positive costs a few kilobytes of RAM.
 
-Delaying the recorded stream is the second, and it exists because detection always lags the sound that triggered it. A volume VAD checking every 100 ms notices the word 100 ms after it started, and by then the attack of the word is gone. Micdrop routes the recorded audio through a Web Audio `DelayNode` set to the detection interval, so what gets captured starts slightly before the moment of detection. Words keep their first consonant.
+Detection always lags the sound that triggered it, so Micdrop delays the recorded stream. A volume VAD checking every 100 ms notices the word 100 ms after it started, and by then the attack of the word is gone. Micdrop routes the recorded audio through a Web Audio `DelayNode` set to the detection interval, so what gets captured starts slightly before the moment of detection. Words keep their first consonant.
 
-You can also run two detectors at once, which is the setting worth trying when a single one keeps disappointing:
+Micdrop can run both detectors at once, which helps in a room where one alone keeps firing on noise:
 
 ```typescript
 await Micdrop.start({
@@ -131,19 +131,19 @@ await Micdrop.start({
 })
 ```
 
-The combination emits a maybe as soon as either detector fires, and confirms only when both agree. The volume threshold filters out distant voices that are too quiet to be aimed at the microphone, Silero filters out everything loud that is not human. The full option surface for both lives in the [VAD documentation](/docs/client/vad).
+The combination emits a maybe as soon as either detector fires, and confirms only when both agree. The volume threshold filters out distant voices too quiet to be aimed at the microphone, and Silero filters out everything loud that is not human.
 
 ## VAD and interruptions
 
 Barge-in is the feature that separates a conversation from a menu system, and the VAD is the only component in a position to deliver it. While the assistant is talking, the transcription pipeline has nothing to work with. Something has to be listening to raw microphone audio and willing to act on it within a few hundred milliseconds.
 
-In Micdrop the browser handles it without a server round trip. The moment speech is confirmed, playback stops locally, the processing state is cleared, and a message goes out telling the server to abandon the answer it was streaming. The cut lands immediately because it happens on the same machine as the ear that heard it.
+In Micdrop the browser handles it without a server round trip. The moment speech is confirmed, playback stops locally, the processing state is cleared, and a message goes out telling the server to abandon the answer it was streaming. The cut lands immediately because it happens on the machine holding the microphone.
 
-The failure mode here is echo. If the assistant's voice reaches the microphone through the speakers, the VAD hears speech and interrupts the agent with its own words, on loop. Micdrop asks `getUserMedia` for `echoCancellation` and `noiseSuppression`, which handles most laptop and phone setups. Loud external speakers can still defeat it, and headphones remain the reliable answer for a demo you cannot afford to have fail.
+The failure mode here is echo. If the assistant's voice reaches the microphone through the speakers, the VAD hears speech and interrupts the agent with its own words, on loop. Micdrop asks `getUserMedia` for `echoCancellation` and `noiseSuppression`, which handles most laptop and phone setups. Loud external speakers can still defeat it, and headphones remain the reliable answer for a demo that has to work.
 
 ## Where VAD stops and turn detection starts
 
-A VAD reports acoustics. It tells you sound stopped, and it has no opinion about whether the sentence was finished. Those two questions differ more than they look:
+A VAD reports acoustics. It tells you sound stopped, and it has no opinion about whether the sentence was finished:
 
 > "I'd like to book a flight to..."
 
@@ -151,7 +151,7 @@ The speaker paused to remember the city. Acoustically, this is a completed utter
 
 Longer silence windows push the problem around rather than solving it. Two seconds of tolerance for mid-sentence pauses makes every normal exchange feel two seconds slow.
 
-The fix lives one layer up, on the transcript rather than on the waveform. [Semantic turn detection](/docs/server/semantic-turn-detection) asks whether the text so far is a complete thought, and holds the answer back when it is not. Micdrop implements it as an agent option that emits a `SkipAnswer` event on an incomplete sentence:
+The fix sits one layer up, on the transcript rather than on the waveform. [Semantic turn detection](/docs/server/semantic-turn-detection) asks whether the text so far is a complete thought, and holds the answer back when it is not. Micdrop implements it as an agent option that emits a `SkipAnswer` event on an incomplete sentence:
 
 ```typescript
 const agent = new OpenaiAgent({
@@ -162,7 +162,7 @@ const agent = new OpenaiAgent({
 })
 ```
 
-The second option covers the other half of the problem. A VAD correctly identifies "hmm" as speech, because it is, and answering it wastes a full round trip. [Noise filtering](/docs/server/noise-filtering) drops those interjections before the agent replies to them.
+A VAD correctly identifies "hmm" as speech, because it is, and answering it wastes a full round trip. `autoIgnoreUserNoise` turns on [noise filtering](/docs/server/noise-filtering), which drops those interjections before the agent replies.
 
 Divide the responsibilities this way and each layer does what it is good at. The VAD decides when the microphone is worth recording, and the language model decides when the user is done talking.
 
@@ -182,9 +182,9 @@ Divide the responsibilities this way and each layer does what it is good at. The
 
 ## Getting started
 
-Voice activity detection is the least glamorous part of a voice agent and the one users feel first. A threshold that is too high loses quiet speakers, a silence window that is too long makes every answer feel sluggish, and a missing interruption path makes the agent feel deaf.
+Voice activity detection is the least glamorous part of a voice agent and the one users feel first. Too high a threshold loses quiet speakers, too long a silence window makes every answer feel sluggish, and an agent that cannot be cut off feels deaf.
 
-Micdrop ships both detectors, the two-stage confirmation and the interruption path in the browser package:
+Micdrop ships the volume and Silero detectors, the two-stage confirmation and the interruption path in the browser package:
 
 ```bash
 npm install @micdrop/client @micdrop/server
