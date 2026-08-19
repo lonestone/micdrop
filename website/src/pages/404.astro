@@ -7,7 +7,7 @@ const entry = await getEntry('pages', '404')
 const { Content } = await render(entry!)
 ---
 
-<BaseLayout title={entry!.data.title} description={entry!.data.description}>
+<BaseLayout title={entry!.data.title} titleBrand={entry!.data.titleBrand} description={entry!.data.description}>
   <div class="flex w-full flex-1 flex-col items-center justify-center px-6 text-center">
     <Content components={mdxComponents} />
   </div>

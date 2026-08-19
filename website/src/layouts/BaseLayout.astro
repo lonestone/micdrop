@@ -17,6 +17,8 @@ interface Props {
   description?: string
   /** `article` on blog posts, `website` everywhere else. */
   ogType?: 'website' | 'article'
+  /** Appends ` | <brand>` to the document title. */
+  titleBrand?: boolean
   image?: ImageMetadata
   keywords?: string[]
   /**
@@ -33,19 +35,16 @@ const {
   title,
   description = config.description,
   ogType = 'website',
+  titleBrand = true,
   image,
   keywords = [],
   bottomSpace = true,
   fullWidth = false,
 } = Astro.props
 
-// Index pages carry very short titles ("Blog", "Installation"), so the brand is
-// appended to give them a full document title. It is left out when the title
-// already names the brand, and when the suffix would push the title past the
-// ~60 characters a search result displays.
-const brandedTitle = `${title} | ${config.siteName}`
-const pageTitle =
-  title.includes(config.siteName) || brandedTitle.length > 60 ? title : brandedTitle
+// Very short titles ("Blog", "Installation") need the brand appended to read
+// as a full document title. Titles that already name it opt out.
+const pageTitle = titleBrand ? `${title} | ${config.siteName}` : title
 
 const canonicalPath = getCanonicalPath(Astro.url.pathname)
 const absoluteUrl = (path: string) => new URL(path, Astro.site).href

@@ -19,6 +19,9 @@ const docs = defineCollection({
     // Position among siblings. Numbered across the whole sidebar, so a group
     // sits where its first page sits.
     order: z.number().optional(),
+    // Set to false on titles that already name the brand, so the document
+    // title is not suffixed with it twice.
+    titleBrand: z.boolean().default(true),
   }),
 })
 
@@ -70,6 +73,7 @@ const pages = defineCollection({
     description: z.string().optional(),
     // Homepage and other full-bleed pages skip the prose container.
     fullWidth: z.boolean().default(false),
+    titleBrand: z.boolean().default(true),
   }),
 })
 

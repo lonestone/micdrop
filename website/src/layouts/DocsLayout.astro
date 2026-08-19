@@ -6,14 +6,16 @@ import Toc from '../components/Toc.astro'
 
 interface Props {
   title: string
+  /** Appends ` | <brand>` to the document title. */
+  titleBrand?: boolean
   description?: string
   headings: MarkdownHeading[]
 }
 
-const { title, description, headings } = Astro.props
+const { title, titleBrand = true, description, headings } = Astro.props
 ---
 
-<BaseLayout title={title} description={description} bottomSpace={false} fullWidth>
+<BaseLayout title={title} titleBrand={titleBrand} description={description} bottomSpace={false} fullWidth>
   <div class="flex min-h-[calc(100dvh-3.5rem)] w-full">
     <Sidebar />
     <div class="min-w-0 max-w-5xl flex-1 px-6 py-8 md:px-12">
