@@ -268,7 +268,8 @@ pas de backend.
   `DocsLayout`, `DocPage`) et `website/src/pages/`.
 - **Composants JSON-LD** : `website/src/components/JsonLd.astro` (émetteur générique).
   `BlogPost.astro` émet le `BlogPosting`, `Breadcrumb.astro` le `BreadcrumbList`, `FaqList.astro`
-  la `FAQPage`. Les tags Open Graph / Twitter sont dans `SocialPreview.astro`.
+  la `FAQPage`, `SiteJsonLd.astro` les `Organization` / `WebSite` / `SoftwareApplication` de la page
+  d'accueil. Les tags Open Graph / Twitter sont dans `SocialPreview.astro`.
 - **Navigation** : `website/src/navigation.ts` (header et footer), valeurs de marque dans
   `website/website.config.ts`.
 - **Redirections** : renommer ou supprimer une page implique une redirection, dans

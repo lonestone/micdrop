@@ -16,6 +16,8 @@ Micdrop provides a modular AI architecture allowing you to:
 - **Mix and match** providers for optimal cost and quality
 - **Build custom integrations** using abstract base classes
 
+Splitting transcription, the agent and the voice into three services is one of two architectures. The other sends audio straight to a speech-to-speech model such as [the OpenAI Realtime API](/blog/openai-realtime-api-vs-pipeline), where one connection comes with a fixed voice and a single provider.
+
 ## Provider Categories
 
 ### Provided Integrations
