@@ -17,6 +17,7 @@
     "dev:website": "pnpm --filter @micdrop/website dev",
     "dev:main": "concurrently -n \"server,client\" -c \"blue,green\" \"pnpm --filter server dev\" \"pnpm --filter client dev\"",
     "dev:demo": "concurrently -n \"demo-server,demo-client\" -c \"blue,yellow\" \"pnpm --filter demo-server dev\" \"pnpm --filter demo-client dev\"",
+    "dev:world": "pnpm --filter @micdrop/demo-world dev",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {

@@ -27,8 +27,9 @@ Micdrop is a set of open source Typescript packages to build real-time voice con
 
 ### Demo Applications
 
-- [`demo-client`](./packages/demo-client/README.md) - Example web application with React.
-- [`demo-server`](./packages/demo-server/README.md) - Example server with fastify.
+- [`demo-client`](./examples/demo-client/README.md) - Example web application with React.
+- [`demo-server`](./examples/demo-server/README.md) - Example server with fastify.
+- [`demo-world`](./examples/demo-world/README.md) - Immersive 3D demo where a newborn planet talks to you and reshapes itself as the conversation goes. Client and server in one folder, with a test page that runs the whole interface without a call.
 
 ## 🎥 Demo and technical details (video)
 
