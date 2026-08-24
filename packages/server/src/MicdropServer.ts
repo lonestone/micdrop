@@ -286,8 +286,17 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
       // LLM: Generate answer
       const stream = this.config.agent.answer()
 
-      // TTS: Generate answer audio
-      await this._speak(stream)
+      // TTS: Generate answer audio, unless there is nothing to say.
+      //
+      // An answer can be skipped after the fact: a tool with skipAnswer, or an
+      // onBeforeAnswer hook returning true, ends the stream without a word in
+      // it. Handing that empty stream to the TTS opens a synthesis request for
+      // nothing, and a provider that stamps each request (Gradium multiplexes
+      // this way) then drops the audio of the sentence still playing, so a
+      // skipped answer cuts the assistant off mid-word.
+      if (await hasContent(stream)) {
+        await this._speak(stream)
+      }
     } catch (error) {
       this.socket?.send(MicdropServerCommands.SkipAnswer)
       throw error
@@ -318,4 +327,30 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
     // Run TTS
     this.config.tts.speak(textStream)
   }
+}
+
+/**
+ * Resolves true as soon as the stream holds something to read, false if it ends
+ * without ever carrying anything.
+ *
+ * The chunk read to find out is put back, so the consumer that follows sees the
+ * whole stream from its first byte.
+ */
+function hasContent(stream: Readable): Promise<boolean> {
+  return new Promise((resolve) => {
+    const onReadable = () => {
+      const chunk = stream.read()
+      if (chunk === null) return
+      stream.unshift(chunk)
+      done(true)
+    }
+    const onEnd = () => done(false)
+    const done = (result: boolean) => {
+      stream.off('readable', onReadable)
+      stream.off('end', onEnd)
+      resolve(result)
+    }
+    stream.on('readable', onReadable)
+    stream.on('end', onEnd)
+  })
 }

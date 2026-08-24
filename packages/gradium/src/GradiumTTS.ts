@@ -23,6 +23,11 @@ export class GradiumTTS extends TTS {
   private socket?: WebSocket
   private initPromise!: Promise<void>
   private counter = 0
+  // Bumped by every speak() and every cancel(), so a request claimed late can
+  // tell whether it is still the one that should be heard. Kept apart from
+  // `counter`, which numbers the audio requests and must only move when there
+  // is something to synthesize.
+  private generation = 0
   private isProcessing = false
   private reconnectTimeout?: NodeJS.Timeout
   private textSent = ''
@@ -43,25 +48,44 @@ export class GradiumTTS extends TTS {
   }
 
   speak(textStream: Readable) {
-    this.counter++
-    const counter = this.counter
-    const clientReqId = counter.toString()
-    this.isProcessing = true
-    this.textSent = ''
-    this.textBuffer = ''
+    const generation = ++this.generation
+    let counter = 0
+    let clientReqId = ''
 
-    // Each speak() is its own multiplexed request: send a fresh setup stamped
-    // with the request's client_req_id before the first text chunk, so the
-    // server can bind the voice to this session. Multiplexing is required to
-    // reuse the connection across utterances (sequential mode only works for
-    // the first request on a socket). Queued here before any data handler can
-    // run, so the setup microtask precedes the first transcript microtask.
-    this.initPromise.then(() => {
-      if (counter !== this.counter) return
-      this.sendSetup(clientReqId)
-    })
+    // Claiming the request is deferred until there is something to say.
+    //
+    // Taking the next id right away would silence the utterance still playing,
+    // because incoming audio is matched against the current id and anything
+    // older is dropped. A stream that never carries a word, which is what an
+    // answer skipped by a tool or by onBeforeAnswer hands over, would then cut
+    // the assistant off mid-sentence for nothing.
+    const claimRequest = () => {
+      if (counter) return true
+      // Cancelled, or superseded by another speak(), before the first word.
+      if (this.generation !== generation) return false
+      this.counter++
+      counter = this.counter
+      clientReqId = counter.toString()
+      this.isProcessing = true
+      this.textSent = ''
+      this.textBuffer = ''
+
+      // Each speak() is its own multiplexed request: send a fresh setup stamped
+      // with the request's client_req_id before the first text chunk, so the
+      // server can bind the voice to this session. Multiplexing is required to
+      // reuse the connection across utterances (sequential mode only works for
+      // the first request on a socket). Queued from the first data handler
+      // before that handler awaits, so the setup microtask still precedes the
+      // first transcript microtask.
+      this.initPromise.then(() => {
+        if (counter !== this.counter) return
+        this.sendSetup(clientReqId)
+      })
+      return true
+    }
 
     textStream.on('data', async (chunk: Buffer) => {
+      if (!claimRequest()) return
       if (counter !== this.counter) return
       const text = chunk.toString('utf-8').replace(/[\r\n ]+/g, ' ')
       this.textSent += text
@@ -83,12 +107,15 @@ export class GradiumTTS extends TTS {
     })
 
     textStream.on('error', (error) => {
+      if (!counter) return
       this.log('Error in text stream, ending audio stream', error)
       this.isProcessing = false
     })
 
     textStream.on('end', async () => {
-      if (counter !== this.counter) return
+      // Nothing was ever said, so there is no request to close and no audio to
+      // wait for.
+      if (!counter || counter !== this.counter) return
       await this.initPromise
       if (counter !== this.counter) return
 
@@ -110,6 +137,7 @@ export class GradiumTTS extends TTS {
   }
 
   cancel() {
+    this.generation++
     if (!this.isProcessing) return
     this.log('Cancel')
     this.isProcessing = false

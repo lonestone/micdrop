@@ -53,12 +53,20 @@ export class MistralSTT extends STT {
   }
 
   transcribe(audioStream: Readable) {
-    // New utterance: a flush finalizes and resets the transcription context, so
-    // start from a clean transcript for this stream.
-    this.transcriptDelta = ''
+    let started = false
 
     // Read audio stream and send to Mistral
     audioStream.on('data', async (chunk: Buffer) => {
+      // New utterance: a flush finalizes and resets the transcription context,
+      // so start from a clean transcript for this stream, but only once it
+      // carries something. Voice detection opens a stream on any noise and many
+      // of them never carry a word, and clearing here rather than on entry
+      // keeps those from wiping the transcript of the utterance before, whose
+      // flush may still be on its way back.
+      if (!started) {
+        started = true
+        this.transcriptDelta = ''
+      }
       this.audioChunksPending.push(chunk)
       await this.initPromise
       this.sendAudioChunk(chunk)

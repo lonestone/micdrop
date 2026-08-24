@@ -13,6 +13,15 @@ const PREBUFFER_DURATION = 100 // ms
 // end-of-speech signal). Kept above providers' inter-chunk gaps so it does not
 // fire mid-utterance.
 const QUIET_FLUSH_DELAY = 600 // ms
+// How long everything scheduled has to stay finished before the utterance is
+// considered over and a fresh prebuffer is armed for the next one.
+//
+// Running out of scheduled audio is not the end of a sentence: a chunk that
+// arrives a few milliseconds late leaves the same silence, and there is no
+// end-of-speech signal to tell the two apart. Rearming immediately turns that
+// small hole into a long one, since the late chunk then has to wait for a whole
+// new prebuffer before it may be heard.
+const UTTERANCE_END_DELAY = 300 // ms
 
 export class Pcm16AudioStream extends AudioStream {
   private blobQueue: Blob[] = []
@@ -23,6 +32,7 @@ export class Pcm16AudioStream extends AudioStream {
   private prebuffer: AudioBuffer[] = []
   private prebufferDuration = 0
   private quietTimer?: ReturnType<typeof setTimeout>
+  private endTimer?: ReturnType<typeof setTimeout>
 
   constructor() {
     super()
@@ -76,6 +86,12 @@ export class Pcm16AudioStream extends AudioStream {
   // Accumulate audio until enough is buffered, then start playing. Once
   // playing, schedule incoming buffers directly.
   private handleBuffer(audioBuffer: AudioBuffer): void {
+    // Audio is still coming, so what just ran out was a hole, not an ending.
+    if (this.endTimer !== undefined) {
+      clearTimeout(this.endTimer)
+      this.endTimer = undefined
+    }
+
     if (!this.prebuffering) {
       this.scheduleBuffer(audioBuffer)
       return
@@ -110,6 +126,10 @@ export class Pcm16AudioStream extends AudioStream {
     if (this.quietTimer !== undefined) {
       clearTimeout(this.quietTimer)
       this.quietTimer = undefined
+    }
+    if (this.endTimer !== undefined) {
+      clearTimeout(this.endTimer)
+      this.endTimer = undefined
     }
     this.prebuffering = true
     this.prebuffer = []
@@ -164,12 +184,17 @@ export class Pcm16AudioStream extends AudioStream {
       const index = this.sourceNodes.indexOf(sourceNode)
       if (index !== -1) this.sourceNodes.splice(index, 1)
 
-      // If no more nodes playing and queue empty, playback is done.
-      // Re-arm prebuffering for the next utterance.
+      // Nothing left scheduled. That is the end of the utterance only if it
+      // stays that way, so the prebuffer is armed on a delay: a chunk arriving
+      // late is played straight away instead of waiting for a new one.
       if (this.sourceNodes.length === 0 && this.blobQueue.length === 0) {
         this.nextStartTime = 0
-        this.resetPrebuffer()
         this.setIsPlaying(false)
+        if (this.endTimer !== undefined) clearTimeout(this.endTimer)
+        this.endTimer = setTimeout(() => {
+          this.endTimer = undefined
+          this.resetPrebuffer()
+        }, UTTERANCE_END_DELAY)
       }
     }
 

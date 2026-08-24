@@ -28,6 +28,9 @@ export class ElevenLabsTTS extends TTS {
   private reconnectTimeout?: NodeJS.Timeout
   private retryCount = 0
   private canceled = false
+  // Bumped by every speak() and every cancel(), so a stream that starts late
+  // can tell whether it is still the one that should be heard.
+  private generation = 0
 
   constructor(private readonly options: ElevenLabsTTSOptions) {
     super()
@@ -39,15 +42,34 @@ export class ElevenLabsTTS extends TTS {
   }
 
   speak(textStream: Readable) {
-    this.canceled = false
-    this.isProcessing = true
-    this.textEnded = false
-    this.textBuffer = ''
-    this.textSent = ''
-    this.receivedAudioText = ''
+    const generation = ++this.generation
+    let started = false
+
+    // Taking over is deferred until there is something to say.
+    //
+    // These fields track the utterance being spoken right now, and the
+    // comparison between what was sent and what came back as audio is what
+    // says where it is. Resetting them for a stream that never carries a word,
+    // which is what an answer skipped by a tool or by onBeforeAnswer hands
+    // over, loses the state of a sentence still being spoken and flushes it
+    // for nothing.
+    const start = () => {
+      if (started) return true
+      // Cancelled, or superseded by another speak(), before the first word.
+      if (this.generation !== generation) return false
+      started = true
+      this.canceled = false
+      this.isProcessing = true
+      this.textEnded = false
+      this.textBuffer = ''
+      this.textSent = ''
+      this.receivedAudioText = ''
+      return true
+    }
 
     // Forward text chunks coming from the caller to ElevenLabs
     textStream.on('data', async (chunk: Buffer) => {
+      if (!start()) return
       if (this.canceled) return
       const text = chunk.toString('utf-8').replace(/[\r\n ]+/g, ' ')
       this.textSent += text
@@ -64,12 +86,14 @@ export class ElevenLabsTTS extends TTS {
     })
 
     textStream.on('error', (error) => {
+      if (!started) return
       this.log('Error in text stream, ending audio stream', error)
       this.isProcessing = false
     })
 
     textStream.on('end', async () => {
-      if (this.canceled) return
+      // Nothing was ever said, so there is nothing to flush.
+      if (!started || this.canceled) return
       await this.initPromise
       // Send last buffered text
       if (this.textBuffer.trim()) {
@@ -84,6 +108,7 @@ export class ElevenLabsTTS extends TTS {
   }
 
   cancel() {
+    this.generation++
     if (!this.isProcessing) return
     this.log('Cancel')
 

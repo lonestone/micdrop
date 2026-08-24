@@ -26,6 +26,11 @@ export class CartesiaTTS extends TTS {
   private socket?: WebSocket
   private initPromise: Promise<void>
   private counter = 0
+  // Bumped by every speak() and every cancel(), so a context claimed late can
+  // tell whether it is still the one that should be heard. Kept apart from
+  // `counter`, which numbers the audio contexts and must only move when there
+  // is something to synthesize.
+  private generation = 0
   private isProcessing = false
   private reconnectTimeout?: NodeJS.Timeout
   private textSent: string = '' // Store text chunks to send them again if reconnecting
@@ -42,13 +47,31 @@ export class CartesiaTTS extends TTS {
   }
 
   speak(textStream: Readable) {
-    this.counter++
-    const counter = this.counter
-    const context_id = counter.toString()
-    this.isProcessing = true
-    this.textSent = ''
+    const generation = ++this.generation
+    let counter = 0
+    let context_id = ''
+
+    // Claiming the context is deferred until there is something to say.
+    //
+    // Taking the next id right away would silence the utterance still playing,
+    // because incoming audio is matched against the current context and
+    // anything older is dropped. A stream that never carries a word, which is
+    // what an answer skipped by a tool or by onBeforeAnswer hands over, would
+    // then cut the assistant off mid-sentence for nothing.
+    const claimContext = () => {
+      if (counter) return true
+      // Cancelled, or superseded by another speak(), before the first word.
+      if (this.generation !== generation) return false
+      this.counter++
+      counter = this.counter
+      context_id = counter.toString()
+      this.isProcessing = true
+      this.textSent = ''
+      return true
+    }
 
     textStream.on('data', async (chunk: Buffer) => {
+      if (!claimContext()) return
       if (counter !== this.counter) return
       const text = chunk.toString('utf-8').replace(/[\r\n ]+/g, ' ')
       this.textSent += text
@@ -67,12 +90,14 @@ export class CartesiaTTS extends TTS {
     })
 
     textStream.on('error', (error) => {
+      if (!counter) return
       this.log('Error in text stream, ending audio stream', error)
       this.isProcessing = false
     })
 
     textStream.on('end', async () => {
-      if (counter !== this.counter) return
+      // Nothing was ever said, so there is no context to close.
+      if (!counter || counter !== this.counter) return
       await this.initPromise
       this.socket?.send(
         JSON.stringify({
@@ -86,6 +111,7 @@ export class CartesiaTTS extends TTS {
   }
 
   cancel() {
+    this.generation++
     if (!this.isProcessing) return
     this.log('Cancel')
     this.isProcessing = false

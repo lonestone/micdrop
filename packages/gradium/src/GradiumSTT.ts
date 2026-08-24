@@ -41,11 +41,19 @@ export class GradiumSTT extends STT {
   }
 
   transcribe(audioStream: Readable) {
-    // New utterance: start from a clean transcript for this stream
-    this.transcript = ''
+    let started = false
 
     // Read audio stream and send to Gradium
     audioStream.on('data', async (chunk: Buffer) => {
+      // New utterance: start from a clean transcript for this stream, but only
+      // once it carries something. Voice detection opens a stream on any noise
+      // and many of them never carry a word, and clearing here rather than on
+      // entry keeps those from wiping the transcript of the utterance before,
+      // whose flush may still be on its way back.
+      if (!started) {
+        started = true
+        this.transcript = ''
+      }
       this.audioChunksPending.push(chunk)
       await this.initPromise
       this.sendAudioChunk(chunk)
