@@ -6,8 +6,9 @@
  * keeps the fractional sample position continuous across chunks, so feeding a
  * stream chunk by chunk yields the same result as resampling it in one go.
  *
- * Used by OpenaiSTT (16kHz -> 24kHz, GA Realtime API requires >= 24kHz) and
- * OpenaiTTS (24kHz pcm output -> 16kHz expected by the Micdrop client).
+ * Providers use it to bridge their own rate with the 16kHz PCM16 the Micdrop
+ * client records and plays: OpenaiSTT (16kHz -> 24kHz, the GA Realtime API
+ * requires >= 24kHz), OpenaiTTS and KokoroTTS (24kHz output -> 16kHz).
  */
 export class Pcm16Resampler {
   private readonly step: number

@@ -14,6 +14,7 @@ Integrate speech-to-text, text-to-speech, and AI agents from multiple providers 
 Micdrop provides a modular AI architecture allowing you to:
 
 - **Mix and match** providers for optimal cost and quality
+- **Run everything locally**, with no API key and no data leaving your machine
 - **Build custom integrations** using abstract base classes
 
 Splitting transcription, the agent and the voice into three services is one of two architectures. The other sends audio straight to a speech-to-speech model such as [the OpenAI Realtime API](/blog/openai-realtime-api-vs-pipeline), where one connection comes with a fixed voice and a single provider.
@@ -30,17 +31,25 @@ Ready-to-use implementations for popular AI services:
 - **[OpenAI Whisper](./provided-integrations/openai)** - High-quality speech recognition
 - **[Mistral Voxtral](./provided-integrations/mistral)** - Real-time transcription
 - **[Gradium](./provided-integrations/gradium)** - Real-time transcription
+- **[Whisper](./provided-integrations/whisper)** - Local transcription, in your Node process
 
 **Text-to-Speech (TTS):**
 
 - **[ElevenLabs](./provided-integrations/elevenlabs)** - High-quality voice synthesis
 - **[Cartesia](./provided-integrations/cartesia)** - Low-latency streaming TTS
+- **[Kokoro](./provided-integrations/kokoro)** - Local voice, in your Node process, English only
+- **[Piper](./provided-integrations/piper)** - Local voice, around forty languages
 
 **AI Agents (LLM):**
 
 - **[AI SDK](./provided-integrations/ai-sdk)** - Universal provider using Vercel AI SDK
 - **[OpenAI](./provided-integrations/openai)** - GPT models for conversation
 - **[Mistral](./provided-integrations/mistral)** - Open-source and commercial LLMs
+
+### Running Locally
+
+The three parts above all have a local counterpart, so a whole conversation can
+run on your machine. Read the [local models guide](./local-models) to set it up.
 
 ### Custom Integrations
 
@@ -109,23 +118,35 @@ new MicdropServer(socket, {
 
 ### Speech-to-Text Comparison
 
-| Provider           | Latency | Languages | Cost | Best For                    |
-| ------------------ | ------- | --------- | ---- | --------------------------- |
-| **Gladia 🇫🇷**      | ~200ms  | 99+       | $    | General use, multilingual   |
-| **OpenAI Whisper** | ~300ms  | 57        | $$   | High accuracy, multilingual |
+| Provider            | Latency | Languages | Cost per hour | Best For                    |
+| ------------------- | ------- | --------- | ------------- | --------------------------- |
+| **Gladia 🇫🇷**       | ~200ms  | 99+       | $0.75         | General use, multilingual   |
+| **Gradium 🇫🇷**      | ~300ms  | 5         | $0.62         | French, EU data residency   |
+| **OpenAI Whisper**  | ~300ms  | 57        | $0.36         | High accuracy, multilingual |
+| **Whisper (local)** | ~440ms  | 99        | Free          | Privacy, no API key         |
 
 ### Text-to-Speech Comparison
 
-| Provider       | Latency | Quality   | Voices | Best For              |
-| -------------- | ------- | --------- | ------ | --------------------- |
-| **ElevenLabs** | ~400ms  | Excellent | 1000+  | High-quality voices   |
-| **Cartesia**   | ~150ms  | Good      | 50+    | Low-latency streaming |
+| Provider           | Latency | Quality   | Voices | Cost per hour | Best For                  |
+| ------------------ | ------- | --------- | ------ | ------------- | ------------------------- |
+| **ElevenLabs**     | ~400ms  | Excellent | 1000+  | $9.00         | High-quality voices       |
+| **Cartesia**       | ~150ms  | Good      | 50+    | $1.80         | Low-latency streaming     |
+| **Gradium 🇫🇷**     | ~300ms  | Excellent | 150+   | $2.60         | French, EU data residency |
+| **Kokoro (local)** | ~1000ms | Good      | 28     | Free          | Privacy, English only     |
+| **Piper (local)**  | ~390ms  | Fair      | 100+   | Free          | Privacy, forty languages  |
+
+Costs are the published list price of the entry paid plan in August 2026, per
+hour of audio generated or transcribed. Every provider charges less as the
+volume grows, and Gladia goes furthest with real-time transcription at $0.25 an
+hour on a commitment. The plans priced per character are converted at the 45,000
+characters an hour Gradium publishes for its own voices.
 
 ### AI Agent Comparison
 
-| Provider             | Speed  | Quality   | Cost | Best For               |
-| -------------------- | ------ | --------- | ---- | ---------------------- |
-| **AI SDK**           | Varies | Varies    | Varies | Universal compatibility, any model |
-| **OpenAI GPT-4**     | Medium | Excellent | $$$  | Complex reasoning      |
-| **OpenAI GPT-3.5**   | Fast   | Good      | $    | Simple conversations   |
-| **Mistral Large 🇫🇷** | Fast   | Excellent | $$   | Cost-effective quality |
+| Provider                      | Speed  | Quality   | Cost   | Best For                           |
+| ----------------------------- | ------ | --------- | ------ | ---------------------------------- |
+| **AI SDK**                    | Varies | Varies    | Varies | Universal compatibility, any model |
+| **OpenAI GPT-4**              | Medium | Excellent | $$$    | Complex reasoning                  |
+| **OpenAI GPT-3.5**            | Fast   | Good      | $      | Simple conversations               |
+| **Mistral Large 🇫🇷**          | Fast   | Excellent | $$     | Cost-effective quality             |
+| **Qwen3 4B Instruct (local)** | Fast   | Fair      | Free   | Privacy, no API key                |

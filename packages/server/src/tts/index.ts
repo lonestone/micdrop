@@ -1,3 +1,5 @@
-export * from './MockTTS'
-export * from './TTS'
 export * from './FallbackTTS'
+export * from './MockTTS'
+export * from './SentenceSplitter'
+export * from './SentenceTTS'
+export * from './TTS'

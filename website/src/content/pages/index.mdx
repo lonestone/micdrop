@@ -1,7 +1,7 @@
 ---
 title: 'Micdrop: TypeScript voice AI SDK for real-time web apps'
 titleBrand: false
-description: 'Add a real-time voice mode to your web app with a few lines of TypeScript. It runs on your own servers, with the agent, STT and TTS providers you pick.'
+description: 'Add a real-time voice mode to your web app with a few lines of TypeScript. It runs on your own servers, with hosted or local agent, STT and TTS providers.'
 fullWidth: true
 ---
 
@@ -11,7 +11,7 @@ fullWidth: true
   primaryLabel="Start Building (5 min)"
   primaryHref="/docs/getting-started"
   secondaryLabel="View on GitHub"
-  note="Free, open source (MIT). Bring your own API keys (BYOK)."
+  note="Free, open source (MIT). Bring your own API keys, or run the models on your own machine."
 />
 
 <HomeMain>
@@ -82,9 +82,28 @@ fullWidth: true
   />
 </PackageGroup>
 
+<PackageGroup
+  title="Local Models"
+  description="Transcription and voice that run inside your Node process. The audio stays on the machine."
+  variant="ai"
+>
+  <PackageLink
+    name="@micdrop/whisper"
+    href="/docs/ai-integration/provided-integrations/whisper"
+  />
+  <PackageLink
+    name="@micdrop/kokoro"
+    href="/docs/ai-integration/provided-integrations/kokoro"
+  />
+  <PackageLink
+    name="@micdrop/piper"
+    href="/docs/ai-integration/provided-integrations/piper"
+  />
+</PackageGroup>
+
   <PackageGroup
     title="Utilities"
-    description="React hooks and utilities for seamless frontend integration"
+    description="React hooks that re-render your components as the call state changes"
     variant="utility"
   >
     <PackageLink name="@micdrop/react" href="/docs/client/react-hooks" />
@@ -109,6 +128,11 @@ fullWidth: true
     ElevenLabs, Cartesia, Mistral, Gladia, and more. Build custom integrations
     using our abstract interfaces.
   </FeatureCard>
+  <FeatureCard title="Runs On Your Machine" icon="server">
+    The local packages run the speech models inside your Node process and the
+    agent on Ollama, so the whole conversation works offline, with no API key
+    and no audio leaving the machine.
+  </FeatureCard>
   <FeatureCard title="Developer Experience" icon="code">
     Built with TypeScript for excellent DX. Comprehensive documentation, React
     hooks, demo applications, and detailed examples to get you started quickly.
@@ -118,7 +142,7 @@ fullWidth: true
 <SovereignSection
   title="Build Sovereign Voice AI"
   intro="Micdrop is the perfect solution to build sovereign voice AI applications, especially in French. Combine European AI providers to keep your data and infrastructure fully within EU borders."
-  note="100% open-source stack. No data leaves the EU. Full GDPR compliance."
+  note="100% open-source stack. Your data stays in the EU, or on your own machine with local models. Full GDPR compliance."
   linkLabel="Learn more about sovereign voice AI"
   linkHref="/docs/ai-integration/sovereign-voice-ai"
 >
@@ -142,6 +166,13 @@ fullWidth: true
     href="/docs/ai-integration/provided-integrations/gradium"
   >
     French STT and TTS with natural voices
+  </ProviderCard>
+  <ProviderCard
+    name="Local models"
+    role="Agent, Speech-to-Text & Text-to-Speech"
+    href="/docs/ai-integration/local-models"
+  >
+    Whisper, Piper and Ollama on your own machine
   </ProviderCard>
 </SovereignSection>
 

@@ -1,19 +1,46 @@
 import { MicdropError, MicdropErrorCode, waitForParams } from '@micdrop/server'
 import { WebSocket } from 'ws'
 import { z } from 'zod'
+import { CallSelection } from './providers'
 
 // Required authorization param to start a call
 const AUTHORIZATION_KEY = '1234'
+
+// One of the three parts of a call, as picked in the client
+const providerSelectionSchema = z.object({
+  provider: z.string().optional(),
+  model: z.string().optional(),
+})
 
 // Params schema for the call
 export const callParamsSchema = z.object({
   authorization: z.string(),
   lang: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/),
+  // The automatic prompts, ticked in the client. Absent means the defaults.
+  auto: z
+    .object({
+      autoEndCall: z.boolean().optional(),
+      autoSemanticTurn: z.boolean().optional(),
+      autoIgnoreUserNoise: z.boolean().optional(),
+    })
+    .optional(),
+  // Absent when the client did not read the catalog, the server then falls
+  // back to the providers it considers its defaults
+  providers: z
+    .object({
+      agent: providerSelectionSchema.optional(),
+      stt: providerSelectionSchema.optional(),
+      tts: providerSelectionSchema.optional(),
+    })
+    .optional(),
 })
 export type CallParams = z.infer<typeof callParamsSchema>
 
 // Optional, only if we want to check authorization and/or get other params
-export async function checkParams(socket: WebSocket) {
+export async function checkParams(socket: WebSocket): Promise<{
+  lang: string
+  selection: CallSelection
+}> {
   // Get params from first message
   const params = await waitForParams(socket, callParamsSchema.parse)
   if (params.authorization !== AUTHORIZATION_KEY) {
@@ -25,5 +52,6 @@ export async function checkParams(socket: WebSocket) {
 
   return {
     lang: params.lang,
+    selection: { ...params.providers, auto: params.auto },
   }
 }

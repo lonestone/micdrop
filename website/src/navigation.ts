@@ -62,6 +62,24 @@ export const footerNav: { title: string; links: NavLink[] }[] = [
     ],
   },
   {
+    title: 'Local Models',
+    links: [
+      { label: 'Running Locally', href: '/docs/ai-integration/local-models' },
+      {
+        label: 'Whisper',
+        href: '/docs/ai-integration/provided-integrations/whisper',
+      },
+      {
+        label: 'Kokoro',
+        href: '/docs/ai-integration/provided-integrations/kokoro',
+      },
+      {
+        label: 'Piper',
+        href: '/docs/ai-integration/provided-integrations/piper',
+      },
+    ],
+  },
+  {
     title: 'More',
     links: [
       { label: 'Blog', href: '/blog' },

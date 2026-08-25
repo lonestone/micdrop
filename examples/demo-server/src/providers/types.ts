@@ -1,0 +1,93 @@
+/**
+ * Description of the providers the demo can assemble a call from.
+ *
+ * The same catalog serves two purposes: the client reads it to fill the three
+ * selects at the top of the page, and the server reads it to build the agent,
+ * the speech to text and the text to speech the client picked. Adding a
+ * provider therefore means adding one entry, nothing else.
+ */
+
+export interface ModelOption {
+  id: string
+  label: string
+  /**
+   * Language this model or voice speaks, when it only speaks one. The call
+   * uses it as the language of the conversation, so picking a French voice
+   * makes the agent answer in French.
+   */
+  language?: string
+}
+
+/**
+ * The prompts Micdrop adds to every turn, each one costing a tool call the
+ * model has to answer. A small model handles them less reliably than a hosted
+ * one, so the demo lets them be turned off from the client to see the
+ * difference rather than editing the code.
+ */
+export interface AutoOptions {
+  autoEndCall: boolean
+  autoSemanticTurn: boolean
+  autoIgnoreUserNoise: boolean
+}
+
+export const DEFAULT_AUTO_OPTIONS: AutoOptions = {
+  autoEndCall: true,
+  autoSemanticTurn: true,
+  autoIgnoreUserNoise: true,
+}
+
+export interface ProviderContext {
+  lang: string
+  model?: string
+  /** Only read by the agents, the other registries ignore it. */
+  auto: AutoOptions
+}
+
+export interface ProviderDefinition<T> {
+  label: string
+  /** Shown next to the name in the select, to tell the options apart. */
+  description?: string
+  /** Environment variables without which the provider cannot run. */
+  requiredEnv?: string[]
+  /** Extra condition, for a provider needing more than an API key. */
+  isAvailable?: () => boolean | Promise<boolean>
+  /** Models or voices offered for this provider, possibly looked up at runtime. */
+  models?: ModelOption[] | (() => ModelOption[] | Promise<ModelOption[]>)
+  /** Model used when the client picked the provider but no model. */
+  defaultModel?: string
+  create: (context: ProviderContext) => T
+}
+
+export type ProviderRegistry<T> = Record<string, ProviderDefinition<T>>
+
+/** What the client receives for one provider. */
+export interface ProviderInfo {
+  id: string
+  label: string
+  description?: string
+  available: boolean
+  missingEnv: string[]
+  models: ModelOption[]
+  defaultModel?: string
+}
+
+/** What the client receives for one of the three parts of a call. */
+export interface PartCatalog {
+  providers: ProviderInfo[]
+  defaultProvider: string
+}
+
+export interface Catalog {
+  agent: PartCatalog
+  stt: PartCatalog
+  tts: PartCatalog
+}
+
+/** What the client sends back when it starts a call. */
+export interface ProviderSelection {
+  provider?: string
+  model?: string
+}
+
+/** The automatic prompts as the client sends them, all of them optional. */
+export type AutoSelection = Partial<AutoOptions>

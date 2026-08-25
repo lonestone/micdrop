@@ -1,0 +1,257 @@
+---
+title: 'Local Models'
+description: 'Run the whole Micdrop pipeline on your own machine, with no API key and no data leaving it.'
+order: 51
+---
+
+# Local Models
+
+Micdrop splits a call into an agent, a transcription and a voice, and each one
+has a local counterpart. Run them all locally and the whole conversation stays
+on your machine, with no API key and no network call.
+
+This page walks through a complete local setup, the models worth picking, what
+it costs in latency and memory, and where the sharp edges are.
+
+## What runs locally
+
+| Part           | Package                                             | Runs                                           |
+| -------------- | --------------------------------------------------- | ---------------------------------------------- |
+| Agent          | [@micdrop/ai-sdk](./provided-integrations/ai-sdk)   | Any local server speaking the OpenAI protocol  |
+| Speech to text | [@micdrop/whisper](./provided-integrations/whisper) | Whisper, in your Node process                  |
+| Text to speech | [@micdrop/kokoro](./provided-integrations/kokoro)   | Kokoro, in your Node process, English only     |
+| Text to speech | [@micdrop/piper](./provided-integrations/piper)     | Piper, as a subprocess, around forty languages |
+
+The transcription and the English voice need nothing beyond an npm install:
+they download their weights on first use and run inside Node. The LLM needs a
+server such as [Ollama](https://ollama.com), and Piper needs its binary.
+
+## Setting it up
+
+Install Ollama and pull a model:
+
+```bash
+brew install ollama
+brew services start ollama
+ollama pull qwen3:4b-instruct
+```
+
+Pulling a model talks to the Ollama daemon, so the daemon has to be up first.
+`brew services start` puts it in the background and keeps it across reboots.
+Running `ollama serve` works too, in a terminal of its own, since it holds the
+one it runs in.
+
+<Callout type="warning">
+  Pick a variant without reasoning. `qwen3:4b`, the default tag, writes nine
+  hundred to fifteen hundred tokens of reflection before answering, which took
+  between ninety and a hundred and twenty seconds per turn on an Apple M3.
+  Neither `/no_think` in the prompt nor Ollama's `think` flag removes it: the
+  flag only stops the reflection from being separated out, so it lands in the
+  answer and gets spoken. The `-instruct` tags answer directly.
+</Callout>
+
+Install the Micdrop packages:
+
+```bash
+npm install @micdrop/ai-sdk @micdrop/whisper @micdrop/kokoro @ai-sdk/openai
+```
+
+Then assemble the call:
+
+```typescript
+import { createOpenAI } from '@ai-sdk/openai'
+import { AiSdkAgent } from '@micdrop/ai-sdk'
+import { KokoroTTS } from '@micdrop/kokoro'
+import { MicdropServer } from '@micdrop/server'
+import { WhisperSTT } from '@micdrop/whisper'
+
+// Ollama serves the OpenAI protocol on /v1
+const ollama = createOpenAI({
+  baseURL: 'http://localhost:11434/v1',
+  apiKey: 'ollama', // Unused, the SDK refuses to start without one
+})
+
+new MicdropServer(socket, {
+  // .chat() rather than the provider itself: the default of the OpenAI
+  // provider is the Responses API, which a local server does not serve
+  agent: new AiSdkAgent({
+    model: ollama.chat('qwen3:4b-instruct'),
+    systemPrompt: 'You are a helpful voice assistant.',
+  }),
+
+  stt: new WhisperSTT({
+    model: 'base',
+    language: 'en',
+  }),
+
+  tts: new KokoroTTS({
+    voice: 'britishFemale',
+  }),
+})
+```
+
+LM Studio and the llama.cpp server answer on the same routes, so pointing
+`baseURL` at their port runs them instead of Ollama.
+
+## Choosing the LLM
+
+Micdrop asks the model for tool calls on every turn when
+[auto end call](../server/auto-end-call),
+[semantic turn detection](../server/semantic-turn-detection) and
+[noise filtering](../server/noise-filtering) are on, so function calling
+matters more here than raw writing quality.
+
+| Model                 | Size in `Q4` | Notes                                                           |
+| --------------------- | ------------ | --------------------------------------------------------------- |
+| **Qwen3 4B Instruct** | ~2.5 GB      | Best balance of tool calling, latency and multilingual coverage |
+| Qwen3 8B Instruct     | ~5 GB        | Better conversation, still comfortable next to the voice models |
+| Ministral 8B          | ~5 GB        | Strong in French, check its license for commercial use          |
+| Gemma 3 4B            | ~3 GB        | Very good at writing, but no native tool call format            |
+
+Llama 3.2 3B is tempting for its size, though its function calling gets shaky
+on the long system prompts Micdrop builds.
+
+### What a small model gets wrong
+
+Running the automatic prompts against Qwen3 4B Instruct, over three
+identical conversations on an Apple M3:
+
+- Noise filtering fired every time on a meaningless `"euh"`, so
+  `autoIgnoreUserNoise` can be trusted.
+- Ending the call never fired on `"Merci, au revoir !"`, so `autoEndCall` needs
+  a fallback such as a goodbye button or a silence timeout. The reasoning
+  variant of the same model did catch it, which says the miss comes from
+  answering in one pass rather than from the model being small.
+- The answer wrote `"23 heures 41 minutes 35 secondes"` in digits despite the
+  system prompt asking for numbers written in full, which the voice then reads
+  out inconsistently.
+
+Turn the automatic prompts off one at a time when the assistant misbehaves, to
+see which one the model mishandles.
+
+## Latency
+
+Measured on an Apple M3 with 24 GB of memory, on CPU, with the models already
+loaded:
+
+| Step                                     | Time           |
+| ---------------------------------------- | -------------- |
+| Whisper `base` on a 3 second sentence    | ~440 ms        |
+| Whisper `french` on a 3 second sentence  | ~1100 ms       |
+| First token from Qwen3 4B Instruct       | ~80 ms         |
+| First token when a tool call is answered | 740 to 1200 ms |
+| First sentence from Kokoro               | 900 to 1300 ms |
+| First sentence from Piper                | ~390 ms        |
+
+A local call therefore answers in about one second with Piper, and closer to
+two with Kokoro. A turn where the model answers one of the automatic prompts
+pays a second pass, and that pass costs more than the transcription and the
+voice put together.
+
+Keeping the models loaded between turns recovers most of the difference, which
+Micdrop does by sharing one instance per configuration and Ollama does through
+its `keep_alive`. Letting the warm-up run at startup covers the rest, so the
+first inference cost lands while the call is being set up rather than on the
+first sentence the user hears.
+
+## Why the GPU is barely used
+
+The language model already runs on it. Ollama uses Metal on a Mac and CUDA on a
+machine with an NVIDIA card, and `ollama ps` says `100% GPU` while a call is in
+progress. Since the model is by far the heaviest part of a call, most of the
+work is on the GPU already.
+
+Transcription and the voice are the ones staying on the CPU, and that is a
+limitation of the runtime rather than a choice:
+
+- Transformers.js declares no GPU device on macOS. Windows gets DirectML and
+  Linux on x64 gets CUDA, both reachable through the `device` option of
+  `WhisperSTT` and `KokoroTTS`, but macOS gets nothing.
+- The CoreML provider is compiled into the ONNX Runtime that ships with Node
+  and can be reached directly, so it was measured rather than assumed. On the
+  encoder of the `french` checkpoint, on an Apple M3:
+
+| Provider           | Encoder | Session load |
+| ------------------ | ------- | ------------ |
+| cpu                | 586 ms  | 207 ms       |
+| coreml             | 1728 ms | 14552 ms     |
+| coreml `MLProgram` | 2975 ms | 12655 ms     |
+
+CoreML is three to five times slower, and pays another twelve seconds
+compiling the model when the session opens. The reason is in its own log:
+it covers 577 of the 873 nodes of the graph and splits it into 88 partitions,
+so the run spends its time copying tensors back and forth across those
+boundaries instead of computing.
+
+- WebGPU, which is the fast path Transformers.js uses in a browser, does not
+  exist in Node, with or without a flag.
+
+So the CPU is the right answer on a Mac today, and quantized weights on the CPU
+are the fastest combination measured, which is why `q8` is the default. On
+Linux with an NVIDIA card, passing `device: 'cuda'` is worth trying.
+
+`src/tests/onnx-device-bench.ts` in the demo server runs this comparison
+against any encoder from the Transformers.js cache, which is the way to check
+what a different machine does.
+
+Piper is in the same position for a different reason: its command line offers
+`--cuda` and nothing for Metal. It is fast enough that this rarely matters,
+since almost all of its cost is loading the voice once.
+
+## Memory
+
+Qwen3 4B in `Q4`, Whisper `base` and Kokoro together take around 4 GB
+including the key value cache, which leaves plenty of room on a 16 GB machine
+and is comfortable on 24 GB. The binding constraint is latency, not memory, so
+spending the spare memory on a larger LLM is usually a better trade than on a
+larger transcription model.
+
+## Languages
+
+Kokoro only speaks English, since `kokoro-js` phonemizes every input with the
+English rules. Piper covers around forty languages including French, at the
+cost of installing its binary and downloading a voice.
+
+Whisper is multilingual in every size, though the smaller models lose accuracy
+outside English badly enough to matter: `base` misreads a quarter of the words
+of a French sentence. Reach for a checkpoint fine-tuned on the language rather
+than for a heavier generic one. The `french` shorthand costs what `small` costs
+and reads French better than `turbo`, which is four times heavier, and it
+writes numbers in words rather than in digits, which is what the voice needs.
+
+Pass `language` explicitly when the call has a known language, which saves the
+detection pass and avoids a wrong guess on a short sentence.
+
+Kyutai publishes streaming speech to text models that cover French and English
+well, and they would remove the fixed cost Whisper pays by always reading
+thirty seconds of audio. They have no ONNX export, so running them means a
+Python or Rust server next to Node rather than an npm install, which is why
+they are not integrated here.
+
+<Callout type="tip">
+  The voice and the agent have to agree. Pairing an English voice with an agent
+  writing French produces French words read with English phonemes, which is
+  unintelligible. Make the system prompt name the same language as the voice.
+</Callout>
+
+## First run
+
+Whisper and Kokoro download their weights on first use, from 45 MB for
+`whisper-tiny` to 850 MB for `whisper-large-v3-turbo`. Pulling an LLM is
+heavier still. Warm the whole stack once before a demo rather than discovering
+the download while somebody is watching.
+
+## Licenses
+
+Whisper is MIT, Kokoro is Apache 2.0, Piper is MIT and Qwen3 is Apache 2.0, so
+every model named here is usable commercially. Voice cloning models are where
+the restrictions usually hide: XTTS-v2 for instance is released under a non
+commercial license.
+
+## Trying it
+
+The demo in `examples/demo-server` and `examples/demo-client` exposes every
+provider in the selects at the top of the page, local ones included. A
+provider whose key is missing or whose binary is not installed appears greyed
+out rather than failing once the call has started, which makes it a quick way
+to compare a local stack with a hosted one on the same conversation.

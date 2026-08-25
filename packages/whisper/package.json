@@ -1,0 +1,49 @@
+{
+  "name": "@micdrop/whisper",
+  "version": "1.0.0",
+  "description": "Local Whisper speech to text for @micdrop/server",
+  "author": "Godefroy de Compreignac",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Godefroy/micdrop.git",
+    "directory": "packages/whisper"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "microphone",
+    "audio",
+    "voice",
+    "conversation",
+    "whisper",
+    "local",
+    "offline",
+    "stt"
+  ],
+  "dependencies": {
+    "@huggingface/transformers": "^3.5.1"
+  },
+  "peerDependencies": {
+    "@micdrop/server": ">=2.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.13",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}

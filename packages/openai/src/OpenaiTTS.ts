@@ -1,8 +1,7 @@
-import { TTS } from '@micdrop/server'
+import { Pcm16Resampler, SentenceSplitter, TTS } from '@micdrop/server'
 import OpenAI from 'openai'
 import { Readable } from 'stream'
 import { OpenaiOptions } from './OpenaiAgent'
-import { Pcm16Resampler } from './utils/Pcm16Resampler'
 
 /**
  * OpenAI Text-to-Speech
@@ -61,7 +60,7 @@ export class OpenaiTTS extends TTS {
   // `counter`, which numbers the synthesis calls and must only move when there
   // is something to synthesize.
   private generation = 0
-  private buffer = '' // Incomplete sentence waiting for more text
+  private splitter = new SentenceSplitter()
   private queue: QueueItem[] = [] // Sentences whose synthesis has not started
   private pending: PendingItem[] = [] // Requests in flight, in speaking order
   private cushion: Buffer[] = [] // Opening audio held back, see OPENING_CUSHION
@@ -95,7 +94,7 @@ export class OpenaiTTS extends TTS {
       if (this.generation !== generation) return false
       this.counter++
       counter = this.counter
-      this.buffer = ''
+      this.splitter.reset()
       this.cushion = []
       this.cushionBytes = 0
       return true
@@ -104,8 +103,9 @@ export class OpenaiTTS extends TTS {
     textStream.on('data', (chunk: Buffer) => {
       if (!claimCall()) return
       if (counter !== this.counter) return
-      this.buffer += chunk.toString('utf-8')
-      this.flushSentences(counter, false)
+      for (const sentence of this.splitter.push(chunk.toString('utf-8'))) {
+        this.enqueue(counter, sentence)
+      }
     })
 
     textStream.on('error', (error) => {
@@ -115,7 +115,9 @@ export class OpenaiTTS extends TTS {
     textStream.on('end', () => {
       // Nothing was ever said, so there is nothing left to flush.
       if (!counter || counter !== this.counter) return
-      this.flushSentences(counter, true)
+      for (const sentence of this.splitter.flush()) {
+        this.enqueue(counter, sentence)
+      }
     })
   }
 
@@ -124,36 +126,13 @@ export class OpenaiTTS extends TTS {
     this.log('Cancel')
     // Increment counter to ignore in-flight and queued work
     this.counter++
-    this.buffer = ''
+    this.splitter.reset()
     this.queue = []
     this.pending = []
     this.cushion = []
     this.cushionBytes = 0
     this.abortControllers.forEach((controller) => controller.abort())
     this.abortControllers.clear()
-  }
-
-  // Extract complete sentences from the buffer and enqueue them.
-  // On `end`, whatever remains in the buffer is flushed as a last sentence.
-  private flushSentences(counter: number, end: boolean) {
-    const regex = /[\s\S]*?[.!?…\n]+(?=\s|$)/g
-    let match: RegExpExecArray | null
-    let lastIndex = 0
-    while ((match = regex.exec(this.buffer)) !== null) {
-      // A sentence ending at the very end of an unfinished stream may still
-      // grow, so keep it buffered until more text arrives or the stream ends.
-      if (!end && regex.lastIndex === this.buffer.length) break
-      const sentence = match[0].trim()
-      if (sentence) this.enqueue(counter, sentence)
-      lastIndex = regex.lastIndex
-    }
-    this.buffer = this.buffer.slice(lastIndex)
-
-    if (end) {
-      const rest = this.buffer.trim()
-      if (rest) this.enqueue(counter, rest)
-      this.buffer = ''
-    }
   }
 
   private enqueue(counter: number, text: string) {

@@ -1,7 +1,6 @@
-import { STT } from '@micdrop/server'
+import { Pcm16Resampler, STT } from '@micdrop/server'
 import { Readable } from 'stream'
 import WebSocket from 'ws'
-import { Pcm16Resampler } from './utils/Pcm16Resampler'
 
 /**
  * OpenAI Real-time STT

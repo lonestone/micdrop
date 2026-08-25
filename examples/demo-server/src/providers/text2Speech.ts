@@ -1,0 +1,148 @@
+import { CartesiaLanguage, CartesiaTTS } from '@micdrop/cartesia'
+import { ElevenLabsTTS } from '@micdrop/elevenlabs'
+import { GradiumTTS } from '@micdrop/gradium'
+import { KOKORO_VOICE_IDS, KokoroTTS } from '@micdrop/kokoro'
+import { OpenaiTTS } from '@micdrop/openai'
+import { PiperTTS } from '@micdrop/piper'
+import { FallbackTTS, MockTTS, TTS } from '@micdrop/server'
+import { existsSync, readdirSync } from 'fs'
+import path from 'path'
+import { ModelOption, ProviderRegistry } from './types'
+
+// Where the Piper voices were downloaded, see the README of @micdrop/piper
+const PIPER_VOICES_DIR =
+  process.env.PIPER_VOICES_DIR || path.join(__dirname, '../../voices')
+
+/**
+ * Piper voices found on disk.
+ *
+ * A voice is a pair of files named after its language and its speaker, such as
+ * `fr_FR-siwis-medium.onnx`, so the locale comes straight from the file name.
+ */
+function listPiperVoices(): ModelOption[] {
+  if (!existsSync(PIPER_VOICES_DIR)) return []
+  return readdirSync(PIPER_VOICES_DIR)
+    .filter((file) => file.endsWith('.onnx'))
+    .map((file) => {
+      const name = file.replace(/\.onnx$/, '')
+      const [locale] = name.split('-')
+      return {
+        id: file,
+        label: name,
+        language: locale.replace('_', '-'),
+      }
+    })
+}
+
+const text2speech: ProviderRegistry<TTS> = {
+  mock: {
+    label: 'Mock',
+    description: 'Recorded chunks, no model called',
+    create: () =>
+      new MockTTS([
+        path.join(__dirname, '../../../demo-client/public/chunk-1.wav'),
+        path.join(__dirname, '../../../demo-client/public/chunk-2.wav'),
+      ]),
+  },
+
+  elevenlabs: {
+    label: 'ElevenLabs',
+    requiredEnv: ['ELEVENLABS_API_KEY', 'ELEVENLABS_VOICE_ID'],
+    create: () =>
+      new ElevenLabsTTS({
+        apiKey: process.env.ELEVENLABS_API_KEY || '',
+        voiceId: process.env.ELEVENLABS_VOICE_ID || '',
+        modelId: 'eleven_flash_v2_5',
+      }),
+  },
+
+  cartesia: {
+    label: 'Cartesia',
+    requiredEnv: ['CARTESIA_API_KEY', 'CARTESIA_VOICE_ID'],
+    create: ({ lang }) =>
+      new CartesiaTTS({
+        apiKey: process.env.CARTESIA_API_KEY || '',
+        modelId: 'sonic-turbo',
+        voiceId: process.env.CARTESIA_VOICE_ID || '',
+        language: lang.split('-')[0] as CartesiaLanguage,
+      }),
+  },
+
+  gradium: {
+    label: 'Gradium',
+    requiredEnv: ['GRADIUM_API_KEY', 'GRADIUM_VOICE_ID'],
+    create: () =>
+      new GradiumTTS({
+        apiKey: process.env.GRADIUM_API_KEY || '',
+        voiceId: process.env.GRADIUM_VOICE_ID || '',
+      }),
+  },
+
+  openai: {
+    label: 'OpenAI',
+    requiredEnv: ['OPENAI_API_KEY'],
+    models: [
+      { id: 'alloy', label: 'alloy' },
+      { id: 'ash', label: 'ash' },
+      { id: 'ballad', label: 'ballad' },
+      { id: 'coral', label: 'coral' },
+      { id: 'echo', label: 'echo' },
+      { id: 'sage', label: 'sage' },
+      { id: 'shimmer', label: 'shimmer' },
+      { id: 'verse', label: 'verse' },
+    ],
+    defaultModel: 'alloy',
+    create: ({ model }) =>
+      new OpenaiTTS({
+        apiKey: process.env.OPENAI_API_KEY || '',
+        model: 'gpt-4o-mini-tts-2025-12-15',
+        voice: model,
+      }),
+  },
+
+  // Local, English only: kokoro-js phonemizes every input as English
+  kokoro: {
+    label: 'Kokoro',
+    description: 'Local, English only',
+    models: KOKORO_VOICE_IDS.map((id) => ({
+      id,
+      label: id,
+      language: id.startsWith('b') ? 'en-GB' : 'en-US',
+    })),
+    defaultModel: 'af_heart',
+    create: ({ model }) => new KokoroTTS({ voice: model }),
+  },
+
+  // Local, many languages, needs the piper binary and the voice files
+  piper: {
+    label: 'Piper',
+    description: 'Local, needs the piper binary',
+    isAvailable: () => listPiperVoices().length > 0,
+    models: listPiperVoices,
+    create: ({ model }) =>
+      new PiperTTS({
+        modelPath: path.join(PIPER_VOICES_DIR, model || ''),
+        binaryPath: process.env.PIPER_BINARY,
+      }),
+  },
+
+  fallback: {
+    label: 'Fallback',
+    description: 'ElevenLabs, then Cartesia',
+    requiredEnv: [
+      'ELEVENLABS_API_KEY',
+      'ELEVENLABS_VOICE_ID',
+      'CARTESIA_API_KEY',
+      'CARTESIA_VOICE_ID',
+    ],
+    create: (context) =>
+      new FallbackTTS({
+        factories: [
+          () => text2speech.elevenlabs.create(context),
+          () => text2speech.cartesia.create(context),
+        ],
+      }),
+  },
+}
+
+export default text2speech

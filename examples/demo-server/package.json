@@ -13,17 +13,22 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.0",
+    "@fastify/cors": "^11.3.0",
     "@fastify/websocket": "^11.2.0",
     "@micdrop/ai-sdk": "*",
     "@micdrop/cartesia": "*",
     "@micdrop/elevenlabs": "*",
     "@micdrop/gladia": "*",
     "@micdrop/gradium": "*",
+    "@micdrop/kokoro": "*",
     "@micdrop/mistral": "*",
     "@micdrop/openai": "*",
+    "@micdrop/piper": "*",
     "@micdrop/server": "*",
+    "@micdrop/whisper": "*",
     "dotenv": "^17.0.0",
     "fastify": "^5.7.4",
+    "onnxruntime-node": "^1.21.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

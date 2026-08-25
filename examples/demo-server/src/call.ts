@@ -1,21 +1,31 @@
 import { handleError, Logger, MicdropServer } from '@micdrop/server'
 import { FastifyInstance } from 'fastify'
-import agents from './agents'
 import { checkParams } from './params'
+import { createProviders, getCatalog } from './providers'
 import { record } from './record'
-import speech2text from './speech2Text'
-import text2speech from './text2Speech'
 import { addTools } from './tools'
 
 export default async (app: FastifyInstance) => {
+  // Providers the client can pick from, read by the three selects of the demo
+  app.get('/providers', async () => getCatalog())
+
   app.get('/call', { websocket: true }, async (socket) => {
     try {
-      const { lang } = await checkParams(socket)
+      const { lang, selection } = await checkParams(socket)
 
-      // Select demo providers (see files agents.ts, speech2text.ts, text2speech.ts)
-      const agent = agents.mistral(lang)
-      const stt = speech2text.gladia()
-      const tts = text2speech.gradium()
+      // Build the providers picked in the client (see the providers folder)
+      const { agent, stt, tts, ...call } = await createProviders(
+        selection,
+        lang
+      )
+      const off = Object.entries(call.auto)
+        .filter(([, on]) => !on)
+        .map(([name]) => name)
+      console.log(
+        `Call in ${call.lang} with ${agent.constructor.name}, ` +
+          `${stt.constructor.name} and ${tts.constructor.name}` +
+          (off.length ? `, without ${off.join(' and ')}` : '')
+      )
 
       // Start call
       const server = new MicdropServer(socket, {

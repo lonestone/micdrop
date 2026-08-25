@@ -2,6 +2,7 @@
 import * as dotenv from 'dotenv'
 dotenv.config()
 
+import fastifyCors from '@fastify/cors'
 import fastifyWebsocket from '@fastify/websocket'
 import fastify from 'fastify'
 import call from './call'
@@ -12,6 +13,9 @@ const PORT = process.env.PORT || 8081
 const server = fastify({
   logger: true,
 })
+
+// Allow the demo client, served by Vite on another port, to read the catalog
+server.register(fastifyCors, { origin: true })
 
 // Register Websocket
 server.register(fastifyWebsocket, {
