@@ -1,7 +1,12 @@
 import { Micdrop, Speaker } from '@micdrop/client'
 import { useMicdropEndCall, useMicdropState } from '@micdrop/react'
 import { FaMicrophone, FaPause, FaPlay, FaStop } from 'react-icons/fa'
-import { getAutoOptions, getSelections, SERVER_URL } from '../providers'
+import {
+  getAutoOptions,
+  getSelections,
+  getToolOptions,
+  SERVER_URL,
+} from '../providers'
 import CallStatusCircle from './CallStatusCircle'
 
 export default function CallControls() {
@@ -18,9 +23,10 @@ export default function CallControls() {
       params: {
         authorization: '1234',
         lang: navigator.language,
-        // Providers and agent prompts picked in the settings above
+        // Providers, agent prompts and tools picked in the settings above
         providers: getSelections(),
         auto: getAutoOptions(),
+        tools: getToolOptions(),
       },
       // disableInterruption: true,
       debugLog: true,

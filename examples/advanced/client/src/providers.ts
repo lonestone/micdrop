@@ -64,6 +64,38 @@ export const AUTO_OPTIONS: { name: AutoName; label: string; help: string }[] = [
   },
 ]
 
+/**
+ * The tools the server hands to the agent. Their names match the ones in
+ * `server/src/tools.ts`, which is what the server reads to register them.
+ */
+export type ToolName = 'get_time' | 'get_weather' | 'say_something_later'
+
+export type ToolOptions = Record<ToolName, boolean>
+
+export const TOOL_OPTIONS: { name: ToolName; label: string; help: string }[] = [
+  {
+    name: 'get_time',
+    label: 'Get time',
+    help: 'The assistant reads the clock of the server instead of guessing what time it is.',
+  },
+  {
+    name: 'get_weather',
+    label: 'Get weather',
+    help: 'The assistant looks up the temperature and the wind at a place, which also asks the model for its coordinates.',
+  },
+  {
+    name: 'say_something_later',
+    label: 'Say something later',
+    help: 'The assistant sets a timer and speaks again once it fires, so it can act as a reminder or an alarm clock.',
+  },
+]
+
+const DEFAULT_TOOLS: ToolOptions = {
+  get_time: true,
+  get_weather: true,
+  say_something_later: true,
+}
+
 const DEFAULT_AUTO: AutoOptions = {
   autoEndCall: true,
   autoSemanticTurn: true,
@@ -83,6 +115,7 @@ interface State {
   error?: string
   selections: Selections
   auto: AutoOptions
+  tools: ToolOptions
 }
 
 /**
@@ -96,12 +129,13 @@ interface State {
 let state: State = {
   selections: readStored('selections', { agent: {}, stt: {}, tts: {} }),
   auto: readStored('auto', DEFAULT_AUTO),
+  tools: readStored('tools', DEFAULT_TOOLS),
 }
 
 const listeners = new Set<() => void>()
 
 /** Reads one key of the stored settings, falling back to the given default. */
-function readStored<T>(key: 'selections' | 'auto', fallback: T): T {
+function readStored<T>(key: 'selections' | 'auto' | 'tools', fallback: T): T {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return fallback
@@ -119,7 +153,11 @@ function persist() {
   try {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ selections: state.selections, auto: state.auto })
+      JSON.stringify({
+        selections: state.selections,
+        auto: state.auto,
+        tools: state.tools,
+      })
     )
   } catch {
     // A browser refusing to store just forgets the settings on reload
@@ -191,7 +229,7 @@ function completeSelection(
 }
 
 export function useProviders() {
-  const { catalog, error, selections, auto } = useSyncExternalStore(
+  const { catalog, error, selections, auto, tools } = useSyncExternalStore(
     subscribe,
     getSnapshot,
     getSnapshot
@@ -216,7 +254,21 @@ export function useProviders() {
     persist()
   }, [])
 
-  return { catalog, error, selections, select, auto, toggleAuto }
+  const toggleTool = useCallback((name: ToolName, enabled: boolean) => {
+    setState({ tools: { ...state.tools, [name]: enabled } })
+    persist()
+  }, [])
+
+  return {
+    catalog,
+    error,
+    selections,
+    select,
+    auto,
+    toggleAuto,
+    tools,
+    toggleTool,
+  }
 }
 
 /** The selection sent to the server when a call starts. */
@@ -227,4 +279,9 @@ export function getSelections(): Selections {
 /** The automatic prompts sent to the server when a call starts. */
 export function getAutoOptions(): AutoOptions {
   return state.auto
+}
+
+/** The tools the agent is given, sent to the server when a call starts. */
+export function getToolOptions(): ToolOptions {
+  return state.tools
 }

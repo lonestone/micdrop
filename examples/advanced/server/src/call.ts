@@ -11,7 +11,7 @@ export default async (app: FastifyInstance) => {
 
   app.get('/call', { websocket: true }, async (socket) => {
     try {
-      const { lang, selection } = await checkParams(socket)
+      const { lang, selection, tools } = await checkParams(socket)
 
       // Build the providers picked in the client (see the providers folder)
       const { agent, stt, tts, ...call } = await createProviders(
@@ -44,8 +44,13 @@ export default async (app: FastifyInstance) => {
       // Setup recorder
       record(server)
 
-      // Add tools
-      addTools(server, agent)
+      // Add the tools ticked in the client
+      const toolNames = addTools(server, agent, tools)
+      console.log(
+        toolNames.length
+          ? `Tools: ${toolNames.join(', ')}`
+          : 'Call without any tool'
+      )
 
       // Enable debug logs
       server.logger = new Logger('MicdropServer')

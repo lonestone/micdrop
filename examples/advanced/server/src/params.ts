@@ -2,6 +2,7 @@ import { MicdropError, MicdropErrorCode, waitForParams } from '@micdrop/server'
 import { WebSocket } from 'ws'
 import { z } from 'zod'
 import { CallSelection } from './providers'
+import { ToolSelection } from './tools'
 
 // Required authorization param to start a call
 const AUTHORIZATION_KEY = '1234'
@@ -24,6 +25,15 @@ export const callParamsSchema = z.object({
       autoIgnoreUserNoise: z.boolean().optional(),
     })
     .optional(),
+  // The tools the agent is given, ticked in the client. Absent means all of
+  // them.
+  tools: z
+    .object({
+      get_time: z.boolean().optional(),
+      get_weather: z.boolean().optional(),
+      say_something_later: z.boolean().optional(),
+    })
+    .optional(),
   // Absent when the client did not read the catalog, the server then falls
   // back to the providers it considers its defaults
   providers: z
@@ -40,6 +50,7 @@ export type CallParams = z.infer<typeof callParamsSchema>
 export async function checkParams(socket: WebSocket): Promise<{
   lang: string
   selection: CallSelection
+  tools: ToolSelection
 }> {
   // Get params from first message
   const params = await waitForParams(socket, callParamsSchema.parse)
@@ -53,5 +64,6 @@ export async function checkParams(socket: WebSocket): Promise<{
   return {
     lang: params.lang,
     selection: { ...params.providers, auto: params.auto },
+    tools: params.tools ?? {},
   }
 }
