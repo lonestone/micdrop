@@ -14,10 +14,16 @@ Run (watch) the client and server
 pnpm dev:main
 ```
 
-Run (watch) the demo server and client
+Run (watch) the basic example
 
 ```bash
-pnpm dev:demo
+pnpm dev:basic
+```
+
+Run (watch) the advanced demo, client and server together
+
+```bash
+pnpm dev:advanced
 ```
 
 Run (watch) the website and its documentation

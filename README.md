@@ -38,8 +38,8 @@ pointed at Ollama or any local server speaking the OpenAI protocol.
 
 ### Demo Applications
 
-- [`demo-client`](./examples/demo-client/README.md) - Example web application with React.
-- [`demo-server`](./examples/demo-server/README.md) - Example server with fastify.
+- [`basic`](./examples/basic/README.md) - The smallest possible app, one button in the browser and a WebSocket server, with OpenAI for the agent, the transcription and the voice. Start here.
+- [`advanced`](./examples/advanced/README.md) - Full featured demo, a React client and a Fastify server in one folder, with every provider wired in and picked from the browser.
 - [`demo-world`](./examples/demo-world/README.md) - Immersive 3D demo where a newborn planet talks to you and reshapes itself as the conversation goes. Client and server in one folder, with a test page that runs the whole interface without a call.
 
 ## 🎥 Demo and technical details (video)

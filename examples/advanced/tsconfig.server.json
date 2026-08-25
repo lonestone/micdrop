@@ -7,10 +7,10 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "declaration": true
+    "outDir": "dist/server",
+    "rootDir": "server/src",
+    "declaration": false
   },
-  "include": ["src"],
+  "include": ["server/src"],
   "exclude": ["node_modules", "dist"]
 }

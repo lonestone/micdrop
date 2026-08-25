@@ -1,6 +1,6 @@
 # 🖐️🎤 Micdrop: Real-Time Voice Conversations with AI
 
-[Micdrop website](https://micdrop.dev) | [Documentation](https://micdrop.dev/docs/server) | [Demo](../../examples/demo-server)
+[Micdrop website](https://micdrop.dev) | [Documentation](https://micdrop.dev/docs/server) | [Basic example](../../examples/basic) | [Demo](../../examples/advanced)
 
 Micdrop is a set of open source Typescript packages to build real-time voice conversations with AI agents. It handles all the complexities on the browser and server side (microphone, speaker, VAD, network communication, etc) and provides ready-to-use implementations for various AI providers.
 

@@ -40,8 +40,8 @@ const text2speech: ProviderRegistry<TTS> = {
     description: 'Recorded chunks, no model called',
     create: () =>
       new MockTTS([
-        path.join(__dirname, '../../../demo-client/public/chunk-1.wav'),
-        path.join(__dirname, '../../../demo-client/public/chunk-2.wav'),
+        path.join(__dirname, '../../../client/public/chunk-1.wav'),
+        path.join(__dirname, '../../../client/public/chunk-2.wav'),
       ]),
   },
 

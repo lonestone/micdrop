@@ -10,7 +10,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { PassThrough } from 'stream'
 
-const chunkDir = path.join(__dirname, '../../../demo-client/public')
+const chunkDir = path.join(__dirname, '../../../client/public')
 
 const stt = new MistralSTT({
   apiKey: process.env.MISTRAL_API_KEY || '',

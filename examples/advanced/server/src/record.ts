@@ -6,8 +6,8 @@ export function record(server: MicdropServer) {
   const recorder = new MicdropRecorder(server)
   // recorder.logger = new Logger('MicdropRecorder')
 
-  // Save audio messages to a single JSON file at the repo root of demo-server
-  const filePath = join(__dirname, '../../demo-client/public/recording.json')
+  // Save audio messages to a single JSON file served by the client
+  const filePath = join(__dirname, '../../client/public/recording.json')
   const audioMessages: object[] = []
   writeFileSync(filePath, JSON.stringify(audioMessages, null, 2))
 

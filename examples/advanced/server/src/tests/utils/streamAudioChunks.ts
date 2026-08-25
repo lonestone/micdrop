@@ -2,7 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { PassThrough } from 'stream'
 
-const chunkDir = path.join(__dirname, '../../../../demo-client/public')
+const chunkDir = path.join(__dirname, '../../../../client/public')
 
 // Function to stream audio chunks
 export async function streamAudioChunks(audioStream: PassThrough) {

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Micdrop basic example</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 32rem;
+        margin: 4rem auto;
+        padding: 0 1rem;
+      }
+      button {
+        font: inherit;
+        padding: 0.6rem 1.2rem;
+        cursor: pointer;
+      }
+      #status {
+        color: #666;
+      }
+      #conversation {
+        padding: 0;
+        list-style: none;
+      }
+      #conversation li {
+        margin-bottom: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🖐️🎤 Micdrop</h1>
+    <button id="call">Start call</button>
+    <p id="status">Ready</p>
+    <ul id="conversation"></ul>
+    <script type="module" src="/src/client.ts"></script>
+  </body>
+</html>
