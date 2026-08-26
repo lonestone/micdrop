@@ -7,6 +7,7 @@ import expressiveCode from 'astro-expressive-code'
 import rehypeExternalLinks from 'rehype-external-links'
 import rehypeMermaid from 'rehype-mermaid'
 import { redirects } from './src/redirects'
+import { contentLastmod } from './src/utils/content-lastmod'
 import rehypeMdClass from './src/utils/rehype-md-class'
 import { getExternalLinkRel } from './src/utils/external-links'
 import remarkAdmonitions from './src/utils/remark-admonitions'
@@ -65,7 +66,14 @@ export default defineConfig({
         .rehypePlugins as MdxOptions['rehypePlugins'],
       gfm: true,
     }),
-    sitemap(),
+    sitemap({
+      // Date of the last commit on each page's source, so a crawler (and an agent
+      // ranking what to read first) can tell what actually moved since last time.
+      serialize: (item) => {
+        item.lastmod = contentLastmod(new URL(item.url).pathname)
+        return item
+      },
+    }),
     enrichMd(),
   ],
   vite: {
