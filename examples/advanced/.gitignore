@@ -1,2 +1,5 @@
 # Piper voices downloaded by hand, see the README
 server/voices
+
+# Pocket TTS weights downloaded by hand, see the README
+server/models

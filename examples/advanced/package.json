@@ -27,6 +27,7 @@
     "@micdrop/mistral": "*",
     "@micdrop/openai": "*",
     "@micdrop/piper": "*",
+    "@micdrop/pocket-tts": "*",
     "@micdrop/react": "*",
     "@micdrop/server": "*",
     "@micdrop/whisper": "*",

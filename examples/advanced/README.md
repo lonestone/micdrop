@@ -94,6 +94,16 @@ curl -LO $BASE/fr_FR-siwis-medium.onnx.json
 Every voice of the [samples page](https://rhasspy.github.io/piper-samples/) is
 downloaded the same way, with its own path in the repository.
 
+For a local English voice that clones a recording, extract the Pocket TTS
+archive into `examples/advanced/server/models`, where the demo looks for it:
+
+```bash
+mkdir -p server/models && cd server/models
+curl -LO https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/sherpa-onnx-pocket-tts-int8-2026-01-26.tar.bz2
+tar xf sherpa-onnx-pocket-tts-int8-2026-01-26.tar.bz2
+rm sherpa-onnx-pocket-tts-int8-2026-01-26.tar.bz2
+```
+
 The [local models guide](https://micdrop.dev/docs/ai-integration/local-models)
 covers the models worth picking and what they cost in latency and memory.
 

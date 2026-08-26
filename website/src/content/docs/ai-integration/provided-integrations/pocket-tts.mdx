@@ -1,0 +1,152 @@
+---
+title: 'Pocket TTS'
+description: 'Local text to speech with Kyutai Pocket TTS, cloning a voice on the CPU.'
+order: 44
+---
+
+# Pocket TTS
+
+Local text to speech for [@micdrop/server](../../server), running
+[Pocket TTS](https://github.com/kyutai-labs/pocket-tts) in your Node process
+through the [sherpa-onnx](https://k2-fsa.github.io/sherpa/onnx/tts/pocket.html)
+addon and ONNX Runtime.
+
+Pocket TTS is a 100 million parameter model from Kyutai, designed for the CPU,
+that takes its voice from a few seconds of reference audio instead of from a
+catalog. It generates about five times faster than real time and emits its
+audio while it is still writing the rest, which is what makes it the local
+voice with the shortest delay before the first word.
+
+## Installation
+
+Install the package:
+
+```bash
+npm install @micdrop/pocket-tts
+```
+
+Download the weights, converted to ONNX by the sherpa-onnx project:
+
+```bash
+curl -LO https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/sherpa-onnx-pocket-tts-int8-2026-01-26.tar.bz2
+tar xf sherpa-onnx-pocket-tts-int8-2026-01-26.tar.bz2
+rm sherpa-onnx-pocket-tts-int8-2026-01-26.tar.bz2
+```
+
+The archive weighs 98 MB and takes 190 MB on disk. A full precision archive,
+`sherpa-onnx-pocket-tts-2026-01-26.tar.bz2`, sits next to it and is read the
+same way: the weights are looked up by name in the folder, quantized first when
+both are there.
+
+<Callout type="tip">
+  The addon ships prebuilt binaries for macOS, Linux and Windows on both Intel
+  and ARM, so installing it is an `npm install` rather than a compilation.
+</Callout>
+
+## Usage
+
+```typescript
+import { PocketTTS } from '@micdrop/pocket-tts'
+import { MicdropServer } from '@micdrop/server'
+
+const tts = new PocketTTS({
+  modelDir: './sherpa-onnx-pocket-tts-int8-2026-01-26',
+  voice: 'bria',
+})
+
+// Use with MicdropServer
+new MicdropServer(socket, {
+  tts,
+  // ... other options
+})
+```
+
+## Options
+
+| Option            | Type      | Default    | Description                                       |
+| ----------------- | --------- | ---------- | ------------------------------------------------- |
+| `modelDir`        | `string`  | Required   | Folder the archive was extracted into             |
+| `voice`           | `string`  | `'bria'`   | Bundled voice name, or path to a wav to clone     |
+| `speed`           | `number`  | `1`        | Speech rate, above 1 to speak faster              |
+| `numSteps`        | `number`  | `2`        | Sampling steps per frame                          |
+| `referenceLength` | `number`  | `12`       | Seconds of the reference the voice is built from  |
+| `seed`            | `number`  | Optional   | Sampling seed, to make a sentence reproducible    |
+| `numThreads`      | `number`  | `2`        | Threads given to ONNX Runtime                     |
+| `provider`        | `string`  | `'cpu'`    | Execution provider passed to ONNX Runtime         |
+| `warmup`          | `boolean` | `true`     | Speaks one word at startup                        |
+
+## Voices
+
+The voice comes from a recording rather than from a catalog: a few seconds of
+someone speaking is enough for the model to answer in that voice, with no
+transcript of the sample and no training step. The archive ships three of them
+in its `test_wavs` folder, reachable by name through `BUNDLED_VOICES`, and any
+wav file works in their place.
+
+```typescript
+import { BUNDLED_VOICES, PocketTTS } from '@micdrop/pocket-tts'
+
+const tts = new PocketTTS({
+  modelDir: './sherpa-onnx-pocket-tts-int8-2026-01-26',
+  voice: './voices/my-voice.wav',
+})
+```
+
+`bria` is a woman reading calmly for forty seconds, `loona` is a one second
+clip, which is about the shortest a reference can be, and `frenchAccent` is a
+French speaker: the words come from the text and stay English, the timbre and
+the accent come from the recording.
+
+Only the first `referenceLength` seconds are read, so a long recording costs
+nothing extra. The quality of the sample is reproduced along with the voice,
+which makes a clean recording worth more than a long one.
+
+<Callout type="warning">
+  Clone a voice only with the consent of the person it belongs to. The
+  [Kyutai license](https://github.com/kyutai-labs/pocket-tts#prohibited-use)
+  makes it a condition of use, and impersonation is what voice cloning gets
+  misused for.
+</Callout>
+
+## Languages
+
+Pocket TTS speaks English here. Kyutai also publishes French, German, Spanish,
+Italian and Portuguese checkpoints, and none of them is converted to ONNX yet,
+so the English model is the one the addon loads. Handing it French produces
+fluent nonsense rather than an accent, since it reads every word with English
+phonemes. Use [Piper](./piper) for the other languages.
+
+## Latency
+
+Measured on an Apple M2, on CPU, with the model already loaded:
+
+| Step                                    | Time         |
+| --------------------------------------- | ------------ |
+| Loading the model                       | ~470 ms      |
+| First audio of a sentence               | 250 to 430 ms |
+| Generating four seconds of speech       | ~850 ms      |
+
+The answer is cut into sentences, and each sentence is handed over in chunks as
+the model writes it, so the user hears its opening words while the model is
+still generating its end. An interruption stops the generation between two
+chunks rather than at the end of the sentence, which is what keeps a barge-in
+immediate.
+
+## Memory
+
+The model takes about 350 MB once loaded and around 600 MB while generating,
+which is more than [Kokoro](./kokoro) at 80 MB and small next to the language
+model it runs beside. One instance is loaded per configuration and shared by
+every call, so a second conversation costs nothing more.
+
+## Documentation
+
+Read the [guide on running Micdrop with local models](../local-models) to see
+how this fits with a local LLM and a local transcription.
+
+## License
+
+Pocket TTS is released under the MIT license, and the sherpa-onnx addon under
+Apache 2.0. The reference recordings shipped with the archive carry their own
+licenses, listed on the
+[Kyutai voice repository](https://huggingface.co/kyutai/tts-voices).

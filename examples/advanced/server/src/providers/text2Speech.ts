@@ -4,10 +4,17 @@ import { GradiumTTS } from '@micdrop/gradium'
 import { KOKORO_VOICE_IDS, KokoroTTS } from '@micdrop/kokoro'
 import { OpenaiTTS } from '@micdrop/openai'
 import { PiperTTS } from '@micdrop/piper'
+import { BUNDLED_VOICES, PocketTTS } from '@micdrop/pocket-tts'
 import { FallbackTTS, MockTTS, TTS } from '@micdrop/server'
 import { existsSync, readdirSync } from 'fs'
 import path from 'path'
 import { ModelOption, ProviderRegistry } from './types'
+
+// Where the Pocket TTS archive was extracted, see the README of
+// @micdrop/pocket-tts
+const POCKET_MODEL_DIR =
+  process.env.POCKET_MODEL_DIR ||
+  path.join(__dirname, '../../models/sherpa-onnx-pocket-tts-int8-2026-01-26')
 
 // Where the Piper voices were downloaded, see the README of @micdrop/piper
 const PIPER_VOICES_DIR =
@@ -124,6 +131,21 @@ const text2speech: ProviderRegistry<TTS> = {
         modelPath: path.join(PIPER_VOICES_DIR, model || ''),
         binaryPath: process.env.PIPER_BINARY,
       }),
+  },
+
+  // Local, English only, needs the weights extracted next to the demo
+  pocket: {
+    label: 'Pocket TTS',
+    description: 'Local, English only, clones a voice',
+    isAvailable: () => existsSync(POCKET_MODEL_DIR),
+    models: Object.keys(BUNDLED_VOICES).map((id) => ({
+      id,
+      label: id,
+      language: 'en-US',
+    })),
+    defaultModel: 'bria',
+    create: ({ model }) =>
+      new PocketTTS({ modelDir: POCKET_MODEL_DIR, voice: model }),
   },
 
   fallback: {

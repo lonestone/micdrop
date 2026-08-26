@@ -1,7 +1,7 @@
 ---
 title: 'Local Models'
 description: 'Run the whole Micdrop pipeline on your own machine, with no API key and no data leaving it.'
-order: 51
+order: 52
 ---
 
 # Local Models
@@ -15,16 +15,18 @@ it costs in latency and memory, and where the sharp edges are.
 
 ## What runs locally
 
-| Part           | Package                                             | Runs                                           |
-| -------------- | --------------------------------------------------- | ---------------------------------------------- |
-| Agent          | [@micdrop/ai-sdk](./provided-integrations/ai-sdk)   | Any local server speaking the OpenAI protocol  |
-| Speech to text | [@micdrop/whisper](./provided-integrations/whisper) | Whisper, in your Node process                  |
-| Text to speech | [@micdrop/kokoro](./provided-integrations/kokoro)   | Kokoro, in your Node process, English only     |
-| Text to speech | [@micdrop/piper](./provided-integrations/piper)     | Piper, as a subprocess, around forty languages |
+| Part           | Package                                                   | Runs                                             |
+| -------------- | --------------------------------------------------------- | ------------------------------------------------ |
+| Agent          | [@micdrop/ai-sdk](./provided-integrations/ai-sdk)         | Any local server speaking the OpenAI protocol    |
+| Speech to text | [@micdrop/whisper](./provided-integrations/whisper)       | Whisper, in your Node process                    |
+| Text to speech | [@micdrop/kokoro](./provided-integrations/kokoro)         | Kokoro, in your Node process, English only       |
+| Text to speech | [@micdrop/piper](./provided-integrations/piper)           | Piper, as a subprocess, around forty languages   |
+| Text to speech | [@micdrop/pocket-tts](./provided-integrations/pocket-tts) | Pocket TTS, in your Node process, English only, cloning a voice |
 
-The transcription and the English voice need nothing beyond an npm install:
-they download their weights on first use and run inside Node. The LLM needs a
-server such as [Ollama](https://ollama.com), and Piper needs its binary.
+Whisper and Kokoro need nothing beyond an npm install: they download their
+weights on first use and run inside Node. The LLM needs a server such as
+[Ollama](https://ollama.com), Piper needs its binary, and Pocket TTS needs its
+archive extracted somewhere the server can read.
 
 ## Setting it up
 
@@ -142,11 +144,16 @@ loaded:
 | First token when a tool call is answered | 740 to 1200 ms |
 | First sentence from Kokoro               | 900 to 1300 ms |
 | First sentence from Piper                | ~390 ms        |
+| First sentence from Pocket TTS           | 250 to 430 ms  |
 
-A local call therefore answers in about one second with Piper, and closer to
-two with Kokoro. A turn where the model answers one of the automatic prompts
-pays a second pass, and that pass costs more than the transcription and the
-voice put together.
+The Pocket TTS row was measured on an Apple M2, the machine that integration
+was written on, so compare it with the others as an order of magnitude rather
+than digit by digit.
+
+A local call therefore answers in about one second with Piper or Pocket TTS,
+and closer to two with Kokoro. A turn where the model answers one of the
+automatic prompts pays a second pass, and that pass costs more than the
+transcription and the voice put together.
 
 Keeping the models loaded between turns recovers most of the difference, which
 Micdrop does by sharing one instance per configuration and Ollama does through
@@ -202,15 +209,19 @@ since almost all of its cost is loading the voice once.
 
 Qwen3 4B in `Q4`, Whisper `base` and Kokoro together take around 4 GB
 including the key value cache, which leaves plenty of room on a 16 GB machine
-and is comfortable on 24 GB. The binding constraint is latency, not memory, so
-spending the spare memory on a larger LLM is usually a better trade than on a
-larger transcription model.
+and is comfortable on 24 GB. Swapping Kokoro for Pocket TTS adds about half a
+gigabyte, since the voice then weighs 600 MB while it generates rather than
+80 MB. The binding constraint is latency, not memory, so spending the spare
+memory on a larger LLM is usually a better trade than on a larger
+transcription model.
 
 ## Languages
 
 Kokoro only speaks English, since `kokoro-js` phonemizes every input with the
-English rules. Piper covers around forty languages including French, at the
-cost of installing its binary and downloading a voice.
+English rules. Pocket TTS only speaks English too, for a different reason: its
+French, German, Spanish, Italian and Portuguese checkpoints have no ONNX export
+yet, so the addon loads the English one. Piper covers around forty languages
+including French, at the cost of installing its binary and downloading a voice.
 
 Whisper is multilingual in every size, though the smaller models lose accuracy
 outside English badly enough to matter: `base` misreads a quarter of the words
@@ -237,16 +248,18 @@ they are not integrated here.
 ## First run
 
 Whisper and Kokoro download their weights on first use, from 45 MB for
-`whisper-tiny` to 850 MB for `whisper-large-v3-turbo`. Pulling an LLM is
-heavier still. Warm the whole stack once before a demo rather than discovering
-the download while somebody is watching.
+`whisper-tiny` to 850 MB for `whisper-large-v3-turbo`. Pocket TTS is downloaded
+by hand, 98 MB compressed and 190 MB on disk. Pulling an LLM is heavier still.
+Warm the whole stack once before a demo rather than discovering the download
+while somebody is watching.
 
 ## Licenses
 
-Whisper is MIT, Kokoro is Apache 2.0, Piper is MIT and Qwen3 is Apache 2.0, so
-every model named here is usable commercially. Voice cloning models are where
-the restrictions usually hide: XTTS-v2 for instance is released under a non
-commercial license.
+Whisper is MIT, Kokoro is Apache 2.0, Piper is MIT, Pocket TTS is MIT and Qwen3
+is Apache 2.0, so every model named here is usable commercially. Voice cloning
+is where the restrictions usually hide: XTTS-v2 for instance is released under
+a non commercial license, and Pocket TTS, which is permissive, still forbids
+cloning a voice without the consent of the person it belongs to.
 
 ## Trying it
 

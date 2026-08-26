@@ -24,6 +24,7 @@ export abstract class SentenceTTS extends TTS {
   // whether it is still the one that should be heard.
   private generation = 0
   private counter = 0 // Identifies the current speak() call
+  private synthesizing = 0 // Stamp of the sentence being synthesized
 
   /**
    * Turns one sentence into PCM16 audio at the client's sample rate.
@@ -36,6 +37,21 @@ export abstract class SentenceTTS extends TTS {
     text: string,
     signal: AbortSignal
   ): Promise<Buffer | undefined>
+
+  /**
+   * Emits a piece of the sentence being synthesized.
+   *
+   * A model that generates progressively can hand its chunks over as they
+   * come rather than waiting for the sentence to be finished, which brings
+   * the first word forward by the duration of that sentence. The false it
+   * returns says the utterance was cancelled or replaced, so the generation
+   * it comes from can be stopped there.
+   */
+  protected emitAudio(audio: Buffer): boolean {
+    if (this.synthesizing !== this.counter) return false
+    if (audio.length) this.emit('Audio', audio)
+    return true
+  }
 
   speak(textStream: Readable) {
     const generation = ++this.generation
@@ -99,6 +115,7 @@ export abstract class SentenceTTS extends TTS {
 
     while (this.queue.length > 0) {
       const counter = this.counter
+      this.synthesizing = counter
       const text = this.queue.shift()!
       const controller = new AbortController()
       this.controller = controller

@@ -1,7 +1,7 @@
 {
-  "name": "@micdrop/server",
-  "version": "2.4.0",
-  "description": "\ud83d\udd90\ufe0f\ud83c\udfa4 Micdrop: Real-Time Voice Conversations with AI",
+  "name": "@micdrop/pocket-tts",
+  "version": "1.0.0",
+  "description": "Local Pocket TTS text to speech for @micdrop/server",
   "author": "Godefroy de Compreignac",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Godefroy/micdrop.git",
-    "directory": "packages/server"
+    "directory": "packages/pocket-tts"
   },
   "publishConfig": {
     "access": "public"
@@ -28,19 +28,23 @@
   "keywords": [
     "microphone",
     "audio",
-    "browser",
     "voice",
-    "conversation"
+    "conversation",
+    "pocket-tts",
+    "kyutai",
+    "local",
+    "offline",
+    "tts"
   ],
   "dependencies": {
-    "eventemitter3": "^5.0.4",
-    "ws": "^8.19.0"
+    "sherpa-onnx-node": "^1.13.6"
+  },
+  "peerDependencies": {
+    "@micdrop/server": ">=2.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.19.13",
-    "@types/ws": "^8.18.1",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
-    "zod": "^4.3.6"
+    "typescript": "^5.9.3"
   }
 }

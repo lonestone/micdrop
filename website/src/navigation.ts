@@ -77,6 +77,10 @@ export const footerNav: { title: string; links: NavLink[] }[] = [
         label: 'Piper',
         href: '/docs/ai-integration/provided-integrations/piper',
       },
+      {
+        label: 'Pocket TTS',
+        href: '/docs/ai-integration/provided-integrations/pocket-tts',
+      },
     ],
   },
   {
