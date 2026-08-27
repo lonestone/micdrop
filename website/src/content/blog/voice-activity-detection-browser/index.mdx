@@ -175,6 +175,12 @@ Divide the responsibilities this way and each layer does what it is good at. The
   <FaqItem question="Does voice activity detection run offline in the browser?">
     Yes. A volume-based VAD uses the Web Audio API and needs no network at all. A Silero VAD downloads a model of about 2 MB plus the ONNX Runtime Web wasm files on first load, then runs entirely on the CPU of the device. No audio is sent anywhere for detection, which also means the microphone stream stays local until speech is actually detected.
   </FaqItem>
+  <FaqItem question="What is Silero VAD and what are its applications?">
+    Silero VAD is a neural network of about 309K parameters that reads a 512-sample frame, 32 milliseconds at 16 kHz, and returns the probability that the frame contains speech. Its LSTM state carries across frames, so it scores each frame using the ones before it. A volume threshold measures loudness and nothing else. Silero separates a human voice from a television, a fan or a passing truck. Voice agents adopted it as their default detector, and Micdrop runs it in `@micdrop/client`, see [client-side VAD](/docs/client/vad).
+  </FaqItem>
+  <FaqItem question="Is Silero VAD open source?">
+    Yes. Silero VAD ships under the MIT license, and Micdrop's browser build comes from `@ricky0123/vad-web`, which wraps the Silero ONNX model and runs it with ONNX Runtime Web.
+  </FaqItem>
   <FaqItem question="What is the difference between VAD and turn detection?">
     A VAD works on the audio signal and answers "is someone speaking right now". Turn detection works on the transcript and answers "has this person finished their thought". A VAD closes an utterance after a fixed amount of silence, so it cuts off a user who pauses mid-sentence. Turn detection reads the words and waits, which is why voice agents run both.
   </FaqItem>
