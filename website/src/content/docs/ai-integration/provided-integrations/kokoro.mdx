@@ -53,7 +53,7 @@ new MicdropServer(socket, {
 
 Shorthands cover the accents and the genders: `americanFemale`,
 `americanMale`, `britishFemale` and `britishMale`. Every voice id the model
-holds works too, exported as `KOKORO_VOICE_IDS`.
+holds works too, and `KOKORO_VOICE_IDS` exports the full list.
 
 ```typescript
 import { KOKORO_VOICE_IDS, KokoroTTS } from '@micdrop/kokoro'
@@ -62,46 +62,46 @@ const tts = new KokoroTTS({ voice: 'am_michael' })
 ```
 
 <Callout type="warning">
-  Kokoro only speaks English here. The upstream model also holds French,
-  Italian, Japanese, Portuguese and Chinese voices, but the `kokoro-js` library
-  phonemizes every input with the English rules, so those voices read foreign
-  words with an English pronunciation. Use [Piper](./piper) for the other
-  languages.
+  Kokoro speaks English only in this integration. The upstream model also holds
+  French, Italian, Japanese, Portuguese and Chinese voices, but the `kokoro-js`
+  library phonemizes every input with the English rules, so those voices read
+  foreign words with an English pronunciation. Use [Piper](./piper) for the
+  other languages.
 </Callout>
 
 ## Latency
 
-Synthesis runs at roughly half to three quarters of real time on an Apple M3,
-so a three second sentence takes about two seconds to generate and a short
+Synthesis runs at roughly half to three quarters of real time on a MacBook Pro
+M2, so a three second sentence takes about two seconds to generate and a short
 greeting comes back in about one second.
 
-The answer is cut into sentences and each one is synthesized as soon as it is
-complete, so the user hears the opening while the rest is still being written.
-Sentences are generated one after the other rather than at once: the model is
-single threaded, and racing two sentences through it slows both down without
-bringing the first word any closer.
+Micdrop cuts the answer into sentences and synthesizes each one as soon as it
+is complete, so the user hears the opening while the rest is still being
+written. Sentences go through one after the other rather than at once. The
+model is single threaded, so racing two sentences through it slows both down
+and the first word still arrives at the same moment.
 
 ## Devices
 
-`cpu` is the default and, on a Mac, the fastest option available, since
-Transformers.js exposes no GPU device on macOS. On Windows `dml` uses
-DirectML, and on Linux with an NVIDIA card `cuda` is worth trying. The
-[local models guide](../local-models) carries the measurements.
+`cpu` is the default and, on a Mac, the fastest option, since Transformers.js
+exposes no GPU device on macOS. On Windows `dml` uses DirectML, and on Linux
+with an NVIDIA card `cuda` is worth trying. The
+[local models guide](../local-models/performance) lists the measurements.
 
 ## Memory and startup
 
 The model is loaded once per configuration and shared by every call. Loading
 takes about a second and a half in `q8`, and the first synthesis pays for the
-graph warm-up, which is why `warmup` speaks one word while the call is being
-set up.
+graph warm-up, which is why `warmup` runs one word through the model while the
+call is being set up.
 
-The `fp32` precision loads several times slower for a synthesis speed that is
-close to identical, so `q8` is the default.
+The `fp32` precision loads several times slower for a nearly identical
+synthesis speed, so `q8` is the default.
 
 ## Documentation
 
 Read the [guide on running Micdrop with local models](../local-models) to see
-how this fits with a local LLM and a local transcription.
+how Kokoro fits with a local LLM and local speech to text.
 
 ## License
 

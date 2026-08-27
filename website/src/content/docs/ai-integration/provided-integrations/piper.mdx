@@ -11,8 +11,9 @@ Local text to speech for [@micdrop/server](../../server), driving the
 
 Piper voices are small VITS models, a few dozen megabytes each, covering around
 forty languages including French. They generate much faster than real time even
-on a modest CPU, which makes Piper the option to reach for outside English,
-where [Kokoro](./kokoro) sounds better but only speaks English.
+on a modest CPU, which makes Piper the option to reach for outside English. In
+English itself, [Kokoro](./kokoro) sounds better, and English is all it speaks
+in Micdrop.
 
 ## Installation
 
@@ -28,8 +29,8 @@ Install the binary:
 pip install piper-tts
 ```
 
-Then download a voice, which comes as a pair of files that have to sit next to
-each other:
+Then download a voice. It comes as a pair of files that have to sit next to each
+other:
 
 ```bash
 mkdir -p voices && cd voices
@@ -41,7 +42,7 @@ curl -LO $BASE/fr_FR-siwis-medium.onnx.json
 <Callout type="tip">
   Piper ships a `download_voices` module, but calling it means finding the exact
   interpreter `pip` installed it under, which is rarely the `python3` in your
-  path. Downloading the two files is shorter and works the same.
+  path. Downloading the two files is shorter and gives the same result.
 </Callout>
 
 ## Usage
@@ -68,7 +69,7 @@ new MicdropServer(socket, {
 | `modelPath`       | `string` | Required            | Path to the `.onnx` voice file                      |
 | `configPath`      | `string` | `<modelPath>.json`  | Voice configuration                                 |
 | `binaryPath`      | `string` | `'piper'` in `PATH` | Piper executable                                    |
-| `speaker`         | `number` | Optional            | Speaker index, for the voices holding several       |
+| `speaker`         | `number` | Optional            | Speaker index, for voices with several speakers     |
 | `lengthScale`     | `number` | Optional            | Duration multiplier, above 1 to slow the voice down |
 | `noiseScale`      | `number` | Optional            | Variability of the generated speech                 |
 | `noiseWidth`      | `number` | Optional            | Variability of the phoneme durations                |
@@ -81,28 +82,28 @@ Voices are named after their language, their speaker and their quality, such as
 [voice samples page](https://rhasspy.github.io/piper-samples/) lets you listen
 to them before downloading.
 
-Each voice ships as `<name>.onnx` and `<name>.onnx.json`, which have to sit next
-to each other. The JSON file carries the sample rate the model generates at,
-read at startup so the audio reaches the client at the rate it expects.
+Each voice ships as `<name>.onnx` and `<name>.onnx.json`. The JSON file gives
+the sample rate the model generates at, and Micdrop reads that file at startup
+so the audio reaches the client at the rate it expects.
 
-## How the process is driven
+## One process per sentence
 
-One process is spawned per sentence: its exit is what marks the end of that
-sentence's audio, and killing it is what makes an interruption immediate.
-Loading a voice costs on the order of a hundred milliseconds, paid while the
-previous sentence is still being played by the client.
+The exit of each Piper process marks the end of a sentence's audio, and killing
+it makes an interruption immediate. Loading a voice costs on the order of a
+hundred milliseconds, paid while the client is still playing the previous
+sentence.
 
 <Callout type="tip">
-  Piper generates much faster than real time, so the whole answer is usually
-  ready before the user has finished hearing its first sentence.
+  The whole answer is usually ready before the user has finished hearing its
+  first sentence.
 </Callout>
 
 ## Documentation
 
 Read the [guide on running Micdrop with local models](../local-models) to see
-how this fits with a local LLM and a local transcription.
+how Piper fits with a local LLM and local speech to text.
 
 ## License
 
-Piper is released under the MIT license, and its voices under permissive
-licenses that vary by voice.
+Piper is released under the MIT license, and each voice under its own
+permissive license.

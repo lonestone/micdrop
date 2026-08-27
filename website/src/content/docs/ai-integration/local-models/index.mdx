@@ -1,0 +1,143 @@
+---
+title: 'Local Models'
+description: 'Run the whole Micdrop pipeline on your own machine, with no API key and no data leaving it.'
+order: 52
+---
+
+# Local Models
+
+Micdrop splits a call into an agent, a transcription and a voice, and each one
+has a local counterpart. Run them all locally and the whole conversation stays
+on your machine, with no API key and no network call.
+
+This page sets up a complete local stack. Three other pages cover the rest:
+
+- [Choosing the models](./choosing-models) compares the candidates for the
+  agent, the transcription and the voice, language by language.
+- [Latency and memory](./performance) gives the numbers a local call costs and
+  explains where the work actually runs.
+- [Explorations](./explorations) collects the models that were measured and set
+  aside, with the reason for each one.
+
+## What the numbers assume
+
+Every measurement on these pages comes from a MacBook Pro M2 with 24 GB of
+memory, and the recommendations are calibrated for a good personal computer.
+That is the machine most people develop on, and the one a local call has to
+share with a browser, an editor and the rest of a working day.
+
+A server with a large GPU changes every one of these numbers. It holds a bigger
+model, and it runs the transcription and the voice on the card rather than on
+the CPU. The recommendations here fit a personal machine, so measure again on
+the hardware you deploy to.
+
+## What runs locally
+
+| Part           | Package                                                    | Runs                                                            |
+| -------------- | ---------------------------------------------------------- | --------------------------------------------------------------- |
+| Agent          | [@micdrop/ai-sdk](../provided-integrations/ai-sdk)         | Any local server speaking the OpenAI protocol                   |
+| Speech to text | [@micdrop/whisper](../provided-integrations/whisper)       | Whisper, in your Node process                                   |
+| Text to speech | [@micdrop/kokoro](../provided-integrations/kokoro)         | Kokoro, in your Node process, English only                      |
+| Text to speech | [@micdrop/piper](../provided-integrations/piper)           | Piper, as a subprocess, around forty languages                  |
+| Text to speech | [@micdrop/pocket-tts](../provided-integrations/pocket-tts) | Pocket TTS, in your Node process, English only, cloning a voice |
+
+An npm install is enough for Whisper and Kokoro. They download their weights on
+first use and run inside Node. The LLM needs a server such as
+[Ollama](https://ollama.com), Piper needs its binary, and Pocket TTS needs its
+archive extracted somewhere the server can read.
+
+## Setting it up
+
+Install Ollama and pull a model:
+
+```bash
+brew install ollama
+brew services start ollama
+ollama pull qwen3:4b-instruct
+```
+
+`ollama pull` sends a request to the Ollama daemon, so the daemon has to be up
+first. `brew services start` puts it in the background and keeps it across
+reboots. `ollama serve` works too, in a terminal it occupies until you stop it.
+
+<Callout type="warning">
+  Pick a variant without reasoning. `qwen3:4b`, the default tag, writes nine
+  hundred to fifteen hundred tokens of reasoning before answering, which takes
+  between ninety and a hundred and twenty seconds per turn. Neither `/no_think`
+  in the prompt nor Ollama's `think` flag removes it. The flag only stops the
+  reasoning from being separated out, so the reasoning stays in the answer and
+  gets spoken. The `-instruct` tags answer directly.
+</Callout>
+
+Install the Micdrop packages:
+
+```bash
+npm install @micdrop/ai-sdk @micdrop/whisper @micdrop/kokoro @ai-sdk/openai
+```
+
+Then assemble the call:
+
+```typescript
+import { createOpenAI } from '@ai-sdk/openai'
+import { AiSdkAgent } from '@micdrop/ai-sdk'
+import { KokoroTTS } from '@micdrop/kokoro'
+import { MicdropServer } from '@micdrop/server'
+import { WhisperSTT } from '@micdrop/whisper'
+
+// Ollama serves the OpenAI protocol on /v1
+const ollama = createOpenAI({
+  baseURL: 'http://localhost:11434/v1',
+  apiKey: 'ollama', // Unused, the SDK refuses to start without one
+})
+
+new MicdropServer(socket, {
+  // .chat() rather than the provider itself: the default of the OpenAI
+  // provider is the Responses API, which a local server does not serve
+  agent: new AiSdkAgent({
+    model: ollama.chat('qwen3:4b-instruct'),
+    systemPrompt: 'You are a helpful voice assistant.',
+  }),
+
+  stt: new WhisperSTT({
+    model: 'base',
+    language: 'en',
+  }),
+
+  tts: new KokoroTTS({
+    voice: 'britishFemale',
+  }),
+})
+```
+
+LM Studio and the llama.cpp server answer on the same routes, so point
+`baseURL` at their port to run them instead of Ollama.
+
+## First run
+
+Each part fetches its weights before it can answer, from 45 MB for the lightest
+transcription checkpoint to several gigabytes for an LLM. Some do it by
+themselves on first use, others expect the download during the install, and each
+integration page says which. Warm the whole stack once before a demo rather than
+discovering the download while somebody is watching.
+
+## Licenses
+
+The default stack is built out of permissively licensed models, so a local call
+can be shipped commercially without asking anyone. Take that as a choice made
+when the integrations were written rather than as a property of local models in
+general. Each integration page states the license of its model, so check any
+model you swap in on its own page, since the terms attached to a set of weights
+change over time.
+
+Most of the restrictions apply to voice cloning. A permissive license covers the
+weights, while the voice itself stays protected, so cloning someone requires
+their consent. Several of the models that clone best are published for
+non-commercial use only.
+
+## Trying it
+
+The demo in `examples/advanced` exposes every provider in the selects at the
+top of the page, local ones included. A provider whose key or binary is missing
+appears greyed out rather than failing once the call has started. That makes
+the demo a quick way to compare a local stack with a hosted one on the same
+conversation.

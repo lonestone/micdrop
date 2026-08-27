@@ -1,0 +1,87 @@
+---
+title: 'Latency and Memory'
+description: 'What a local call costs per turn, how much memory it holds, and why transcription and the voice stay on the CPU.'
+order: 54
+---
+
+# Latency and Memory
+
+Latency limits a local call long before memory does. These measurements come
+from a MacBook Pro M2 with 24 GB of memory, on CPU, with the models already
+loaded.
+
+## Latency
+
+| Step                                     | Time           |
+| ---------------------------------------- | -------------- |
+| Whisper `base` on a 3 second sentence    | ~440 ms        |
+| Whisper `french` on a 3 second sentence  | ~1100 ms       |
+| First token from Qwen3 4B Instruct       | ~80 ms         |
+| First token when a tool call is answered | 740 to 1200 ms |
+| First sentence from Kokoro               | 900 to 1300 ms |
+| First sentence from Piper                | ~390 ms        |
+| First sentence from Pocket TTS           | 250 to 430 ms  |
+
+A local call therefore answers in about one second with Piper or Pocket TTS,
+and closer to two with Kokoro. When the model answers one of the automatic
+prompts, the turn runs a second pass, and that pass costs more than the
+transcription and the voice put together.
+
+Micdrop keeps the models loaded between turns by sharing one instance per
+configuration, and Ollama does the same through its `keep_alive`, so the models
+load once and stay loaded. Run the warm-up at startup, and the first inference happens
+while the call is being set up rather than while the user waits for the first
+sentence.
+
+## Memory
+
+Qwen3 4B in `Q4`, Whisper `base` and Kokoro together take around 4 GB
+including the key value cache, which leaves plenty of room on a 16 GB machine
+and is comfortable on 24 GB. Pocket TTS in place of Kokoro adds about half a
+gigabyte, since Pocket TTS holds 600 MB while it generates, against 80 MB for
+Kokoro.
+Latency is the binding constraint here, so spend the spare memory on a larger
+LLM rather than on a larger transcription model.
+
+## Why transcription and the voice stay on the CPU
+
+The language model, by far the heaviest part of a call, already runs on the GPU.
+Ollama uses Metal on a Mac and CUDA on a machine with an NVIDIA card, and
+`ollama ps` shows `100% GPU` while a call is in progress.
+
+The runtime is what keeps transcription and the voice on the CPU:
+
+- Transformers.js declares no GPU device on macOS. Windows gets DirectML and
+  Linux on x64 gets CUDA, both reachable through the `device` option of
+  `WhisperSTT` and `KokoroTTS`.
+- WebGPU, the fast path Transformers.js uses in a browser, does not exist in
+  Node, with or without a flag.
+- The CoreML provider is compiled into the ONNX Runtime that ships with Node
+  and can be reached directly, so it was measured rather than assumed.
+
+That last one deserves its numbers. On the encoder of the `french` checkpoint:
+
+| Provider           | Encoder | Session load |
+| ------------------ | ------- | ------------ |
+| cpu                | 586 ms  | 207 ms       |
+| coreml             | 1728 ms | 14552 ms     |
+| coreml `MLProgram` | 2975 ms | 12655 ms     |
+
+CoreML is three to five times slower, and needs another twelve seconds to
+compile the model when the session opens. The CoreML log shows why: CoreML covers
+577 of the 873 nodes and splits the graph into 88 partitions, so the run spends
+its time copying tensors back and forth across those boundaries instead of
+computing.
+
+So the CPU is the right answer on a Mac today, and quantized weights are the
+fastest setting measured on it, which is why `q8` is the default. On Linux with
+an NVIDIA card, try `device: 'cuda'`, and measure a server built around such a
+card yourself, since these numbers describe a personal machine.
+
+`src/tests/onnx-device-bench.ts` in the demo server runs this comparison
+against any encoder from the Transformers.js cache. Run it to see what a
+different machine does.
+
+Piper stays on the CPU for a different reason. Its command line has a `--cuda`
+flag, with no Metal equivalent. Piper is fast enough that the missing GPU path
+rarely matters, since almost all of its cost is loading the voice once.

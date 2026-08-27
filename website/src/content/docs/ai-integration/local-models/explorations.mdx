@@ -1,0 +1,86 @@
+---
+title: 'Explorations'
+description: 'Local models that were measured, timed and left out of the stack, with the reason for each.'
+order: 55
+---
+
+# Explorations
+
+Every model on this page was installed, run and timed on a MacBook Pro M2 with
+24 GB of memory, then left out of the recommended stack. The measurements are
+written down so nobody has to run them twice, and the verdicts belong to this
+class of machine rather than to the models themselves. A server with a large
+GPU, or a faster runtime on the same weights, can bring any of them back into
+range.
+
+## The Mistral models
+
+A French project asks for a Mistral first, and the family has little to offer
+at the sizes a personal computer can run. Mistral Small 4 is a mixture of
+experts of 119 billion parameters, Mistral Medium and Large are heavier still,
+and the only open weights that fit are Mistral 7B, whose last revision dates
+from 2024. `ollama-agent.ts`, run against `mistral:7b-instruct-v0.3-q4_K_M` and
+`qwen3:4b-instruct` on the same prompt and the same machine, gives:
+
+| The test                                | Mistral 7B v0.3                      | Qwen3 4B Instruct        |
+| --------------------------------------- | ------------------------------------ | ------------------------ |
+| First token, model already loaded       | 2.8 to 3.1 s                         | 0.8 to 1.3 s             |
+| Asking the time, with a `get_time` tool | No call, invented `[heure]:[minute]` | Tool called, time spoken |
+| A meaningless `"euh"`                   | Answered anyway                      | `CancelLastUserMessage`  |
+| `"Merci, au revoir !"`                  | Started a new offer of help          | Said goodbye             |
+
+Ollama does list `tools` among the capabilities of that model, and the model
+still mishandles the format on the long system prompts Micdrop builds. It
+writes broken French too, such as
+`"Comment pouvez-je vous aider"`. Three seconds to the first token is already
+more than the budget of a whole spoken turn, so pick Qwen3 4B Instruct and
+reach for the Mistral API when you want a Mistral.
+
+## Voxtral Mini 3B for transcription
+
+Voxtral Mini transcribes, translates and answers questions about audio. The
+community publishes an ONNX export, so it does run in Node through
+Transformers.js exactly like Whisper does.
+`examples/advanced/server/src/tests/voxtral-stt.ts` runs it on French sentences
+spoken by Piper, with weights in `q4` on CPU:
+
+| Model            | Per utterance | Word errors |
+| ---------------- | ------------- | ----------- |
+| Voxtral Mini 3B  | ~16600 ms     | 17 %        |
+| Whisper `base`   | ~470 ms       | 34 %        |
+| Whisper `french` | ~1200 ms      | 11 %        |
+
+Voxtral transcribes more accurately than Whisper `base`, and it costs
+thirty-five times more to run, because transcribing with it means generating
+tokens with a three billion parameter model instead of running an encoder and a
+small decoder.
+Whisper `french` does better on both measures for a fourteenth of the time. The
+weights come to 3 GB in `q4`, and Transformers.js downloads them on its own and
+aborts on files that size, so fetch them with `hf download` first.
+
+## Voxtral TTS 4B for the voice
+
+Voxtral TTS arrived in March 2026, speaks nine languages including French, and
+clones a voice from three seconds of audio. It has no ONNX export, so it runs
+through `mlx-audio` in Python on Apple Silicon rather than in Node. With
+`mlx-community/Voxtral-4B-TTS-2603-mlx-4bit` in streaming mode, it loads in
+2.4 seconds and returns its first chunk of audio after 1.0 to 1.5 seconds, then
+produces about two thirds of a second of speech per second of computation.
+
+That speed rules it out, since the audio arrives more slowly than it plays and
+a sentence stalls halfway through. Piper answers in 390 ms on the same machine
+and generates far faster than it plays, so every sentence plays through in one
+go. The voice itself is a clear step above anything else running locally, and a
+machine that generates two or three times faster would make it the best local
+voice available.
+
+Voxtral TTS is also under a `CC BY-NC` license, so a commercial call goes
+through the Mistral API rather than through these weights.
+
+## Kyutai
+
+Kyutai publishes streaming speech to text models that cover French and English
+well, and they would remove the fixed cost of Whisper always reading thirty
+seconds of audio. They have no ONNX export, so running them means a Python or
+Rust server next to Node rather than an npm install. The Voxtral voice runs
+outside Node for the same reason.
