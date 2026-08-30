@@ -172,6 +172,15 @@ cadrer un classement.
   d'usage figé sans code ; ils ne couvrent pas la personnalisation de l'UX ni les appels d'outils
   dans l'application.
 
+### Partenaires
+
+Les projets open source dont Micdrop dépend. Jamais suivis comme concurrents, jamais de page
+« alternative à », et à citer avec un lien dès qu'un contenu touche à leur brique. Une ligne par
+partenaire, à compléter au fil des dépendances.
+
+- **ricky0123** ([vad](https://github.com/ricky0123/vad)) : le VAD navigateur suit son algorithme
+  et charge son modèle Silero. À citer dans les contenus VAD, Silero et détection de parole.
+
 ---
 
 ## 5. Pages canoniques par thème
