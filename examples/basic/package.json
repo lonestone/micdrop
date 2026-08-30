@@ -12,9 +12,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@micdrop/client": "*",
     "@micdrop/openai": "*",
     "@micdrop/server": "*",
+    "@micdrop/web": "*",
     "ws": "^8.19.0"
   },
   "devDependencies": {

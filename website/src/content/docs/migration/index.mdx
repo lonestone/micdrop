@@ -1,0 +1,27 @@
+---
+title: 'Migration'
+description: 'Upgrade guides for Micdrop, with the breaking changes of each major version and what to do about them.'
+order: 63
+---
+
+# Migration
+
+Micdrop follows semantic versioning: a major version is the only place a
+breaking change may appear, and each one gets a guide here.
+
+## Guides
+
+- **August 2026**, [Upgrade to v3](./v3), where the browser code moved to
+  `@micdrop/web` so the same call could run on a phone
+
+## How versions are numbered
+
+Every package moves on its own, so a major bump on one does not force the
+others. `@micdrop/server` stayed on 2.x through the v3 client release, and an
+app can upgrade its client without touching its server: the protocol between
+them has not changed.
+
+<Callout type="tip">
+  Pin your packages to a minor range (`^3.1.0`) rather than to a major one when
+  you want upgrades to stay uneventful.
+</Callout>

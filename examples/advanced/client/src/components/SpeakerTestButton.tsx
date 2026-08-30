@@ -1,10 +1,9 @@
-import { Speaker } from '@micdrop/client'
+import { Speaker } from '@micdrop/web'
 import { useMicdropState } from '@micdrop/react'
 import React, { useRef, useState } from 'react'
 import { FaPlay, FaStop } from 'react-icons/fa'
 
-interface SpeakerTestButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
+interface SpeakerTestButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
 
 export default function SpeakerTestButton(props: SpeakerTestButtonProps) {
   const { isAssistantSpeaking } = useMicdropState()
@@ -30,10 +29,9 @@ export default function SpeakerTestButton(props: SpeakerTestButtonProps) {
       const result = await fetch(filepath)
       if (!result.ok) return
 
-      // Play audio
-      const audioBlob = await result.blob()
-      console.log('Playing audio chunk', audioBlob)
-      Speaker.playAudio(audioBlob)
+      // Play audio, the files hold raw PCM16 at 16 kHz like the server sends
+      const audio = await result.arrayBuffer()
+      Speaker.playAudio(audio)
       i++
       setLoading(false)
 

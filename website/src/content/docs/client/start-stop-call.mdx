@@ -17,7 +17,7 @@ Begin a voice conversation by starting the Micdrop client connection and microph
 Start a call with minimal configuration:
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 await Micdrop.start({
   url: 'ws://localhost:8081',
@@ -169,7 +169,7 @@ End the voice conversation by stopping the microphone, closing the WebSocket con
 Stop the current call and clean up all resources:
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 // Stop the call
 await Micdrop.stop()

@@ -1,13 +1,13 @@
 ---
-title: 'Micdrop: TypeScript voice AI SDK for real-time web apps'
+title: 'Micdrop: TypeScript voice AI SDK for web and React Native'
 titleBrand: false
-description: 'Add a real-time voice mode to your web app with a few lines of TypeScript. It runs on your own servers, with hosted or local agent, STT and TTS providers.'
+description: 'Add a real-time voice mode to your web or React Native app with a few lines of TypeScript. It runs on your own servers, with hosted or local providers.'
 fullWidth: true
 ---
 
 <HomeHeader
-  tagline="Real-time voice conversations with AI in the browser"
-  description="Integrate a powerful voice mode in your webapp with a few lines of code using Micdrop. Use provided AI integrations (agents, STT, TTS) or build your own. Build the best UX with our SDK."
+  tagline="Real-time voice conversations with AI, in the browser and on mobile"
+  description="Integrate a powerful voice mode in your webapp or your React Native app with a few lines of code using Micdrop. One server, the same call on every platform. Use provided AI integrations (agents, STT, TTS) or build your own."
   primaryLabel="Start Building (5 min)"
   primaryHref="/docs/getting-started"
   secondaryLabel="View on GitHub"
@@ -40,10 +40,11 @@ fullWidth: true
 >
   <PackageGroup
     title="Core Packages"
-    description="Essential packages for browser and server-side implementation"
+    description="One server, and the client for the platform you are building for"
     variant="core"
   >
-    <PackageLink name="@micdrop/client" href="/docs/client" />
+    <PackageLink name="@micdrop/web" href="/docs/client" />
+    <PackageLink name="@micdrop/react-native" href="/docs/react-native" />
     <PackageLink name="@micdrop/server" href="/docs/server" />
   </PackageGroup>
 
@@ -107,7 +108,7 @@ fullWidth: true
 
   <PackageGroup
     title="Utilities"
-    description="React hooks that re-render your components as the call state changes"
+    description="React hooks that re-render your components as the call state changes, in the browser and in React Native"
     variant="utility"
   >
     <PackageLink name="@micdrop/react" href="/docs/client/react-hooks" />
@@ -136,6 +137,12 @@ fullWidth: true
     The local packages run the speech models inside your Node process and the
     agent on Ollama, so the whole conversation works offline, with no API key
     and no audio leaving the machine.
+  </FeatureCard>
+  <FeatureCard title="Web and Mobile" icon="devices">
+    The browser and React Native clients are two thin layers over the same
+    engine, so a call behaves the same on a laptop and on a phone, against the
+    server you already run. Microphone permission, audio session and echo
+    cancellation are handled for you.
   </FeatureCard>
   <FeatureCard title="Developer Experience" icon="code">
     Built with TypeScript for excellent DX. Comprehensive documentation, React

@@ -1,3 +1,4 @@
+import { MicSource } from '../types'
 import { getVAD, VADConfigName } from './getVAD'
 import { VAD, VADStatus } from './VAD'
 
@@ -21,13 +22,13 @@ export class MultipleVAD extends VAD {
     return this.vads.every((vad) => vad.isPaused)
   }
 
-  async start(stream: MediaStream): Promise<void> {
+  async start(mic: MicSource): Promise<void> {
     for (const vad of this.vads) {
       if (vad.isStarted) {
         continue
       }
       vad.on('ChangeStatus', this.onStatusChange)
-      await vad.start(stream)
+      await vad.start(mic)
     }
   }
 

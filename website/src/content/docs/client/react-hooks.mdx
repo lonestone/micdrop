@@ -17,7 +17,7 @@ npm install @micdrop/react
 ## Quick Start
 
 ```tsx
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 import { useMicdropState, useMicdropError } from '@micdrop/react'
 
 function VoiceChat() {
@@ -186,7 +186,7 @@ function SpeakerVolumeIndicator() {
 
 ```tsx
 import { useState } from 'react'
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 import {
   useMicdropState,
   useMicdropError,
@@ -288,7 +288,7 @@ function VoiceCallComponent() {
 
 ```tsx
 import { useMicdropState } from '@micdrop/react'
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 function DeviceSettings() {
   const state = useMicdropState()
@@ -303,7 +303,7 @@ function DeviceSettings() {
           onChange={(e) => Micdrop.changeMicDevice(e.target.value)}
         >
           {state.micDevices.map((device) => (
-            <option key={device.deviceId} value={device.deviceId}>
+            <option key={device.id} value={device.id}>
               {device.label || 'Unknown Device'}
             </option>
           ))}
@@ -318,7 +318,7 @@ function DeviceSettings() {
           onChange={(e) => Micdrop.changeSpeakerDevice(e.target.value)}
         >
           {state.speakerDevices.map((device) => (
-            <option key={device.deviceId} value={device.deviceId}>
+            <option key={device.id} value={device.id}>
               {device.label || 'Unknown Device'}
             </option>
           ))}

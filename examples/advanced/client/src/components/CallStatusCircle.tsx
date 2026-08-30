@@ -1,4 +1,4 @@
-import { MicdropState } from '@micdrop/client'
+import { MicdropState } from '@micdrop/web'
 import { useMicdropState, useMicVolume, useSpeakerVolume } from '@micdrop/react'
 
 interface Props {

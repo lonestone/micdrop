@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Micdrop",
+    "slug": "micdrop-example",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "micdrop",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "dev.micdrop.example",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "dev.micdrop.example"
+    },
+    "plugins": [
+      "expo-dev-client",
+      [
+        "react-native-audio-api",
+        {
+          "iosMicrophonePermission": "Micdrop needs the microphone so you can talk with the assistant.",
+          "androidPermissions": [
+            "android.permission.RECORD_AUDIO",
+            "android.permission.MODIFY_AUDIO_SETTINGS",
+            "android.permission.FOREGROUND_SERVICE",
+            "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+            "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+          ],
+          "androidFSTypes": [
+            "microphone",
+            "mediaPlayback"
+          ]
+        }
+      ]
+    ]
+  }
+}

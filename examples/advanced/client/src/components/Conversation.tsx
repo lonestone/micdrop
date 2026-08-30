@@ -1,4 +1,4 @@
-import { MicdropConversationToolResult } from '@micdrop/client'
+import { MicdropConversationToolResult } from '@micdrop/web'
 import { useMicdropState } from '@micdrop/react'
 import { useEffect, useRef } from 'react'
 

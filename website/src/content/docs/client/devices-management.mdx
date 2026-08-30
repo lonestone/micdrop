@@ -13,7 +13,7 @@ Select and manage microphone and speaker devices for optimal audio quality and u
 Access available devices and change them using MicdropClient methods:
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 // Get available devices
 console.log('Microphones:', Micdrop.micDevices)
@@ -33,8 +33,8 @@ await Micdrop.changeSpeakerDevice('speaker-device-id')
 const micDevices = Micdrop.micDevices
 
 micDevices.forEach((device) => {
-  console.log('Mic:', device.label || 'Unknown Device')
-  console.log('ID:', device.deviceId)
+  console.log('Mic:', device.label)
+  console.log('ID:', device.id)
   console.log('Group:', device.groupId)
 })
 
@@ -49,8 +49,8 @@ console.log('Current mic:', Micdrop.micDeviceId)
 const speakerDevices = Micdrop.speakerDevices
 
 speakerDevices.forEach((device) => {
-  console.log('Speaker:', device.label || 'Unknown Device')
-  console.log('ID:', device.deviceId)
+  console.log('Speaker:', device.label)
+  console.log('ID:', device.id)
   console.log('Group:', device.groupId)
 })
 
@@ -66,7 +66,7 @@ Switch to a different microphone device:
 
 ```typescript
 // Change microphone by device ID
-const newMicId = Micdrop.micDevices[1].deviceId
+const newMicId = Micdrop.micDevices[1].id
 await Micdrop.changeMicDevice(newMicId)
 ```
 
@@ -76,7 +76,7 @@ Switch to a different speaker/headphone device:
 
 ```typescript
 // Change speaker by device ID
-const newSpeakerId = Micdrop.speakerDevices[1].deviceId
+const newSpeakerId = Micdrop.speakerDevices[1].id
 await Micdrop.changeSpeakerDevice(newSpeakerId)
 ```
 
@@ -88,7 +88,7 @@ Selected devices are automatically persisted in localStorage.
 
 ```tsx
 import { useState } from 'react'
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 import { useMicdropState } from '@micdrop/react'
 
 function DeviceSettings() {
@@ -123,8 +123,8 @@ function DeviceSettings() {
           disabled={changing}
         >
           {state.micDevices.map((device) => (
-            <option key={device.deviceId} value={device.deviceId}>
-              {device.label || 'Unknown Microphone'}
+            <option key={device.id} value={device.id}>
+              {device.label}
             </option>
           ))}
         </select>
@@ -138,8 +138,8 @@ function DeviceSettings() {
           disabled={changing}
         >
           {state.speakerDevices.map((device) => (
-            <option key={device.deviceId} value={device.deviceId}>
-              {device.label || 'Unknown Speaker'}
+            <option key={device.id} value={device.id}>
+              {device.label}
             </option>
           ))}
         </select>
@@ -158,7 +158,7 @@ Monitor microphone input levels to verify the selected device is working correct
 #### Using Mic Analyzer (Vanilla JavaScript)
 
 ```typescript
-import { Mic } from '@micdrop/client'
+import { Mic } from '@micdrop/web'
 
 // Listen to microphone volume changes
 const onMicVolumeChange = (volume: number) => {
@@ -168,10 +168,10 @@ const onMicVolumeChange = (volume: number) => {
 }
 
 // Start listening to volume events
-Mic.analyser.on('volume', onMicVolumeChange)
+Mic.on('Volume', onMicVolumeChange)
 
 // Stop listening (cleanup)
-Mic.analyser.off('volume', onMicVolumeChange)
+Mic.off('Volume', onMicVolumeChange)
 ```
 
 #### Using React Hook
@@ -221,7 +221,7 @@ Monitor speaker output levels and test audio playback to verify the selected dev
 #### Using Speaker Analyzer (Vanilla JavaScript)
 
 ```typescript
-import { Speaker } from '@micdrop/client'
+import { Speaker } from '@micdrop/web'
 
 // Listen to speaker volume changes
 const onSpeakerVolumeChange = (volume: number) => {
@@ -231,10 +231,10 @@ const onSpeakerVolumeChange = (volume: number) => {
 }
 
 // Start listening to volume events
-Speaker.analyser.on('volume', onSpeakerVolumeChange)
+Speaker.on('Volume', onSpeakerVolumeChange)
 
 // Stop listening (cleanup)
-Speaker.analyser.off('volume', onSpeakerVolumeChange)
+Speaker.off('Volume', onSpeakerVolumeChange)
 ```
 
 #### Using React Hook

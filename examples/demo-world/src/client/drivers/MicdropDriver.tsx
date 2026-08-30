@@ -1,4 +1,9 @@
-import { Micdrop, MicdropToolCall, Speaker } from '@micdrop/client'
+import {
+  audioContext,
+  getSpeakerOutput,
+  Micdrop,
+  MicdropToolCall,
+} from '@micdrop/web'
 import { useMicdropState } from '@micdrop/react'
 import { useEffect } from 'react'
 import { WorldUpdate } from '../../shared/protocol'
@@ -31,9 +36,21 @@ export default function MicdropDriver() {
   // it. Handed over as a node rather than as a number, so the shells can read
   // the envelope on their own frames instead of on the meter's ten a second.
   useEffect(() => {
-    hearVoice(Speaker.analyser.node)
-    return () => hearVoice(undefined)
-  }, [])
+    if (!state.isStarted) return
+    const output = getSpeakerOutput()
+    if (!output) return
+
+    const analyser = audioContext.createAnalyser()
+    analyser.fftSize = 512
+    analyser.smoothingTimeConstant = 0.1
+    output.connect(analyser)
+    hearVoice(analyser)
+
+    return () => {
+      hearVoice(undefined)
+      output.disconnect(analyser)
+    }
+  }, [state.isStarted])
 
   useEffect(() => {
     worldStore.setStatus(toStatus(state))

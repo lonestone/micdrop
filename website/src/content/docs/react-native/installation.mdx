@@ -1,0 +1,158 @@
+---
+title: 'Installation'
+description: 'Install the Micdrop React Native client, the audio library it records with, and the iOS and Android permissions a voice call needs.'
+order: 19
+---
+
+# Installation
+
+## Packages
+
+```bash
+npm install @micdrop/react-native react-native-audio-api
+```
+
+Audio is captured and played by [`react-native-audio-api`](https://github.com/software-mansion/react-native-audio-api), an implementation of the Web Audio API for React Native. It ships a player UI that pulls in three more packages, so install those as well:
+
+```bash
+npx expo install react-native-worklets react-native-gesture-handler react-native-reanimated
+```
+
+For the React hooks:
+
+```bash
+npm install @micdrop/react
+```
+
+The [Silero voice detection](./vad) needs `onnxruntime-react-native` as well,
+which does not autolink on Expo SDK 57 today. The volume detection needs
+nothing.
+
+Native code is involved, so the app runs from a development build. Expo Go does not include these libraries.
+
+## Expo
+
+Add the config plugin to `app.json`. It writes the microphone permission and the audio service into the native projects:
+
+```json
+{
+  "expo": {
+    "plugins": [
+      [
+        "react-native-audio-api",
+        {
+          "iosMicrophonePermission": "We need the microphone so you can talk with the assistant.",
+          "androidPermissions": [
+            "android.permission.RECORD_AUDIO",
+            "android.permission.MODIFY_AUDIO_SETTINGS",
+            "android.permission.FOREGROUND_SERVICE",
+            "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+            "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+          ],
+          "androidFSTypes": ["microphone", "mediaPlayback"]
+        }
+      ]
+    ]
+  }
+}
+```
+
+Then build once:
+
+```bash
+npx expo run:ios
+# or
+npx expo run:android
+```
+
+Later runs only need `npx expo start --dev-client`.
+
+## Bare React Native
+
+Add the microphone permission by hand.
+
+`ios/<App>/Info.plist`:
+
+```xml
+<key>NSMicrophoneUsageDescription</key>
+<string>We need the microphone so you can talk with the assistant.</string>
+<key>UIBackgroundModes</key>
+<array>
+  <string>audio</string>
+</array>
+```
+
+`android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+```
+
+Then run `pod install` in `ios/`.
+
+The permission itself is requested by `Micdrop.start()`, there is nothing to call beforehand.
+
+## Targeting phones only
+
+Expo offers a web target unless you say otherwise, and bundling for it needs
+`react-native-web`. An app meant for phones says so in `app.json`, which keeps
+the dev server from failing on `Unable to resolve react-native-web`:
+
+```json
+{
+  "expo": {
+    "platforms": ["ios", "android"]
+  }
+}
+```
+
+## Reaching the server
+
+A phone does not share `localhost` with your machine, so a development server has to be reached by its address on the network. With Expo, the app already knows where it was loaded from:
+
+```ts
+import Constants from 'expo-constants'
+import { Platform } from 'react-native'
+
+let host = Constants.expoConfig?.hostUri?.split(':')[0] ?? 'localhost'
+
+// An Android emulator has its own loopback, so `localhost` there is the
+// emulator rather than the machine running the server
+if (Platform.OS === 'android' && ['localhost', '127.0.0.1'].includes(host)) {
+  host = '10.0.2.2'
+}
+
+export const serverUrl = `ws://${host}:8087`
+```
+
+Have the server listen on every interface (`host: '0.0.0.0'`) so it accepts that connection.
+
+An iOS simulator shares the machine's network, and a phone on the same Wi-Fi gets
+the address Expo advertised, so both work without the special case. A phone
+plugged in over USB reaches the machine through `adb reverse tcp:8087 tcp:8087`.
+
+In production, use `wss://` and let the app talk to your deployed server.
+
+## Monorepo
+
+Metro has to see the packages outside the app folder. In `metro.config.js`:
+
+```js
+const path = require('path')
+const { getDefaultConfig } = require('expo/metro-config')
+
+const projectRoot = __dirname
+const monorepoRoot = path.resolve(projectRoot, '../..')
+
+const config = getDefaultConfig(projectRoot)
+config.watchFolders = [monorepoRoot]
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'),
+  path.resolve(monorepoRoot, 'node_modules'),
+]
+
+module.exports = config
+```
+
+With pnpm, leave hierarchical lookup on: each package finds its own dependencies through the store next to it.

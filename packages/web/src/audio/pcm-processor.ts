@@ -1,5 +1,5 @@
 import pcmProcessorWorklet from './pcm-processor-worklet?raw'
-import { audioContext } from './utils/audioContext'
+import { audioContext } from './audioContext'
 
 declare global {
   interface Window {

@@ -1,7 +1,12 @@
 import { MicdropClient } from './client'
 
-// Setup and export MicdropClient instance
-if (!window.micdropClient) {
-  window.micdropClient = new MicdropClient()
+const globalScope = globalThis as typeof globalThis & {
+  micdropClient?: MicdropClient
 }
-export const Micdrop = window.micdropClient
+
+// One client for the whole app, kept across fast refreshes
+if (!globalScope.micdropClient) {
+  globalScope.micdropClient = new MicdropClient()
+}
+
+export const Micdrop = globalScope.micdropClient

@@ -1,0 +1,70 @@
+{
+  "name": "@micdrop/react-native",
+  "version": "0.1.0",
+  "description": "React Native audio for Micdrop: real-time voice conversations with AI on iOS and Android",
+  "author": "Godefroy de Compreignac",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Godefroy/micdrop.git",
+    "directory": "packages/react-native"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "ios",
+    "android",
+    "microphone",
+    "audio",
+    "voice",
+    "conversation",
+    "ai"
+  ],
+  "peerDependencies": {
+    "onnxruntime-react-native": ">=1.20.0",
+    "react-native": ">=0.76.0",
+    "react-native-audio-api": ">=0.13.0"
+  },
+  "dependencies": {
+    "@micdrop/client": "^3.0.0"
+  },
+  "devDependencies": {
+    "onnxruntime-react-native": "^1.24.3",
+    "react-native-audio-api": "^0.13.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "peerDependenciesMeta": {
+    "onnxruntime-react-native": {
+      "optional": true
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./silero": {
+      "types": "./dist/silero.d.ts",
+      "import": "./dist/silero.mjs",
+      "require": "./dist/silero.js"
+    }
+  }
+}

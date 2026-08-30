@@ -1,0 +1,83 @@
+---
+title: 'Using Another Audio Library'
+description: 'Replace the recording and playback of the Micdrop React Native client with another native audio library.'
+order: 23
+---
+
+# Using Another Audio Library
+
+Recording and playback sit behind two interfaces, and `react-native-audio-api` is only the implementation that comes wired by default. Another library can take its place without touching anything above it: voice activity detection, chunking, the protocol and the hooks stay the same.
+
+## Recording
+
+A microphone driver starts capturing and emits mono float samples as they come. Everything else, from the level used by the VAD to the resampling to 16 kHz, is built on top.
+
+```ts
+import { Mic, MicDriver, MicdropDevice } from '@micdrop/react-native'
+
+class MyMic extends MicDriver {
+  get isStarted() {
+    return this.recording
+  }
+
+  get deviceId() {
+    return undefined
+  }
+
+  async start(deviceId?: string) {
+    await startNativeRecording((samples: Float32Array, sampleRate: number) => {
+      this.emit('Frames', samples, sampleRate)
+    })
+  }
+
+  async stop() {
+    await stopNativeRecording()
+  }
+
+  async getDevices(): Promise<MicdropDevice[]> {
+    return []
+  }
+}
+
+Mic.setDriver(new MyMic())
+```
+
+Samples may arrive at any rate, the recorder resamples them.
+
+## Playback
+
+A speaker driver receives the 16 kHz PCM16 the server sends, and says when it is playing so the call knows the assistant has the floor.
+
+```ts
+import { Speaker, SpeakerDriver } from '@micdrop/react-native'
+
+class MySpeaker extends SpeakerDriver {
+  get isPlaying() {
+    return this.playing
+  }
+
+  async start() {}
+
+  play(pcm: Int16Array, sampleRate: number) {
+    enqueueNativeAudio(pcm, sampleRate)
+  }
+
+  stopAudio() {
+    clearNativeQueue()
+  }
+
+  async stop() {}
+
+  async setOutput(output: 'speaker' | 'earpiece') {}
+
+  async getDevices() {
+    return []
+  }
+}
+
+Speaker.setDriver(new MySpeaker())
+```
+
+Chunks arrive faster or slower than they are heard, so a driver has to queue them rather than play each one on arrival. `Pcm16AudioStream` does that scheduling and is exported: give it an `AudioSink`, which is the small slice of Web Audio it needs, and it handles the buffering, the gapless playback and the level meter.
+
+Call `setDriver` before the first `Micdrop.start()`.

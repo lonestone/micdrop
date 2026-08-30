@@ -27,7 +27,7 @@ You can monitor tool calls in two ways:
 Tool calls and results are automatically added to the conversation history:
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 // Access conversation including tool calls and results
 const conversation = Micdrop.conversation
@@ -55,7 +55,7 @@ conversation.forEach((item, index) => {
 Listen for tool call events using the Micdrop client:
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 // Listen for tool calls from the AI agent
 Micdrop.on('ToolCall', (toolCall) => {

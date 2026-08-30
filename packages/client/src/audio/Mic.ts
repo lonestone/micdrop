@@ -1,92 +1,174 @@
-import { AudioAnalyser } from './utils/AudioAnalyser'
-import { audioContext } from './utils/audioContext'
-import { LocalStorageKeys } from './utils/localStorage'
-import { stopStream } from './utils/stopStream'
+import { EventEmitter } from 'eventemitter3'
+import { concatFloat32, resample } from './pcm'
+import { MicDriver, MicdropDevice, MicEvents } from './types'
+import { VOLUME_SAMPLE_RATE, VolumeMeter } from './volume'
 
-export class Mic {
-  public analyser = new AudioAnalyser(audioContext)
-  public deviceId: string | undefined
+// Audio worth this much time is measured at once before reporting a level,
+// which is also the pace at which the VAD makes decisions.
+const VOLUME_INTERVAL = 100 // ms
+// Samples the measurement looks at, at VOLUME_SAMPLE_RATE
+const VOLUME_WINDOW = 512
+// How long the captured audio is timed before its rate is judged
+const RATE_CHECK_DURATION = 2000 // ms
+// How far the delivered rate may drift from the announced one
+const RATE_TOLERANCE = 0.15
 
-  private audioStream: MediaStream | undefined
-  private sourceNode: MediaStreamAudioSourceNode | undefined
+/**
+ * The microphone, as a single object shared by the whole app.
+ *
+ * It wraps a {@link MicDriver}, the browser one or the native one, and turns
+ * the samples it captures into the level used by the VAD and by level meters.
+ * Nothing here knows which platform it runs on.
+ */
+export class MicController extends EventEmitter<MicEvents> {
+  private driver: MicDriver | undefined
+  private meter = new VolumeMeter()
+  private pending: Float32Array[] = []
+  private pendingLength = 0
+  private pendingRate = VOLUME_SAMPLE_RATE
+  private rateCheckedAt = 0
+  private rateCheckSamples = 0
+  private rateWarned = false
 
-  private getMicConstraints(deviceId?: string): MediaStreamConstraints {
-    return {
-      audio: {
-        deviceId: { ideal: deviceId },
-        sampleRate: 16000, // not working, it will follow device settings, usually 44.1kHz
-        sampleSize: 16,
-        channelCount: 1,
-        echoCancellation: true,
-        noiseSuppression: true,
-      },
+  /** Last level measured, in decibels, between -Infinity and 0 */
+  public volume = -Infinity
+
+  /**
+   * Replaces the audio driver, to record with another library
+   * @param driver - The driver to record with
+   */
+  setDriver(driver: MicDriver) {
+    if (this.driver === driver) return
+    if (this.driver) {
+      this.driver.off('Frames', this.onFrames)
+      this.driver.off('DeviceChange', this.onDeviceChange)
+      this.driver.off('Error', this.onError)
     }
+    this.driver = driver
+    driver.on('Frames', this.onFrames)
+    driver.on('DeviceChange', this.onDeviceChange)
+    driver.on('Error', this.onError)
+  }
+
+  getDriver(): MicDriver {
+    if (!this.driver) {
+      throw new Error(
+        'No microphone driver. Import @micdrop/web in a browser or @micdrop/react-native on a phone, or call Mic.setDriver().'
+      )
+    }
+    return this.driver
+  }
+
+  get isStarted(): boolean {
+    return this.driver?.isStarted ?? false
+  }
+
+  get deviceId(): string | undefined {
+    return this.driver?.deviceId
   }
 
   /**
-   * Starts the microphone
-   * @param deviceId - The deviceId to use
-   * @returns The microphone stream
+   * Asks for the microphone permission and starts capturing
+   * @param deviceId - Input device to record from, defaults to the system one
    */
-  async start(deviceId?: string): Promise<MediaStream> {
-    if (!audioContext || !this.analyser) {
-      throw new Error('AudioContext not initialized')
+  async start(deviceId?: string) {
+    this.resetVolume()
+    await this.getDriver().start(deviceId)
+  }
+
+  /** Stops capturing and releases the microphone */
+  async stop() {
+    await this.driver?.stop()
+    this.resetVolume()
+  }
+
+  /** Lists the input devices the system offers */
+  async getDevices(): Promise<MicdropDevice[]> {
+    if (!this.driver) return []
+    return this.driver.getDevices()
+  }
+
+  private onFrames = (frames: Float32Array, sampleRate: number) => {
+    this.emit('Frames', frames, sampleRate)
+    this.checkRate(frames.length, sampleRate)
+
+    if (sampleRate !== this.pendingRate) {
+      this.pending = []
+      this.pendingLength = 0
+      this.pendingRate = sampleRate
+      this.meter.reset()
     }
 
-    // Get deviceId from localStorage
-    if (!deviceId) {
-      deviceId = localStorage.getItem(LocalStorageKeys.MicDevice) || undefined
-    }
+    this.pending.push(frames)
+    this.pendingLength += frames.length
 
-    if (this.audioStream) {
-      // deviceId has not changed, reuse previous stream
-      if (this.deviceId === deviceId) {
-        return this.audioStream
-      }
+    const interval = Math.round((VOLUME_INTERVAL / 1000) * sampleRate)
+    if (this.pendingLength < interval) return
 
-      // deviceId has changed, stop previous stream
-      stopStream(this.audioStream)
-    }
+    // Measure the end of what was gathered, which is what the room sounds like
+    // right now
+    const needed = Math.ceil((VOLUME_WINDOW * sampleRate) / VOLUME_SAMPLE_RATE)
+    const gathered = concatFloat32(this.pending)
+    const window = gathered.subarray(Math.max(0, gathered.length - needed))
+    this.pending = []
+    this.pendingLength = 0
 
-    // Get stream from microphone
-    this.audioStream = await navigator.mediaDevices.getUserMedia(
-      this.getMicConstraints(deviceId)
+    this.volume = this.meter.measure(
+      resample(window, sampleRate, VOLUME_SAMPLE_RATE)
     )
-
-    // Store deviceId
-    const track = this.audioStream.getTracks()[0]
-    let newDeviceId =
-      track && track.getCapabilities && track.getCapabilities().deviceId
-    if (newDeviceId) {
-      if (newDeviceId === 'default' && deviceId) {
-        newDeviceId = deviceId
-      }
-      localStorage.setItem(LocalStorageKeys.MicDevice, newDeviceId)
-      this.deviceId = newDeviceId
-    } else {
-      localStorage.removeItem(LocalStorageKeys.MicDevice)
-      this.deviceId = undefined
-    }
-
-    // Connect to AudioContext
-    if (this.sourceNode) this.sourceNode.disconnect()
-    this.sourceNode = audioContext.createMediaStreamSource(this.audioStream)
-    this.sourceNode.connect(this.analyser.node)
-
-    return this.audioStream
+    this.emit('Volume', this.volume)
   }
 
   /**
-   * Stops the microphone
+   * Times the captured audio against the rate it claims to be at.
+   *
+   * A microphone that announces 16 kHz while delivering 48 kHz sends speech to
+   * the server three times too slow, which comes back as a short transcript in
+   * a random language. That is invisible otherwise, so it is worth saying out
+   * loud once.
+   * @param samples - How many samples just arrived
+   * @param sampleRate - The rate they are said to be at
    */
-  stop() {
-    if (this.sourceNode) {
-      this.sourceNode.disconnect()
-      this.sourceNode = undefined
+  private checkRate(samples: number, sampleRate: number) {
+    if (this.rateWarned) return
+
+    const now = Date.now()
+    if (this.rateCheckedAt === 0) {
+      this.rateCheckedAt = now
+      return
     }
-    if (this.audioStream) {
-      stopStream(this.audioStream)
-      this.audioStream = undefined
-    }
+
+    this.rateCheckSamples += samples
+    const elapsed = now - this.rateCheckedAt
+    if (elapsed < RATE_CHECK_DURATION) return
+
+    const delivered = (this.rateCheckSamples / elapsed) * 1000
+    this.rateCheckedAt = now
+    this.rateCheckSamples = 0
+
+    if (Math.abs(delivered - sampleRate) / sampleRate <= RATE_TOLERANCE) return
+
+    this.rateWarned = true
+    console.warn(
+      `[Micdrop] The microphone announces ${sampleRate} Hz but delivers about ${Math.round(delivered)} Hz. ` +
+        'Speech is being sent at the wrong speed, so transcription will be poor.'
+    )
+  }
+
+  private onDeviceChange = () => {
+    this.emit('DeviceChange')
+  }
+
+  private onError = (error: Error) => {
+    this.emit('Error', error)
+  }
+
+  private resetVolume() {
+    this.pending = []
+    this.pendingLength = 0
+    this.meter.reset()
+    this.volume = -Infinity
+    this.rateCheckedAt = 0
+    this.rateCheckSamples = 0
   }
 }

@@ -26,7 +26,7 @@ You can also pass instances of these VADs, or combine them in an array. See belo
 Configure VAD when starting a call:
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 // Use volume-based detection (default)
 await Micdrop.start({
@@ -98,9 +98,24 @@ To use `SileroVAD` for speech detection:
 Micdrop.start({ vad: 'silero' })
 ```
 
-It is based on [@ricky0123/vad-web](https://github.com/ricky0123/vad) which runs a [Silero VAD](https://github.com/snakers4/silero-vad) model in the browser using [ONNX Runtime Web](https://github.com/microsoft/onnxruntime/tree/main/js/web).
+It runs the [Silero](https://github.com/snakers4/silero-vad) model, on [ONNX Runtime Web](https://github.com/microsoft/onnxruntime/tree/main/js/web) in a browser and on the native runtime on a phone. The model is about two megabytes, fetched once on the first call.
 
-It is more accurate than `VolumeVAD` and works better with low voice.
+It is more accurate than `VolumeVAD` and works better with low voice, since it hears the difference between a voice and a noise rather than measuring how loud the room is.
+
+The ONNX runtime weighs more than the rest of Micdrop put together, so it only
+enters your bundle if you ask for it:
+
+```typescript
+import '@micdrop/web/silero'
+```
+
+To serve the model from your own domain rather than from a CDN:
+
+```typescript
+import { setSileroOptions } from '@micdrop/web/silero'
+
+setSileroOptions({ model: '/assets/silero_vad_v5.onnx' })
+```
 
 You can also pass an instance of `SileroVAD` to `MicdropClient`:
 
@@ -115,7 +130,7 @@ Micdrop.start({ vad })
 ```
 
 - **Default options:** `{ positiveSpeechThreshold: 0.18, negativeSpeechThreshold: 0.11, minSpeechFrames: 8, redemptionFrames: 20 }`
-- **Persistence:** Options are saved to `localStorage` and restored automatically.
+- **Persistence:** Options are saved to `localStorage` in a browser, and wherever `setMicdropStorage()` points on a phone.
 
 **When to use Silero VAD:**
 

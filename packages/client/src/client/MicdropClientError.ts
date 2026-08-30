@@ -19,10 +19,16 @@ export class MicdropClientError extends Error {
   }
 }
 
+/** What React Native gives on a WebSocket close */
+export interface WSCloseEvent {
+  code?: number
+  reason?: string
+}
+
 export function getClientErrorFromWSCloseEvent(
-  event: CloseEvent
+  event: WSCloseEvent
 ): MicdropClientError | undefined {
-  const code = getClientErrorFromWSCloseEventCode(event.code)
+  const code = getClientErrorFromWSCloseEventCode(event.code ?? 1006)
   return code && new MicdropClientError(code, event.reason)
 }
 

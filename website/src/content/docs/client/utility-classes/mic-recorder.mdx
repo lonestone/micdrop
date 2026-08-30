@@ -28,16 +28,14 @@ This flexibility allows you to either use the full voice conversation capabiliti
 ## Usage Example
 
 ```typescript
-import { MicRecorder } from '@micdrop/client'
+import { Mic, MicRecorder } from '@micdrop/web'
 
 // Create a new recorder instance with VAD config (string, VAD instance, or array)
 const recorder = new MicRecorder('volume')
 
-// Get microphone stream
-const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-
-// Start recording
-await recorder.start(stream)
+// Start the microphone, then listen to it
+await Mic.start()
+await recorder.start(Mic)
 
 // Listen for events
 recorder.on('StartSpeaking', () => {
@@ -48,9 +46,9 @@ recorder.on('StopSpeaking', () => {
   console.log('User stopped speaking')
 })
 
-recorder.on('Chunk', (blob: Blob) => {
-  // Handle audio chunk
-  console.log('Received audio chunk:', blob)
+recorder.on('Chunk', (chunk: Int16Array) => {
+  // 100 ms of mono PCM16 at 16 kHz, ready to be sent to the server
+  console.log('Received audio chunk:', chunk.length)
 })
 ```
 
@@ -70,7 +68,7 @@ interface MicRecorderState {
 
 The recorder emits the following events:
 
-- `Chunk`: Emitted when a new audio chunk is available (with Blob data)
+- `Chunk`: Emitted when a new audio chunk is available, 100 ms of mono PCM16 at 16 kHz
 - `StartSpeaking`: Emitted when speech is detected
 - `StopSpeaking`: Emitted when speech ends
 - `StateChange`: Emitted when the recorder's state changes
@@ -85,9 +83,9 @@ Creates a new MicRecorder instance with the provided VAD config. The config can 
 - A VAD instance
 - An array of VAD configs for multiple VADs
 
-### `start(stream: MediaStream): Promise<void>`
+### `start(mic: MicSource): Promise<void>`
 
-Starts the recorder with the provided audio stream.
+Starts the recorder, listening to the microphone it is given.
 
 ### `stop(): void`
 

@@ -1,4 +1,4 @@
-import { Micdrop, Speaker } from '@micdrop/client'
+import { Micdrop, Speaker } from '@micdrop/web'
 import { useMicdropEndCall, useMicdropState } from '@micdrop/react'
 import { useEffect } from 'react'
 import { Lang } from '../shared/lang'

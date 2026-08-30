@@ -1,0 +1,44 @@
+{
+  "name": "@micdrop/react-native-example",
+  "version": "1.0.0",
+  "author": "Godefroy de Compreignac",
+  "license": "MIT",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently -n server,app -c blue,green \"pnpm dev:server\" \"pnpm dev:app\"",
+    "dev:server": "tsx watch --env-file=server/.env server/src/server.ts",
+    "dev:app": "expo start --dev-client",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "prebuild": "expo prebuild",
+    "bundle": "expo export --platform ios --output-dir .expo-export",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@micdrop/react": "*",
+    "@micdrop/react-native": "*",
+    "expo": "~57.0.17",
+    "expo-constants": "~57.0.15",
+    "expo-dev-client": "~57.0.16",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-audio-api": "^0.13.3",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-worklets": "0.10.1"
+  },
+  "devDependencies": {
+    "@micdrop/openai": "*",
+    "@micdrop/server": "*",
+    "@types/node": "^22.19.13",
+    "@types/react": "~19.2.2",
+    "@types/ws": "^8.18.1",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "ws": "^8.19.0"
+  }
+}

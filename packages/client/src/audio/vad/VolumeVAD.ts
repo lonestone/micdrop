@@ -1,9 +1,11 @@
-import { audioContext } from '../utils/audioContext'
-import { LocalStorageKeys } from '../utils/localStorage'
+import { MicdropStorageKeys, storage } from '../../storage'
+import { MicSource } from '../types'
 import { VAD, VADStatus } from './VAD'
 
 export type VolumeVADOptions = {
+  /** Number of recent samples kept to decide whether someone is speaking */
   history: number
+  /** Level above which audio counts as speech, in decibels */
   threshold: number
 }
 
@@ -13,19 +15,27 @@ const defaultOptions: VolumeVADOptions = {
 }
 
 /**
- * Volume-based Voice Activity Detection
- * Based on the hark library implementation
+ * Volume based Voice Activity Detection.
+ *
+ * It follows the level reported by the microphone, and needs a few consecutive
+ * loud samples before confirming speech, so a door slam or a keyboard click
+ * does not start a turn.
  */
 export class VolumeVAD extends VAD {
   public readonly name = 'VolumeVAD'
   public options = defaultOptions
+
+  // The microphone reports a level about every 100 ms, and two consecutive loud
+  // ones are needed before a turn opens. Speech can therefore begin up to two
+  // reports before it is noticed, and a third is kept as a margin: without that
+  // reserve the first syllable of a sentence never reaches the server.
+  public delay = 300 // ms
+
+  private mic: MicSource | undefined
+  private running = false
   private _isPaused = false
-  private analyser: AnalyserNode | undefined
-  private sourceNode: MediaStreamAudioSourceNode | undefined
-  private fftBins: Float32Array<ArrayBuffer> | undefined
-  private running: boolean = false
-  private speaking: boolean = false
-  private attemptSpeaking: boolean = false
+  private speaking = false
+  private attemptSpeaking = false
   private speakingHistory: number[] = []
 
   constructor(options?: Partial<VolumeVADOptions>) {
@@ -34,30 +44,13 @@ export class VolumeVAD extends VAD {
     if (options) {
       this.setOptions(options)
     } else {
-      const savedOptions = localStorage.getItem(
-        LocalStorageKeys.VolumeVADOptions
-      )
+      const saved = storage.getItem(MicdropStorageKeys.VolumeVADOptions)
       try {
-        this.setOptions(savedOptions ? JSON.parse(savedOptions) : {})
-      } catch (error) {
+        this.setOptions(saved ? JSON.parse(saved) : {})
+      } catch {
         this.setOptions({})
       }
     }
-  }
-
-  private getMaxVolume(): number {
-    if (!this.analyser || !this.fftBins) return -Infinity
-
-    let maxVolume = -Infinity
-    this.analyser.getFloatFrequencyData(this.fftBins)
-
-    for (let i = 4; i < this.fftBins.length; i++) {
-      if (this.fftBins[i] > maxVolume && this.fftBins[i] < 0) {
-        maxVolume = this.fftBins[i]
-      }
-    }
-
-    return maxVolume
   }
 
   get isStarted(): boolean {
@@ -68,37 +61,69 @@ export class VolumeVAD extends VAD {
     return this._isPaused
   }
 
-  async start(stream: MediaStream): Promise<void> {
-    if (this.running || this._isPaused) return
-
-    // Create audio context and nodes
-    this.analyser = audioContext.createAnalyser()
-    this.sourceNode = audioContext.createMediaStreamSource(stream)
-
-    // Configure analyser
-    this.analyser.fftSize = 512
-    this.analyser.smoothingTimeConstant = 0.1
-    this.fftBins = new Float32Array(this.analyser.frequencyBinCount)
-
-    // Connect nodes
-    this.sourceNode.connect(this.analyser)
-
-    this.running = true
-    this.startLoop()
+  async start(mic: MicSource): Promise<void> {
+    if (this.mic) return
+    this.mic = mic
+    mic.on('Volume', this.onVolume)
+    this.running = !this._isPaused
   }
 
-  private startLoop(): void {
-    if (!this.running) return
+  async stop(): Promise<void> {
+    this.mic?.off('Volume', this.onVolume)
+    this.mic = undefined
+    this.running = false
+    this.reset()
+  }
 
-    const currentVolume = this.getMaxVolume()
+  async pause(): Promise<void> {
+    if (this._isPaused) return
+    this._isPaused = true
+    this.running = false
+    this.reset()
+  }
+
+  async resume(): Promise<void> {
+    if (!this._isPaused) return
+    this._isPaused = false
+    this.running = !!this.mic
+  }
+
+  setOptions(options: Partial<VolumeVADOptions>) {
+    if (typeof options.history === 'number' && options.history < 3) {
+      throw new Error('History must be at least 3')
+    }
+
+    this.options = { ...this.options, ...options }
+
+    // Adjust history
+    while (this.speakingHistory.length > this.options.history) {
+      this.speakingHistory.shift()
+    }
+    while (this.speakingHistory.length < this.options.history) {
+      this.speakingHistory.push(0)
+    }
+
+    storage.setItem(
+      MicdropStorageKeys.VolumeVADOptions,
+      JSON.stringify(this.options)
+    )
+  }
+
+  resetOptions() {
+    this.setOptions(defaultOptions)
+  }
+
+  private onVolume = (volume: number) => {
+    if (!this.running) return
+    const isLoud = volume > this.options.threshold
 
     // Check if started speaking
-    if (currentVolume > this.options.threshold) {
+    if (isLoud) {
       if (!this.speaking) {
         // Check recent history (last 3 samples)
         let recentHistory = 0
         for (
-          let i = this.speakingHistory.length - 3;
+          let i = Math.max(0, this.speakingHistory.length - 3);
           i < this.speakingHistory.length;
           i++
         ) {
@@ -109,7 +134,7 @@ export class VolumeVAD extends VAD {
           this.speaking = true
           this.attemptSpeaking = false
           this.emit('ConfirmSpeaking')
-        } else if (recentHistory === 1) {
+        } else if (recentHistory === 1 && !this.attemptSpeaking) {
           this.attemptSpeaking = true
           this.emit('StartSpeaking')
         }
@@ -131,8 +156,7 @@ export class VolumeVAD extends VAD {
 
     // Check if attempt has failed
     else if (this.attemptSpeaking) {
-      // Check last sample
-      let lastHistory = this.speakingHistory[this.speakingHistory.length - 1]
+      const lastHistory = this.speakingHistory[this.speakingHistory.length - 1]
 
       if (lastHistory === 0) {
         this.attemptSpeaking = false
@@ -142,27 +166,18 @@ export class VolumeVAD extends VAD {
 
     // Update history
     this.speakingHistory.shift()
-    this.speakingHistory.push(Number(currentVolume > this.options.threshold))
-
-    // Schedule next check
-    setTimeout(() => this.startLoop(), this.delay)
+    this.speakingHistory.push(Number(isLoud))
   }
 
-  private resetHistory(): void {
+  private reset() {
+    const status = this.status
     this.speaking = false
     this.attemptSpeaking = false
     for (let i = 0; i < this.speakingHistory.length; i++) {
       this.speakingHistory[i] = 0
     }
-  }
 
-  async stop(): Promise<void> {
-    if (!this.running) return
-
-    this.running = false
-    this.resetHistory()
-
-    switch (this.status) {
+    switch (status) {
       case VADStatus.Speaking:
         this.emit('StopSpeaking')
         break
@@ -170,66 +185,5 @@ export class VolumeVAD extends VAD {
         this.emit('CancelSpeaking')
         break
     }
-
-    if (this.sourceNode) {
-      this.sourceNode.disconnect()
-      this.sourceNode = undefined
-    }
-
-    if (this.analyser) {
-      this.analyser.disconnect()
-      this.analyser = undefined
-    }
-
-    this.fftBins = undefined
-  }
-
-  async pause(): Promise<void> {
-    if (!this.running || this._isPaused) return
-    this._isPaused = true
-    this.running = false
-    this.resetHistory()
-
-    switch (this.status) {
-      case VADStatus.Speaking:
-        this.emit('StopSpeaking')
-        break
-      case VADStatus.MaybeSpeaking:
-        this.emit('CancelSpeaking')
-        break
-    }
-  }
-
-  async resume(): Promise<void> {
-    if (!this._isPaused) return
-    this._isPaused = false
-    this.running = true
-    this.startLoop()
-  }
-
-  setOptions(options: Partial<VolumeVADOptions>) {
-    if (typeof options.history === 'number' && options.history < 3) {
-      throw new Error('History must be at least 3')
-    }
-
-    this.options = { ...this.options, ...options }
-
-    // Adjust history
-    while (this.speakingHistory.length > this.options.history) {
-      this.speakingHistory.shift()
-    }
-    while (this.speakingHistory.length < this.options.history) {
-      this.speakingHistory.push(0)
-    }
-
-    // Save to local storage
-    localStorage.setItem(
-      LocalStorageKeys.VolumeVADOptions,
-      JSON.stringify(this.options)
-    )
-  }
-
-  resetOptions() {
-    this.setOptions(defaultOptions)
   }
 }

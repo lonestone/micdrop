@@ -1,4 +1,5 @@
 import { EventEmitter } from 'eventemitter3'
+import { MicSource } from '../types'
 
 export interface VADEvents {
   // Speech starts, even it it's not confirmed
@@ -27,7 +28,10 @@ export abstract class VAD extends EventEmitter<VADEvents> {
   public readonly name = this.constructor.name
   public status: VADStatus = VADStatus.Silence
 
-  // Max delay to detect speech, can be used to record delayed stream
+  // Worst case time this VAD takes to notice that someone started speaking.
+  // That much audio is kept in reserve and sent along with the turn, so the
+  // beginning of a sentence reaches the server rather than being cut off.
+  // A VAD that needs several samples to make up its mind has to say so here.
   public delay = 100 // ms
 
   /**
@@ -44,9 +48,9 @@ export abstract class VAD extends EventEmitter<VADEvents> {
 
   /**
    * Starts the VAD
-   * @param stream - The stream to start the VAD on
+   * @param mic - The microphone to listen to
    */
-  abstract start(stream: MediaStream): Promise<void>
+  abstract start(mic: MicSource): Promise<void>
 
   /**
    * Stops the VAD

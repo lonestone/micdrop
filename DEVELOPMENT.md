@@ -26,6 +26,14 @@ Run (watch) the advanced demo, client and server together
 pnpm dev:advanced
 ```
 
+Run the React Native example, its server and the Metro bundler. Building the app
+on a device or a simulator is a separate step, see
+[its README](examples/react-native/README.md).
+
+```bash
+pnpm dev:react-native
+```
+
 Run (watch) the website and its documentation
 
 ```bash
@@ -36,6 +44,16 @@ Run (watch) a specific package
 
 ```bash
 pnpm --filter <package-name> dev
+```
+
+### Tests
+
+`@micdrop/client` has a test suite that runs in Node, from the audio helpers up
+to a whole call against a real `MicdropServer`. It covers the code both the
+browser and React Native run.
+
+```bash
+pnpm --filter @micdrop/client test
 ```
 
 ### Publishing to npm

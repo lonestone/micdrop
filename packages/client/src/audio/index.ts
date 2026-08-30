@@ -1,18 +1,28 @@
-import { Mic as MicClass } from './Mic'
-import { Speaker as SpeakerClass } from './Speaker'
+import { MicController } from './Mic'
+import { SpeakerController } from './Speaker'
 
+export * from './Mic'
 export * from './MicRecorder'
-export * from './utils/localStorage'
+export * from './Pcm16AudioStream'
+export * from './pcm'
+export * from './Speaker'
+export * from './types'
 export * from './vad'
+export * from './volume'
 
-// Setup and export Mic instance
-if (!window.micdropMic) {
-  window.micdropMic = new MicClass()
+const globalScope = globalThis as typeof globalThis & {
+  micdropMic?: MicController
+  micdropSpeaker?: SpeakerController
 }
-export const Mic = window.micdropMic
 
-// Setup and export Speaker instance
-if (!window.micdropSpeaker) {
-  window.micdropSpeaker = new SpeakerClass()
+// One microphone and one speaker for the whole app, kept across fast refreshes
+// and shared even if two copies of the package end up in the same bundle
+if (!globalScope.micdropMic) {
+  globalScope.micdropMic = new MicController()
 }
-export const Speaker = window.micdropSpeaker
+if (!globalScope.micdropSpeaker) {
+  globalScope.micdropSpeaker = new SpeakerController()
+}
+
+export const Mic = globalScope.micdropMic
+export const Speaker = globalScope.micdropSpeaker

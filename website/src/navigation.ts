@@ -28,7 +28,9 @@ export const footerNav: { title: string; links: NavLink[] }[] = [
     links: [
       { label: 'Getting Started', href: '/docs/getting-started' },
       { label: 'Client', href: '/docs/client' },
+      { label: 'React Native', href: '/docs/react-native' },
       { label: 'Server', href: '/docs/server' },
+      { label: 'Migration', href: '/docs/migration' },
       { label: 'React Hooks', href: '/docs/client/react-hooks' },
     ],
   },

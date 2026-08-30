@@ -2,11 +2,11 @@ import { Speaker } from '@micdrop/client'
 import { useEffect, useState } from 'react'
 
 /**
- * Hook to get the speaker volume
+ * Hook to get the speaker volume, in decibels between -Infinity and 0
  */
 export function useSpeakerVolume() {
-  const [speakerVolume, setSpeakerVolume] = useState(0) // 0-100
-  const [maxSpeakerVolume, setMaxSpeakerVolume] = useState(1)
+  const [speakerVolume, setSpeakerVolume] = useState(-Infinity)
+  const [maxSpeakerVolume, setMaxSpeakerVolume] = useState(-Infinity)
 
   useEffect(() => {
     const onSpeakerVolumeChange = (volume: number) => {
@@ -14,10 +14,10 @@ export function useSpeakerVolume() {
       setMaxSpeakerVolume((v) => Math.max(v, volume))
     }
 
-    Speaker.analyser.on('volume', onSpeakerVolumeChange)
+    Speaker.on('Volume', onSpeakerVolumeChange)
 
     return () => {
-      Speaker.analyser.off('volume', onSpeakerVolumeChange)
+      Speaker.off('Volume', onSpeakerVolumeChange)
     }
   }, [])
 

@@ -1,0 +1,56 @@
+{
+  "name": "@micdrop/web",
+  "version": "1.0.0",
+  "description": "\ud83d\udd90\ufe0f\ud83c\udfa4 Micdrop: real-time voice conversations with AI, in the browser",
+  "author": "Godefroy de Compreignac",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Godefroy/micdrop.git",
+    "directory": "packages/web"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "microphone",
+    "audio",
+    "browser",
+    "voice",
+    "conversation"
+  ],
+  "dependencies": {
+    "@micdrop/client": "^3.0.0",
+    "onnxruntime-web": "^1.23.2"
+  },
+  "devDependencies": {
+    "esbuild-raw-plugin": "^0.3.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./silero": {
+      "types": "./dist/silero.d.ts",
+      "import": "./dist/silero.mjs",
+      "require": "./dist/silero.js"
+    }
+  }
+}

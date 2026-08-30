@@ -1,4 +1,4 @@
-import { VAD, VADStatus } from '@micdrop/client'
+import { VAD, VADStatus } from '@micdrop/web'
 import { useEffect, useState } from 'react'
 
 const statusColors = {

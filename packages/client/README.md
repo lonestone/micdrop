@@ -1,47 +1,69 @@
 # 🖐️🎤 Micdrop: Real-Time Voice Conversations with AI
 
-[Micdrop website](https://micdrop.dev) | [Documentation](https://micdrop.dev/docs/client) | [Basic example](../../examples/basic) | [Demo](../../examples/advanced)
+[Micdrop website](https://micdrop.dev) | [Documentation](https://micdrop.dev/docs/client)
 
-Micdrop is a set of open source Typescript packages to build real-time voice conversations with AI agents. It handles all the complexities on the browser and server side (microphone, speaker, VAD, network communication, etc) and provides ready-to-use implementations for various AI providers.
+Micdrop is a set of open source Typescript packages to build real-time voice conversations with AI agents. It handles all the complexities on the client and server side (microphone, speaker, VAD, network communication, etc) and provides ready-to-use implementations for various AI providers.
 
 # @micdrop/client
 
-The browser implementation of [Micdrop](https://micdrop.dev).
+The heart of a Micdrop call, with nothing platform specific in it: the protocol, the call state, the voice activity detection, the recording and the playback scheduling.
 
-It is framework agnostic, you can use it with React, Vue, Angular or any other framework. See the [advanced demo](../../examples/advanced) for a complete example with React.
+**You install it through a platform package rather than on its own:**
 
-For server implementation, see [@micdrop/server](https://micdrop.dev/docs/server).
+- [`@micdrop/web`](../web) for a browser
+- [`@micdrop/react-native`](../react-native) for iOS and Android
 
-## Features
+Both re-export everything here, so `import { Micdrop } from '@micdrop/web'` gives you the same objects this package defines.
 
-- 🎤 Real-time microphone recording and playback
-- 🗣️ Voice activity detection (VAD)
-- 🔊 Devices selection and testing
-- 🔌 Full state and events for UI integration
-- 🌐 WebSocket-based audio streaming
+## What lives here
 
-## Installation
+- `MicdropClient` and the `Micdrop` singleton: the WebSocket protocol, the call state, reconnection, interruption
+- `Mic` and `Speaker`: one microphone and one speaker for the app, in front of a pluggable driver
+- `MicRecorder`: the reserve of audio, the chunking at 16 kHz, the wiring to the VAD
+- `VolumeVAD`, `SileroVAD`, `MultipleVAD`: voice activity detection, the same on every platform
+- `Pcm16AudioStream`: gapless playback of the chunks as they arrive
+- `VolumeMeter`: the level the VAD and the level meters read
 
-```bash
-npm install @micdrop/client
+## Writing a platform package
+
+A platform provides two things, and gets everything above for free.
+
+```ts
+import { Mic, MicDriver, Speaker, SpeakerDriver } from '@micdrop/client'
+
+class MyMic extends MicDriver {
+  // start() captures, then emits Frames with mono float samples
+}
+
+class MySpeaker extends SpeakerDriver {
+  // play() queues 16 kHz PCM16
+}
+
+Mic.setDriver(new MyMic())
+Speaker.setDriver(new MySpeaker())
 ```
 
-If you're using React, you can also install [@micdrop/react](https://micdrop.dev/docs/client/react-hooks) package to get a ready-to-use React hooks.
+`Pcm16AudioStream` does the playback scheduling for you if the platform offers something like Web Audio: give it an `AudioSink`, which is the small slice of it that Micdrop needs.
 
-## Quick Start
+For Silero, provide the inference and the state machine comes from here:
 
-```typescript
-import { Micdrop } from '@micdrop/client'
+```ts
+import { setSileroModelLoader } from '@micdrop/client'
 
-// Start a call
-Micdrop.start({
-  url: 'wss://your-server.com/call',
-})
+setSileroModelLoader(async () => myModel) // process(frame) => probability
+```
+
+## Tests
+
+The whole package runs in Node, from the audio helpers up to a full call against a real `MicdropServer`.
+
+```bash
+pnpm --filter @micdrop/client test
 ```
 
 ## Documentation
 
-Read full [documentation of the Micdrop client](https://micdrop.dev/docs/client) on the [website](https://micdrop.dev).
+Read the full [client documentation](https://micdrop.dev/docs/client) on the [website](https://micdrop.dev).
 
 ## License
 

@@ -2,11 +2,11 @@ import { Mic } from '@micdrop/client'
 import { useEffect, useState } from 'react'
 
 /**
- * Hook to get the microphone volume
+ * Hook to get the microphone volume, in decibels between -Infinity and 0
  */
 export function useMicVolume() {
-  const [micVolume, setMicVolume] = useState(0) // 0-100
-  const [maxMicVolume, setMaxMicVolume] = useState(1)
+  const [micVolume, setMicVolume] = useState(-Infinity)
+  const [maxMicVolume, setMaxMicVolume] = useState(-Infinity)
 
   useEffect(() => {
     const onMicVolumeChange = (volume: number) => {
@@ -14,10 +14,10 @@ export function useMicVolume() {
       setMaxMicVolume((v) => Math.max(v, volume))
     }
 
-    Mic.analyser.on('volume', onMicVolumeChange)
+    Mic.on('Volume', onMicVolumeChange)
 
     return () => {
-      Mic.analyser.off('volume', onMicVolumeChange)
+      Mic.off('Volume', onMicVolumeChange)
     }
   }, [])
 

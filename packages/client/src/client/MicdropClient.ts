@@ -1,7 +1,8 @@
 import { EventEmitter } from 'eventemitter3'
-import { Mic, Speaker, VAD } from '../audio'
-import { MicRecorder } from '../audio/MicRecorder'
-import { VADConfig } from '../audio/vad/getVAD'
+import { Mic, MicRecorder, Speaker, VAD, VADConfig } from '../audio'
+import { pcm16ToArrayBuffer } from '../audio/pcm'
+import { MicdropDevice } from '../audio/types'
+import { MicdropStorageKeys, storage } from '../storage'
 import {
   MicdropClientCommands,
   MicdropConversation,
@@ -14,6 +15,7 @@ import {
   isRecoverableError,
   MicdropClientError,
   MicdropClientErrorCode,
+  WSCloseEvent,
 } from './MicdropClientError'
 
 export interface MicdropEvents {
@@ -52,8 +54,8 @@ export interface MicdropState {
   isMicMuted: boolean
   micDeviceId: string | undefined
   speakerDeviceId: string | undefined
-  micDevices: MediaDeviceInfo[]
-  speakerDevices: MediaDeviceInfo[]
+  micDevices: MicdropDevice[]
+  speakerDevices: MicdropDevice[]
   conversation: MicdropConversation
   error: MicdropClientError | undefined
 }
@@ -71,11 +73,10 @@ export class MicdropClient
   public micRecorder?: MicRecorder
   public conversation: MicdropConversation = []
   public error: MicdropClientError | undefined
-  public speakerDevices: MediaDeviceInfo[] = []
-  public micDevices: MediaDeviceInfo[] = []
+  public speakerDevices: MicdropDevice[] = []
+  public micDevices: MicdropDevice[] = []
 
   private ws?: WebSocket
-  private micStream?: MediaStream
   private startTime = 0
   private lastNotifiedState = this.state
   private _isProcessing = false
@@ -83,8 +84,8 @@ export class MicdropClient
   private _isPaused = false
   private _isReconnecting = false
   private reconnectAttempt = 0
-  private reconnectTimer?: number
-  private connectionTimer?: number
+  private reconnectTimer?: ReturnType<typeof setTimeout>
+  private connectionTimer?: ReturnType<typeof setTimeout>
 
   constructor(public options: MicdropOptions = {}) {
     super()
@@ -93,8 +94,8 @@ export class MicdropClient
     Speaker.on('StartPlaying', this.onSpeakerStartPlaying)
     Speaker.on('StopPlaying', this.onSpeakerStopPlaying)
 
-    // Listen to device changes
-    navigator.mediaDevices.addEventListener('devicechange', this.updateDevices)
+    // Refresh the lists when the user plugs a headset in
+    Mic.on('DeviceChange', this.updateDevices)
   }
 
   get vad(): VAD | undefined {
@@ -143,15 +144,15 @@ export class MicdropClient
   }
 
   get isWSStarted(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN
+    return this.ws?.readyState === 1 // WebSocket.OPEN
   }
 
   get isWSStarting(): boolean {
-    return this.ws?.readyState === WebSocket.CONNECTING
+    return this.ws?.readyState === 0 // WebSocket.CONNECTING
   }
 
   get isMicStarted(): boolean {
-    return !!this.micStream
+    return Mic.isStarted
   }
 
   get isMicMuted(): boolean {
@@ -209,7 +210,7 @@ export class MicdropClient
     this._isReconnecting = false
     this.reconnectAttempt = 0
     if (this.reconnectTimer) {
-      window.clearTimeout(this.reconnectTimer)
+      clearTimeout(this.reconnectTimer)
       this.reconnectTimer = undefined
     }
 
@@ -228,7 +229,7 @@ export class MicdropClient
     this._isPaused = false
     this._isReconnecting = false
     if (this.reconnectTimer) {
-      window.clearTimeout(this.reconnectTimer)
+      clearTimeout(this.reconnectTimer)
       this.reconnectTimer = undefined
     }
 
@@ -239,16 +240,15 @@ export class MicdropClient
       console.error('[MicdropClient] Error stopping WebSocket', error)
     }
 
+    // Stop speaker, before the microphone releases the audio session
+    Speaker.stopAudio()
+
     try {
       // Stop microphone
-      this.micRecorder?.stop()
-      this.stopMic()
+      await this.stopMic()
     } catch (error) {
       console.error('[MicdropClient] Error stopping microphone', error)
     }
-
-    // Stop speaker
-    Speaker.stopAudio()
   }
 
   mute = () => {
@@ -316,9 +316,9 @@ export class MicdropClient
         })
 
         // Send chunk of user speech to server
-        this.micRecorder.on('Chunk', (blob) => {
-          this.log(`[MicdropClient] User audio chunk`, blob)
-          this.ws?.send(blob)
+        this.micRecorder.on('Chunk', (chunk) => {
+          this.log('User audio chunk', chunk.length)
+          this.ws?.send(pcm16ToArrayBuffer(chunk))
         })
 
         // Notify server that user started speaking
@@ -342,20 +342,27 @@ export class MicdropClient
         })
       }
 
-      // Start microphone
-      const micStream = await Mic.start(options.deviceId)
-      this.micStream = micStream
+      // Start microphone, on the input chosen last time when none is given
+      const deviceId =
+        options.deviceId ??
+        storage.getItem(MicdropStorageKeys.MicDevice) ??
+        undefined
+      await Mic.start(deviceId)
+      if (Mic.deviceId) {
+        storage.setItem(MicdropStorageKeys.MicDevice, Mic.deviceId)
+      } else {
+        storage.removeItem(MicdropStorageKeys.MicDevice)
+      }
 
       // Start recorder
-      await this.micRecorder.start(micStream)
-
-      // Get devices after starting mic
-      // It's necessary for Firefox that return an empty list before any stream is started
-      await this.updateDevices()
+      await this.micRecorder.start(Mic)
 
       // Start speaker
-      // Must be after devices update
       await Speaker.start()
+
+      // Get devices after starting the mic, the OS only lists them once the
+      // audio session is active
+      await this.updateDevices()
 
       this.notifyStateChange()
     } catch (error) {
@@ -379,43 +386,20 @@ export class MicdropClient
     this.notifyStateChange()
   }
 
-  private stopMic() {
+  private async stopMic() {
     this.micRecorder?.stop()
     this.micRecorder = undefined
-    Mic.stop()
-    this.micStream = undefined
+    await Mic.stop()
     this.notifyStateChange()
   }
 
   private updateDevices = async () => {
-    const rawDevices = await navigator.mediaDevices.enumerateDevices()
-    if (rawDevices.length === 0) return
-
-    // Move default devices to the beginning of the list
-    // and get rid of devices with deviceId=default
-    const defaultDevices = rawDevices.filter(
-      (device) => device.deviceId === 'default'
-    )
-    const devices = rawDevices.filter((device) => device.deviceId !== 'default')
-    const defaultDevicesIndexes = defaultDevices
-      .map((device) =>
-        devices.findIndex(
-          (d) => d.groupId === device.groupId && d.kind === device.kind
-        )
-      )
-      .filter((index) => index !== -1)
-    for (const index of defaultDevicesIndexes) {
-      const device = devices[index]
-      devices.splice(index, 1)
-      devices.unshift(device)
-    }
-
-    this.micDevices = devices.filter((device) => device.kind === 'audioinput')
-    this.speakerDevices = devices.filter(
-      (device) => device.kind === 'audiooutput'
-    )
-    Speaker.devices = this.speakerDevices
-
+    const [micDevices, speakerDevices] = await Promise.all([
+      Mic.getDevices(),
+      Speaker.getDevices(),
+    ])
+    this.micDevices = micDevices
+    this.speakerDevices = speakerDevices
     this.notifyStateChange()
   }
 
@@ -434,7 +418,7 @@ export class MicdropClient
 
       // Start websocket
       this.ws = new WebSocket(this.options.url)
-      this.ws.binaryType = 'blob'
+      this.ws.binaryType = 'arraybuffer'
       this.notifyStateChange()
 
       // Events
@@ -444,19 +428,23 @@ export class MicdropClient
       this.ws.onerror = this.onWSError
 
       // Connection timeout
-      this.connectionTimer = window.setTimeout(() => {
+      this.connectionTimer = setTimeout(() => {
         this.connectionTimer = undefined
-        if (this.ws?.readyState === WebSocket.CONNECTING) {
+        if (this.ws?.readyState === 0) {
           this.log('WebSocket connection timeout')
           this.ws.close()
         }
       }, this.options.reconnect?.connectionTimeout ?? DEFAULT_RECONNECT_OPTIONS.connectionTimeout)
     } catch (error) {
+      // A missing address or a refused microphone already says what went
+      // wrong, only an unnamed failure is reported as a connection error
       this.setError(
-        new MicdropClientError(
-          MicdropClientErrorCode.Connection,
-          (error as any)?.message
-        )
+        error instanceof MicdropClientError
+          ? error
+          : new MicdropClientError(
+              MicdropClientErrorCode.Connection,
+              (error as any)?.message
+            )
       )
       await this.stop()
       throw error
@@ -466,7 +454,7 @@ export class MicdropClient
   private onWSOpen = () => {
     this.log('WebSocket opened')
     if (this.connectionTimer) {
-      window.clearTimeout(this.connectionTimer)
+      clearTimeout(this.connectionTimer)
       this.connectionTimer = undefined
     }
     this._isReconnecting = false
@@ -486,41 +474,47 @@ export class MicdropClient
   }
 
   private onWSMessage = (event: MessageEvent) => {
-    this.log('Received message:', event.data)
-    if (event.data instanceof Blob) {
+    const data = event.data
+
+    if (data instanceof ArrayBuffer) {
       // Received assistant speech
+      this.log('Received audio', data.byteLength)
       if (this.isPaused || this.isUserSpeaking) return
-      Speaker.playAudio(event.data)
+      Speaker.playAudio(new Int16Array(data))
       this._isProcessing = false
       this.notifyStateChange()
-    } else if (typeof event.data !== 'string') {
-      console.warn(`[MicdropClient] Unknown message type: ${event.data}`)
-    } else if (event.data.startsWith(MicdropServerCommands.Message)) {
+      return
+    }
+
+    if (typeof data !== 'string') {
+      console.warn(`[MicdropClient] Unknown message type: ${data}`)
+      return
+    }
+
+    this.log('Received message:', data)
+
+    if (data.startsWith(MicdropServerCommands.Message)) {
       // Received user/assistant message
       try {
         const message = JSON.parse(
-          event.data.substring(MicdropServerCommands.Message.length + 1)
+          data.substring(MicdropServerCommands.Message.length + 1)
         )
         this.addMessage(message)
       } catch (error) {
-        console.error(
-          '[MicdropClient] Error parsing message:',
-          event.data,
-          error
-        )
+        console.error('[MicdropClient] Error parsing message:', data, error)
       }
-    } else if (event.data === MicdropServerCommands.EndCall) {
+    } else if (data === MicdropServerCommands.EndCall) {
       // Call ended
       this.emit('EndCall')
-    } else if (event.data === MicdropServerCommands.SkipAnswer) {
+    } else if (data === MicdropServerCommands.SkipAnswer) {
       // Answer was skipped, listen again
       this._isProcessing = false
       this.notifyStateChange()
-    } else if (event.data === MicdropServerCommands.CancelLastUserMessage) {
+    } else if (data === MicdropServerCommands.CancelLastUserMessage) {
       // Remove last user message if aborted
-      const lastMessage = this.conversation.findLastIndex(
-        (message) => message.role === 'user'
-      )
+      const lastMessage = this.conversation
+        .map((message) => message.role)
+        .lastIndexOf('user')
       if (lastMessage !== -1) {
         this.conversation = this.conversation.filter(
           (_, index) => index !== lastMessage
@@ -528,26 +522,22 @@ export class MicdropClient
         this._isProcessing = false
         this.notifyStateChange()
       }
-    } else if (event.data.startsWith(MicdropServerCommands.ToolCall)) {
+    } else if (data.startsWith(MicdropServerCommands.ToolCall)) {
       // Received tool call information
       try {
         const toolCall = JSON.parse(
-          event.data.substring(MicdropServerCommands.ToolCall.length + 1)
+          data.substring(MicdropServerCommands.ToolCall.length + 1)
         )
         this.emit('ToolCall', toolCall)
       } catch (error) {
-        console.error(
-          '[MicdropClient] Error parsing tool call:',
-          event.data,
-          error
-        )
+        console.error('[MicdropClient] Error parsing tool call:', data, error)
       }
     }
   }
 
-  private onWSClose = (event: CloseEvent) => {
-    this.log('WebSocket closed', event)
-    const error = getClientErrorFromWSCloseEvent(event)
+  private onWSClose = (event: WSCloseEvent) => {
+    this.log('WebSocket closed', event?.code, event?.reason)
+    const error = getClientErrorFromWSCloseEvent(event ?? {})
     if (error) {
       this.setError(error)
     }
@@ -565,20 +555,17 @@ export class MicdropClient
     }
   }
 
-  private onWSError = (event: Event) => {
+  private onWSError = () => {
     this.setError(new MicdropClientError(MicdropClientErrorCode.Connection))
   }
 
   private stopWS() {
     if (this.connectionTimer) {
-      window.clearTimeout(this.connectionTimer)
+      clearTimeout(this.connectionTimer)
       this.connectionTimer = undefined
     }
     if (!this.ws) return
-    if (
-      this.ws.readyState === WebSocket.OPEN ||
-      this.ws.readyState === WebSocket.CONNECTING
-    ) {
+    if (this.ws.readyState === 1 || this.ws.readyState === 0) {
       this.ws.close()
     }
     this.ws = undefined
@@ -603,10 +590,10 @@ export class MicdropClient
     }
 
     if (this.reconnectTimer) {
-      window.clearTimeout(this.reconnectTimer)
+      clearTimeout(this.reconnectTimer)
     }
 
-    this.reconnectTimer = window.setTimeout(async () => {
+    this.reconnectTimer = setTimeout(async () => {
       try {
         await this.startWS()
       } catch {

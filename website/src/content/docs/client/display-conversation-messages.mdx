@@ -17,7 +17,7 @@ The conversation is available through the Micdrop state and contains all message
 Access conversation messages using the state:
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 // Get current conversation
 const conversation = Micdrop.conversation
@@ -71,7 +71,7 @@ interface MicdropConversationToolResult {
 Listen for message events to handle real-time updates:
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 Micdrop.on('StateChange', (state) => {
   console.log('Messages:', state.conversation)
@@ -192,7 +192,7 @@ export default function Conversation({ className }: Props) {
 Clear the conversation history when needed (doesn't apply on server):
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 // Clear all messages
 Micdrop.conversation = []

@@ -1,0 +1,66 @@
+---
+title: 'Audio Output and Devices'
+description: 'Play the assistant voice on the loudspeaker or on the earpiece, and pick the microphone among the inputs the phone offers.'
+order: 21
+---
+
+# Audio Output and Devices
+
+## Loudspeaker or earpiece
+
+A phone has one decision to make about output: whether the voice comes out loud or against the ear.
+
+```ts
+import {
+  EARPIECE_DEVICE,
+  Micdrop,
+  SPEAKER_DEVICE,
+} from '@micdrop/react-native'
+
+await Micdrop.changeSpeakerDevice(EARPIECE_DEVICE)
+await Micdrop.changeSpeakerDevice(SPEAKER_DEVICE)
+```
+
+The two routes are what `speakerDevices` lists on a phone, so the same code that
+picks an output in a browser works here. The current one is in the state:
+
+```tsx
+const state = useMicdropState()
+const onEarpiece = state.speakerDeviceId === EARPIECE_DEVICE
+
+const handlePress = () =>
+  Micdrop.changeSpeakerDevice(onEarpiece ? SPEAKER_DEVICE : EARPIECE_DEVICE)
+```
+
+Headphones and Bluetooth are handled by the operating system: plugging them in moves the call over, whatever was chosen here.
+
+## Choosing the microphone
+
+The inputs the OS reports are in the state, and the call can be moved to another one without interrupting it:
+
+```tsx
+const state = useMicdropState()
+
+state.micDevices.map((device) => (
+  <Button
+    key={device.id}
+    title={device.name}
+    onPress={() => Micdrop.changeMicDevice(device.id)}
+  />
+))
+```
+
+Each device carries an `id` and a `label` to show. The list is filled once the call has started, since the audio session has to be active for the system to answer.
+
+## Echo
+
+The audio session is configured as a voice call, which is what tells iOS and Android to apply echo cancellation. Without it, the microphone would hear the assistant and the call would interrupt itself.
+
+On a device where cancellation is weak, turn interruption off so the microphone is ignored while the assistant speaks:
+
+```ts
+await Micdrop.start({
+  url: 'wss://example.com/call',
+  disableInterruption: true,
+})
+```

@@ -15,13 +15,13 @@ Get up and running with [Micdrop](/) to build real-time voice conversations with
 Install the browser package and start capturing voice input:
 
 ```bash
-npm install @micdrop/client
+npm install @micdrop/web
 ```
 
 If you're using React, you can also install [@micdrop/react](./client/react-hooks) package to get a ready-to-use React hooks.
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 // Start a voice conversation
 Micdrop.start({
@@ -38,6 +38,35 @@ Micdrop.on('EndCall', () => {
   console.log('Call ended by assistant')
 })
 ```
+
+### Client (React Native)
+
+The same call runs on a phone, against the same server:
+
+```bash
+npm install @micdrop/react-native react-native-audio-api
+```
+
+```tsx
+import { Micdrop, useMicdropState } from '@micdrop/react-native'
+
+function Call() {
+  const state = useMicdropState()
+
+  return (
+    <Button
+      title={state.isStarted ? 'Hang up' : 'Start the call'}
+      onPress={() =>
+        state.isStarted
+          ? Micdrop.stop()
+          : Micdrop.start({ url: 'ws://localhost:8081' })
+      }
+    />
+  )
+}
+```
+
+Audio goes through native code there, see [React Native](./react-native) for the setup.
 
 ### Server (Node.js)
 

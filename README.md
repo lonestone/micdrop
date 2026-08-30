@@ -2,14 +2,17 @@
 
 [Micdrop website](https://micdrop.dev) | [Documentation](https://micdrop.dev/docs)
 
-Micdrop is a set of open source Typescript packages to build real-time voice conversations with AI agents. It handles all the complexities on the browser and server side (microphone, speaker, VAD, network communication, etc) and provides ready-to-use implementations for various AI providers.
+Micdrop is a set of open source Typescript packages to build real-time voice conversations with AI agents. It handles all the complexities on the client and server side (microphone, speaker, VAD, network communication, etc) and provides ready-to-use implementations for various AI providers.
 
 ## 📦 Packages
 
 ### Core Packages (start here)
 
-- [`@micdrop/client`](./packages/client/README.md) - Browser library handling microphone input, audio playback, and real-time communication
+- [`@micdrop/web`](./packages/web/README.md) - Browser library handling microphone input, audio playback, and real-time communication
+- [`@micdrop/react-native`](./packages/react-native/README.md) - The same call on iOS and Android
 - [`@micdrop/server`](./packages/server/README.md) - Server implementation for audio streaming and AI integration orchestration
+
+Both client packages are built on [`@micdrop/client`](./packages/client/README.md), which holds the protocol, the call state and the voice activity detection, and knows nothing about the platform it runs on. You install a platform package, not this one.
 
 ### AI Implementations
 
@@ -35,12 +38,13 @@ pointed at Ollama or any local server speaking the OpenAI protocol.
 
 ### Utility Packages
 
-- [`@micdrop/react`](./packages/react/README.md) - React hooks for Micdrop
+- [`@micdrop/react`](./packages/react/README.md) - React hooks for Micdrop, in the browser and in React Native
 
 ### Demo Applications
 
 - [`basic`](./examples/basic/README.md) - The smallest possible app, one button in the browser and a WebSocket server, with OpenAI for the agent, the transcription and the voice. Start here.
 - [`advanced`](./examples/advanced/README.md) - Full featured demo, a React client and a Fastify server in one folder, with every provider wired in and picked from the browser.
+- [`react-native`](./examples/react-native/README.md) - Voice call on a phone, an Expo app with the conversation, level meters and call controls, and the Node server it talks to.
 - [`demo-world`](./examples/demo-world/README.md) - Immersive 3D demo where a newborn planet talks to you and reshapes itself as the conversation goes. Client and server in one folder, with a test page that runs the whole interface without a call.
 
 ## 🎥 Demo and technical details (video)
@@ -74,6 +78,7 @@ This modular approach gives you the flexibility to build voice applications that
 - 🔊 Advanced audio playback with:
   - Streaming support
   - Device selection and control
+- 📱 The same call in the browser and in a React Native app, against one server
 - 🌐 WebSocket communication
 - 📦 AI implementations provided for OpenAI, ElevenLabs, Gradium, Mistral, Gladia, and more
 - 🔌 Bring your own AI components (framework agnostic)

@@ -3,7 +3,7 @@
 // speaker and the WebSocket, so this file only wires a button and some text.
 // https://micdrop.dev/docs/client
 
-import { Micdrop, MicdropState } from '@micdrop/client'
+import { Micdrop, MicdropState } from '@micdrop/web'
 
 // Address of the server started by src/server.ts
 const SERVER_URL = 'ws://localhost:8085'

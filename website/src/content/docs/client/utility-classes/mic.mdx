@@ -1,90 +1,96 @@
 ---
 title: 'Mic'
-description: 'The Mic module provides functionality for managing microphone input and audio recording in the browser.'
+description: 'The Mic object manages microphone capture, the input device in use, and the level the voice activity detection reads.'
 order: 14
 ---
 
 # Mic
 
-The Mic module provides functionality for managing microphone input and audio recording in the browser.
+`Mic` is the microphone, as a single object shared by the whole app. It captures
+audio, reports how loud the room is, and lists the inputs the system offers.
 
-## Features
-
-- 🎤 Microphone input device management
-- 🔊 Audio stream handling
-- 📊 Real-time audio analysis
-- 💾 Persistent device selection
+The recording itself is done by a driver: the Web Audio API in a browser, the
+native audio engine on a phone. Importing `@micdrop/web` or
+`@micdrop/react-native` installs the right one, so there is nothing to wire.
 
 ## Usage Example
 
 ```typescript
-import { Mic } from '@micdrop/client'
+import { Mic } from '@micdrop/web'
 
-// Start microphone with default device
-const stream = await Mic.start()
+// Ask for the microphone permission and start capturing
+await Mic.start()
 
-// Start microphone with specific device
-const deviceStream = await Mic.start('device-id')
+// Or record from a specific input
+await Mic.start(deviceId)
 
-// Stop microphone and cleanup when done
-Mic.stop()
-
-// Monitor volume changes using the audio analyser
-// Volume is in dB range -100 to 0
-Mic.analyser.on('volume', (volume: number) => {
-  // Convert to 0-100 range for visualization if needed
-  const normalizedVolume = Math.max(0, volume + 100)
-  console.log('Current volume:', normalizedVolume)
+// The level, in decibels between -Infinity and 0, about ten times a second
+Mic.on('Volume', (volume: number) => {
+  console.log('Current level:', volume)
 })
+
+// Stop capturing and release the microphone
+await Mic.stop()
 ```
+
+Starting and stopping a call already does this for you, see
+[Start/Stop Call](../start-stop-call). Reach for `Mic` when you need the
+microphone on its own, for a level meter before the call begins for instance.
 
 ## API Reference
 
-### Functions
+### Methods
 
-#### `start(deviceId?: string): Promise<MediaStream>`
+#### `start(deviceId?: string): Promise<void>`
 
-Starts the microphone and returns the audio stream.
+Asks for the microphone permission and starts capturing, from the given input or
+from the system one.
 
-```typescript
-const stream = await Mic.start()
-```
+#### `stop(): Promise<void>`
 
-or
+Stops capturing and releases the microphone.
 
-```typescript
-const stream = await Mic.start(deviceId)
-```
+#### `getDevices(): Promise<MicdropDevice[]>`
 
-#### `stop(): void`
+Lists the inputs the system offers, each with an `id`, a `label` to show and its
+`kind`. A browser only reveals the labels once a stream is running.
 
-Stops the microphone stream and cleans up resources.
+#### `setDriver(driver: MicDriver): void`
 
-```typescript
-Mic.stop()
-```
+Records with another library. See
+[Using another audio library](../../react-native/custom-audio).
 
-### Variables
+### Properties
 
-#### `analyser`
+#### `isStarted: boolean`
 
-An instance of `AudioAnalyser` that can be used to analyze the microphone input.
+Whether the microphone is capturing.
 
-```typescript
-Mic.analyser.on('volume', (volume: number) => {
-  console.log('Current volume:', volume)
-})
+#### `deviceId: string | undefined`
 
-// AnalyserNode
-// See https://developer.mozilla.org/docs/Web/API/AnalyserNode
-console.log(Mic.analyser.node)
-```
+The input in use, when the system reports one.
 
-## Browser Support
+#### `volume: number`
 
-Fully supported in Chrome, Firefox, Safari and Edge.
+The last level measured, in decibels between -Infinity and 0.
 
-Requires support for:
+### Events
 
-- Web Audio API
-- MediaDevices API
+#### `Volume: [number]`
+
+The level of the captured audio, about ten times a second. It is the loudest
+frequency rather than the overall energy, which is what separates a voice from a
+room, see [Voice Activity Detection](../vad).
+
+#### `Frames: [Float32Array, number]`
+
+A batch of mono samples in the -1..1 range, with their sample rate. This is the
+raw capture, before any chunking.
+
+#### `DeviceChange: []`
+
+The system gained or lost an audio device.
+
+#### `Error: [Error]`
+
+Capture failed.

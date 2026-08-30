@@ -11,17 +11,31 @@ Micdrop client handles real-time voice conversations in the browser with microph
 ## Installation
 
 ```bash
-npm install @micdrop/client
+npm install @micdrop/web
 ```
 
 That's it 🎉 The client is ready to use in any browser, with any framework.
+
+## One call, two platforms
+
+Everything on this page also runs on a phone. The call itself, the protocol, the
+state and the [voice activity detection](./vad) live in `@micdrop/client`, and
+each platform only brings its microphone and its speaker:
+
+| You are building for | You install | You import from |
+| --- | --- | --- |
+| A browser | `@micdrop/web` | `@micdrop/web` |
+| iOS and Android | `@micdrop/react-native` | `@micdrop/react-native` |
+
+Both re-export the whole shared API, so the pages of this section apply to both.
+Read [React Native](../react-native) for what a phone does differently.
 
 See [Installation](./installation) for more details.
 
 ## Quick Example
 
 ```typescript
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 
 // Start a voice conversation
 await Micdrop.start({

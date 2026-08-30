@@ -1,7 +1,7 @@
 {
   "name": "@micdrop/react",
-  "version": "1.0.4",
-  "description": "React hooks for Micdrop voice conversation client",
+  "version": "2.0.0",
+  "description": "React hooks for Micdrop, in the browser and in React Native",
   "author": "Godefroy de Compreignac",
   "license": "MIT",
   "main": "dist/index.js",
@@ -27,18 +27,19 @@
   },
   "keywords": [
     "react",
+    "react-native",
     "hooks",
     "microphone",
     "audio",
-    "browser",
     "voice",
     "conversation"
   ],
   "peerDependencies": {
-    "@micdrop/client": ">=2.0.0",
+    "@micdrop/client": ">=3.0.0",
     "react": ">=16.8.0"
   },
   "devDependencies": {
+    "@micdrop/client": "*",
     "@types/react": "^18.3.28",
     "react": "^18.3.1",
     "tsup": "^8.5.1",

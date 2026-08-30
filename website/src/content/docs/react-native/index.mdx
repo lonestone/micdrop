@@ -1,0 +1,67 @@
+---
+title: 'Client (React Native)'
+description: 'Run a real-time voice conversation on iOS and Android, with the microphone, the audio session, voice activity detection and the WebSocket handled for you.'
+order: 18
+---
+
+# Client (React Native)
+
+`@micdrop/react-native` runs a Micdrop call on a phone. It records the microphone, plays the assistant voice, detects who is speaking and streams both ways over a WebSocket, against the same [server](/docs/server) a browser talks to.
+
+## Installation
+
+```bash
+npm install @micdrop/react-native react-native-audio-api
+```
+
+Audio goes through native code, so the app runs from a development build rather than from Expo Go. See [Installation](./installation) for the permissions and the config plugin.
+
+## Quick start
+
+```tsx
+import { useMicdropState } from '@micdrop/react'
+import { Micdrop } from '@micdrop/react-native'
+import { Button, Text, View } from 'react-native'
+
+export default function Call() {
+  const state = useMicdropState()
+
+  const handlePress = () =>
+    state.isStarted
+      ? Micdrop.stop()
+      : Micdrop.start({ url: 'wss://example.com/call' })
+
+  return (
+    <View>
+      <Text>{state.isUserSpeaking ? 'Listening' : 'Your turn'}</Text>
+      <Button
+        title={state.isStarted ? 'Hang up' : 'Start the call'}
+        onPress={handlePress}
+      />
+    </View>
+  )
+}
+```
+
+`Micdrop.start()` asks for the microphone permission, configures the audio session for a call, opens the connection and starts listening. The rest of the app only reads the state.
+
+## What you get
+
+- Microphone capture at 16 kHz, and playback of the answer as it streams in
+- [Voice activity detection](./vad), on volume or with the Silero model, so the user just talks
+- Interruption: the assistant stops the moment the user starts speaking
+- Mute, pause, and a choice between the loudspeaker and the earpiece
+- Reconnection when the network drops
+- React hooks for the whole [call state](./hooks)
+
+## Same API as the browser
+
+Everything about running a call is shared with [@micdrop/react-native](/docs/client): `start`, `stop`, `mute`, `pause`, the `StateChange` event, the conversation, the error codes. Those pages apply here, with three differences:
+
+- Output is a route rather than a device, see [Audio output and devices](./audio-output)
+- Voice activity detection is volume based, see [Voice activity detection](./vad)
+- Preferences are not persisted, the system keeps its own audio routing
+
+## Example
+
+The [React Native example](https://github.com/lonestone/micdrop/tree/main/examples/react-native) is a complete screen: conversation, level meters, call controls, and the Node server it talks to.

@@ -2,9 +2,11 @@
 
 [Micdrop website](https://micdrop.dev) | [Documentation](https://micdrop.dev/docs/client/react-hooks)
 
-React hooks for Micdrop voice conversation client.
+React hooks for Micdrop, in the browser and in React Native. They read the call state, so they work with either platform package.
 
 ## Installation
+
+Alongside [`@micdrop/web`](../web) in a browser, or [`@micdrop/react-native`](../react-native) on a phone.
 
 ```bash
 npm install @micdrop/react
@@ -15,6 +17,7 @@ npm install @micdrop/react
 - `useMicdropState`
 - `useMicdropEndCall`
 - `useMicdropError`
+- `useMicdropToolCall`
 - `useMicVolume`
 - `useSpeakerVolume`
 

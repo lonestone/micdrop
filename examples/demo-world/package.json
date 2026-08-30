@@ -15,12 +15,12 @@
   },
   "dependencies": {
     "@fastify/websocket": "^11.2.0",
-    "@micdrop/client": "*",
     "@micdrop/gladia": "*",
     "@micdrop/gradium": "*",
     "@micdrop/openai": "*",
     "@micdrop/react": "*",
     "@micdrop/server": "*",
+    "@micdrop/web": "*",
     "@react-three/fiber": "^8.17.10",
     "dotenv": "^17.0.0",
     "fastify": "^5.7.4",

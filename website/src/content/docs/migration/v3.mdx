@@ -1,0 +1,176 @@
+---
+title: 'Upgrade to v3'
+description: 'Upgrade a Micdrop app to v3, where the client was split so the same call runs in a browser and on a phone. Breaking changes, version mapping and what stays put.'
+order: 64
+---
+
+# Upgrade to v3
+
+_Released in August 2026._
+
+v3 splits the client in two. Everything that runs a call, the protocol, the
+state, the voice activity detection and the recording, moved into a
+platform agnostic `@micdrop/client`. The browser code that surrounds it became
+`@micdrop/web`, and [`@micdrop/react-native`](../react-native) is the same call
+on iOS and Android.
+
+For most apps the upgrade is one install and one search and replace.
+
+## Which versions go together
+
+| Package                 | v2    | v3    |                                                          |
+| ----------------------- | ----- | ----- | -------------------------------------------------------- |
+| `@micdrop/web`          |       | `1.x` | new, this is what a browser app installs                 |
+| `@micdrop/react-native` |       | `0.x` | new, for iOS and Android                                 |
+| `@micdrop/client`       | `2.x` | `3.x` | no longer installed directly, it arrives as a dependency |
+| `@micdrop/react`        | `1.x` | `2.x` | now works on both platforms                              |
+| `@micdrop/server`       | `2.x` | `2.x` | unchanged, nothing to do                                 |
+
+The server does not move. The protocol between the two sides is the same, so a
+v3 client talks to the server you are already running, and you can upgrade one
+side at a time.
+
+The AI packages, `@micdrop/openai` and the others, do not move either. They sit
+on the server and never saw the client.
+
+## The short version
+
+```bash
+npm uninstall @micdrop/client
+npm install @micdrop/web
+```
+
+```diff
+-import { Micdrop } from '@micdrop/client'
++import { Micdrop } from '@micdrop/web'
+```
+
+`@micdrop/web` re-exports the whole shared API, so every name you imported
+before still comes from this single package. You never install
+`@micdrop/client` yourself, it arrives as a dependency and follows the browser
+package.
+
+If you use the React hooks, upgrade them too:
+
+```bash
+npm install @micdrop/react@^2
+```
+
+<Callout type="warning">
+  `@micdrop/react` v2 declares `@micdrop/client` v3 as a peer, so npm says so if
+  the two drift apart. Kept together by force, `useMicVolume` and
+  `useSpeakerVolume` subscribe to a `Volume` event that v2 never emits, and the
+  level meters stay flat. The other four hooks would still work.
+</Callout>
+
+## What breaks
+
+### Devices are one shape on every platform
+
+A phone does not have `MediaDeviceInfo`, so devices became a small type of their
+own. The values are the same, the field names are shorter.
+
+```diff
+-<option key={device.deviceId} value={device.deviceId}>
+-  {device.label || 'Microphone'}
++<option key={device.id} value={device.id}>
++  {device.label}
+ </option>
+```
+
+`MicdropDevice` carries `id`, `label` and `kind`. The label is never empty now,
+it falls back to a generic name when the browser hides it.
+
+### The speaker takes samples rather than a Blob
+
+`Speaker.playAudio()` used to accept the `Blob` the WebSocket delivered. The
+connection now reads binary as `ArrayBuffer`, which skips a conversion on every
+chunk, so the speaker takes the samples directly.
+
+```diff
+-const audioBlob = await response.blob()
+-Speaker.playAudio(audioBlob)
++Speaker.playAudio(await response.arrayBuffer())
+```
+
+`Int16Array` works too. Nothing changes for a normal call, where the client
+feeds the speaker on its own.
+
+### Levels come from events, not from an analyser
+
+`Mic.analyser` and `Speaker.analyser` are gone, along with the `AudioAnalyser`
+class. The level is now an event, measured the same way on both platforms.
+
+```diff
+-Mic.analyser.on('volume', onVolume)
++Mic.on('Volume', onVolume)
+```
+
+The number means exactly what it meant before, the loudest frequency in
+decibels, so a threshold you had tuned still holds.
+
+For a raw `AnalyserNode`, connect one to the node the assistant voice comes out
+of:
+
+```ts
+import { audioContext, getSpeakerOutput } from '@micdrop/web'
+
+const analyser = audioContext.createAnalyser()
+getSpeakerOutput()?.connect(analyser)
+```
+
+### The microphone no longer hands back a stream
+
+`Mic.start()` returns nothing. A phone has no `MediaStream`, and the recorder
+reads the microphone through the shared object instead.
+
+```diff
+-const stream = await Mic.start()
+-await recorder.start(stream)
++await Mic.start()
++await recorder.start(Mic)
+```
+
+### Silero is an opt-in import
+
+The ONNX runtime weighs more than the rest of Micdrop put together, so it only
+enters your bundle when you ask for it. Add one import, wherever your app starts:
+
+```ts
+import '@micdrop/web/silero'
+```
+
+Without it, `vad: 'silero'` throws with a message saying exactly this. `'volume'`
+needs nothing.
+
+### Renamed
+
+| v2                                    | v3                                  |
+| ------------------------------------- | ----------------------------------- |
+| `LocalStorageKeys`                    | `MicdropStorageKeys`                |
+| `state.micDevices: MediaDeviceInfo[]` | `state.micDevices: MicdropDevice[]` |
+
+The stored keys themselves are unchanged, so a returning user keeps the
+microphone, the speaker and the VAD settings they had.
+
+### Errors say what went wrong
+
+A missing `url` and a refused microphone used to surface as
+`MicdropClientErrorCode.Connection`, because they were caught and relabelled on
+the way out. They now arrive as `MissingUrl` and `Mic`. Code that branched on
+`Connection` to cover those cases needs the other two branches.
+
+## What does not change
+
+- **The protocol.** A v3 client talks to a v2 server, and the other way round. `@micdrop/server` did not move.
+- **The call API.** `start`, `stop`, `mute`, `pause`, `StateChange`, the conversation, the tool calls: all identical.
+- **Saved settings.** Same storage keys, same values.
+- **VAD thresholds.** The level is measured exactly as before, so your tuned numbers carry over.
+
+## What you gain
+
+- The same call on [iOS and Android](../react-native), against the server you already run
+- [React hooks](../client/react-hooks) that work on both, from one package
+- Silero on a phone as well as in a browser, sharing one implementation
+- A first syllable that no longer gets cut: each VAD now declares how long it takes to notice speech, and that much audio is kept in reserve
+- A warning when a microphone announces one sample rate and delivers another, which used to turn into unexplained transcription errors

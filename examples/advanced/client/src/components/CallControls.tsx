@@ -1,4 +1,4 @@
-import { Micdrop, Speaker } from '@micdrop/client'
+import { Micdrop, Speaker } from '@micdrop/web'
 import { useMicdropEndCall, useMicdropState } from '@micdrop/react'
 import { FaMicrophone, FaPause, FaPlay, FaStop } from 'react-icons/fa'
 import {

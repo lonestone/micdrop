@@ -1,4 +1,4 @@
-import { Micdrop } from '@micdrop/client'
+import { Micdrop } from '@micdrop/web'
 import { useMicdropState } from '@micdrop/react'
 import { FaMicrophone, FaMicrophoneSlash, FaVolumeUp } from 'react-icons/fa'
 import MicVolume from './MicVolume'
@@ -30,9 +30,9 @@ export default function DevicesSettings() {
           className="flex-1 form-select min-w-0 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
           onChange={(event) => Micdrop.changeMicDevice(event.target.value)}
         >
-          {micDevices.map(({ deviceId, label }) => (
-            <option key={deviceId} value={deviceId}>
-              {label || 'Microphone'}
+          {micDevices.map(({ id, label }) => (
+            <option key={id} value={id}>
+              {label}
             </option>
           ))}
         </select>
@@ -48,9 +48,9 @@ export default function DevicesSettings() {
           className="flex-1 form-select min-w-0 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2"
           onChange={(event) => Micdrop.changeSpeakerDevice(event.target.value)}
         >
-          {speakerDevices.map(({ deviceId, label }) => (
-            <option key={deviceId} value={deviceId}>
-              {label || 'Speaker'}
+          {speakerDevices.map(({ id, label }) => (
+            <option key={id} value={id}>
+              {label}
             </option>
           ))}
         </select>

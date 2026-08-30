@@ -6,7 +6,7 @@ import {
   VAD,
   VolumeVAD,
   VolumeVADOptions,
-} from '@micdrop/client'
+} from '@micdrop/web'
 import { useMicdropState } from '@micdrop/react'
 import { useState } from 'react'
 import { FaChevronDown } from 'react-icons/fa'
