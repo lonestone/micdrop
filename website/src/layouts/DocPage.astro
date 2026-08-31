@@ -3,7 +3,8 @@ import type { MarkdownHeading } from 'astro'
 import DocsLayout from './DocsLayout.astro'
 import Breadcrumb from '../components/Breadcrumb.astro'
 import DocNav from '../components/DocNav.astro'
-import type { DocsLink } from '../utils/docs-tree'
+import { getDocsTrail, getDocsTree, type DocsLink } from '../utils/docs-tree'
+import { getCanonicalPath } from '../utils/getCanonicalPath'
 
 interface Props {
   title: string
@@ -16,6 +17,9 @@ interface Props {
 }
 
 const { title, titleBrand = true, description, headings, previous, next } = Astro.props
+
+// The groups the page sits under, so the breadcrumb mirrors the sidebar.
+const sections = getDocsTrail(await getDocsTree(), getCanonicalPath(Astro.url.pathname))
 ---
 
 <DocsLayout title={title} titleBrand={titleBrand} description={description} headings={headings}>
@@ -24,6 +28,7 @@ const { title, titleBrand = true, description, headings, previous, next } = Astr
       <Breadcrumb
         category="Documentation"
         categoryUrl="/docs/getting-started"
+        sections={sections}
         title={title}
         hideTitle
         class="mb-3"

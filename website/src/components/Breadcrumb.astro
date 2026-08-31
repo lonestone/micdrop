@@ -2,31 +2,47 @@
 import config from '../../website.config'
 import { getCanonicalPath } from '../utils/getCanonicalPath'
 
+export interface BreadcrumbSection {
+  label: string
+  href?: string
+}
+
 interface Props {
   category: string
   categoryUrl: string
+  /** Groups between the category and the page, outermost first. */
+  sections?: BreadcrumbSection[]
   title: string
   hideTitle?: boolean
   class?: string
 }
 
-const { category, categoryUrl, title, hideTitle = false, class: className } = Astro.props
+const {
+  category,
+  categoryUrl,
+  sections = [],
+  title,
+  hideTitle = false,
+  class: className,
+} = Astro.props
 
 const linkClass = 'text-text-secondary hover:text-primary hover:underline transition-colors'
 const origin = Astro.site?.origin ?? config.site
+const trail = [
+  { label: config.siteName, href: '/' },
+  { label: category, href: categoryUrl },
+  ...sections,
+  { label: title, href: getCanonicalPath(Astro.url.pathname) },
+]
 const breadcrumb = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: config.siteName, item: `${origin}/` },
-    { '@type': 'ListItem', position: 2, name: category, item: `${origin}${categoryUrl}` },
-    {
-      '@type': 'ListItem',
-      position: 3,
-      name: title,
-      item: `${origin}${getCanonicalPath(Astro.url.pathname)}`,
-    },
-  ],
+  itemListElement: trail.map((item, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    name: item.label,
+    ...(item.href ? { item: `${origin}${item.href}` } : {}),
+  })),
 }
 ---
 
@@ -34,6 +50,20 @@ const breadcrumb = {
   <a href="/" class={linkClass}>{config.siteName}</a>
   <span class="mx-1">›</span>
   <a href={categoryUrl} class={linkClass}>{category}</a>
+  {
+    sections.map((section) => (
+      <>
+        <span class="mx-1">›</span>
+        {section.href ? (
+          <a href={section.href} class={linkClass}>
+            {section.label}
+          </a>
+        ) : (
+          <span>{section.label}</span>
+        )}
+      </>
+    ))
+  }
   {
     !hideTitle && (
       <>

@@ -164,3 +164,20 @@ export function containsPath(node: DocsNode, path: string): boolean {
   if (node.href === path) return true
   return node.items.some((item) => containsPath(item, path))
 }
+
+/**
+ * Groups a page sits under, outermost first, used by the breadcrumb. The group
+ * whose landing page is the current page is left out, since the breadcrumb
+ * already names it.
+ */
+export function getDocsTrail(
+  nodes: DocsNode[],
+  path: string
+): { label: string; href?: string }[] {
+  for (const node of nodes) {
+    if (node.type !== 'group' || !containsPath(node, path)) continue
+    const rest = getDocsTrail(node.items, path)
+    return node.href === path ? rest : [{ label: node.label, href: node.href }, ...rest]
+  }
+  return []
+}
