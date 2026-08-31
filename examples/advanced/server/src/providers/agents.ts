@@ -12,13 +12,16 @@ import { ModelOption, ProviderRegistry } from './types'
  */
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434/v1'
 
-// System prompt passed to the LLM
-function getSystemPrompt(lang: string) {
-  return `You are a voice assistant named Micdrop.
+/**
+ * System prompt the demo starts from, and the one the client shows in its
+ * editor. Rewriting it there changes the character of the assistant without
+ * touching this file, which is the quickest way to try a persona or a task on
+ * a model already running.
+ */
+export const DEFAULT_SYSTEM_PROMPT = `You are a voice assistant named Micdrop.
 Your role is to help the user with their questions and requests.
 
 ## Instructions
-- Write every message in ${lang} language.
 - If you're first to speak, greet the user and ask how you can help.
 - You're in a conversation, keep your answers short and helpful.
 - Write all numbers and abbreviations in full.
@@ -28,6 +31,16 @@ Your role is to help the user with their questions and requests.
 - Do not use abbreviations.
 - Do not use emojis.
 `
+
+/**
+ * The prompt the LLM receives, from the one written in the client when it sent
+ * one. The language stays out of the editor: a voice or a transcription model
+ * locked to one language decides it here, so the line is appended after the
+ * prompt rather than written into it.
+ */
+function getSystemPrompt(lang: string, prompt?: string) {
+  const base = prompt?.trim() || DEFAULT_SYSTEM_PROMPT.trim()
+  return `${base}\n- Write every message in ${lang} language.\n`
 }
 
 /** Models pulled on the machine, asked to the local server at page load. */
@@ -70,11 +83,11 @@ const agents: ProviderRegistry<Agent> = {
     requiredEnv: ['OPENAI_API_KEY'],
     models: OPENAI_MODELS,
     defaultModel: 'gpt-5.2',
-    create: ({ lang, model, auto }) =>
+    create: ({ lang, model, auto, prompt }) =>
       new OpenaiAgent({
         apiKey: process.env.OPENAI_API_KEY || '',
         model,
-        systemPrompt: getSystemPrompt(lang),
+        systemPrompt: getSystemPrompt(lang, prompt),
         ...auto,
       }),
   },
@@ -85,10 +98,10 @@ const agents: ProviderRegistry<Agent> = {
     requiredEnv: ['OPENAI_API_KEY'],
     models: OPENAI_MODELS,
     defaultModel: 'gpt-5.2',
-    create: ({ lang, model, auto }) =>
+    create: ({ lang, model, auto, prompt }) =>
       new AiSdkAgent({
         model: openai(model || 'gpt-5.2'),
-        systemPrompt: getSystemPrompt(lang),
+        systemPrompt: getSystemPrompt(lang, prompt),
         ...auto,
       }),
   },
@@ -102,11 +115,11 @@ const agents: ProviderRegistry<Agent> = {
       { id: 'ministral-8b-latest', label: 'ministral-8b-latest' },
     ],
     defaultModel: 'mistral-large-latest',
-    create: ({ lang, model, auto }) =>
+    create: ({ lang, model, auto, prompt }) =>
       new MistralAgent({
         apiKey: process.env.MISTRAL_API_KEY || '',
         model,
-        systemPrompt: getSystemPrompt(lang),
+        systemPrompt: getSystemPrompt(lang, prompt),
         ...auto,
       }),
   },
@@ -118,7 +131,7 @@ const agents: ProviderRegistry<Agent> = {
     local: true,
     isAvailable: isOllamaRunning,
     models: listOllamaModels,
-    create: ({ lang, model, auto }) =>
+    create: ({ lang, model, auto, prompt }) =>
       new AiSdkAgent({
         // .chat() rather than the provider itself: the default of the OpenAI
         // provider is the Responses API, which a local server does not serve
@@ -126,7 +139,7 @@ const agents: ProviderRegistry<Agent> = {
           baseURL: OLLAMA_URL,
           apiKey: 'ollama', // Unused, the SDK refuses to start without one
         }).chat(model || 'qwen3:4b-instruct'),
-        systemPrompt: getSystemPrompt(lang),
+        systemPrompt: getSystemPrompt(lang, prompt),
         // A small model answers these less reliably than a large one, and they
         // run on every turn. Turning them off from the client is the quickest
         // way to tell which one a model mishandles.

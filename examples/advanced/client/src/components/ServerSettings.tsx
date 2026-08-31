@@ -1,6 +1,8 @@
 import { useMicdropState } from '@micdrop/react'
 import { useDetection } from '../detection'
+import { useProviders } from '../providers'
 import ProvidersSettings from './ProvidersSettings'
+import ResetButton from './ResetButton'
 
 /**
  * Everything the client sends when a call starts.
@@ -12,6 +14,14 @@ import ProvidersSettings from './ProvidersSettings'
 export default function ServerSettings({ className }: { className?: string }) {
   const { isStarted } = useMicdropState()
   const { serverTurnDetection, toggleServerTurnDetection } = useDetection()
+  const { resetAll } = useProviders()
+
+  // Turn detection is stored with the other detectors, so the card puts it
+  // back itself rather than through the providers store
+  const handleReset = () => {
+    resetAll()
+    toggleServerTurnDetection(false)
+  }
 
   return (
     <div
@@ -50,6 +60,7 @@ export default function ServerSettings({ className }: { className?: string }) {
             </span>
           </label>
         </div>
+        <ResetButton onClick={handleReset} disabled={isStarted} />
       </div>
     </div>
   )

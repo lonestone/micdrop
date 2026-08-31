@@ -4,6 +4,8 @@ import { FaPause, FaPlay, FaStop } from 'react-icons/fa'
 import { getServerTurnDetection, getVADConfig } from '../detection'
 import {
   getAutoOptions,
+  getLang,
+  getPrompt,
   getSelections,
   getToolOptions,
   SERVER_URL,
@@ -20,11 +22,14 @@ export default function CallControls() {
       vad: getVADConfig(),
       params: {
         authorization: '1234',
-        lang: navigator.language,
-        // Providers, agent prompts and tools picked in the settings above
+        // Language, providers, agent prompts and tools picked in the settings
+        // above
+        lang: getLang(),
         providers: getSelections(),
         auto: getAutoOptions(),
         tools: getToolOptions(),
+        // The system prompt as the editor shows it
+        prompt: getPrompt(),
         // The server weighs the turns when the browser is not doing it
         smartTurn: getServerTurnDetection(),
       },

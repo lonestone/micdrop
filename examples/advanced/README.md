@@ -44,8 +44,10 @@ pnpm typecheck     # Typecheck both sides
 
 ## Choosing providers
 
-The selects at the top of the page pick the agent, the transcription and the
-voice for the next call. The server exposes what it can run on
+The selects at the top of the page pick the language, the agent, the
+transcription and the voice for the next call. The language starts on the one
+of the browser, and a voice or a transcription model that speaks a single
+language takes it over. The server exposes what it can run on
 `GET /providers`, the client sends back what was picked when a call starts, and
 a provider whose key is missing or whose binary is not installed appears greyed
 out rather than failing mid-call. The selection is kept in the browser storage,
@@ -62,6 +64,20 @@ with the call and the server logs the ones left off. Each one costs the model a
 tool call on every turn, and a small model handles them less reliably than a
 hosted one, so unticking them one at a time shows which one a model mishandles.
 Hover a label for what it does.
+
+## Writing the prompt
+
+The text area under the checkboxes holds the system prompt given to the agent.
+It starts from the one the server exposes with its catalog, travels with the
+call, and stays in the browser storage, so giving the assistant another
+persona, another script or another task altogether is a matter of typing rather
+than of editing `server/src/providers/agents.ts` and restarting. The language
+of the conversation stays on the server side, which appends it after the prompt
+since a voice or a transcription model locked to one language decides it.
+
+Reset to default, at the bottom of the card, puts the whole server side back to
+what the demo starts with: its preferred providers, its checkboxes and its
+prompt.
 
 ## Running locally
 

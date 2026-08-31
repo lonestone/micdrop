@@ -1,5 +1,5 @@
 import { Agent, STT, TTS } from '@micdrop/server'
-import agents from './agents'
+import agents, { DEFAULT_SYSTEM_PROMPT } from './agents'
 import speech2Text from './speech2Text'
 import text2Speech from './text2Speech'
 import {
@@ -31,6 +31,8 @@ export interface CallSelection {
   tts?: ProviderSelection
   /** The automatic prompts, left to their defaults when the client omits them. */
   auto?: AutoSelection
+  /** System prompt written in the client, absent when it kept the default. */
+  prompt?: string
 }
 
 export interface CallProviders {
@@ -111,7 +113,7 @@ export async function getCatalog(): Promise<Catalog> {
     describeRegistry(speech2Text, DEFAULT_PROVIDERS.stt),
     describeRegistry(text2Speech, DEFAULT_PROVIDERS.tts),
   ])
-  return { agent, stt, tts }
+  return { agent, stt, tts, defaultPrompt: DEFAULT_SYSTEM_PROMPT }
 }
 
 interface Resolved<T> {
@@ -196,6 +198,7 @@ export async function createProviders(
       lang: language,
       model: agent.model,
       auto,
+      prompt: selection.prompt,
     }),
     stt: stt.definition.create({ lang: language, model: stt.model, auto }),
     tts: tts.definition.create({ lang: language, model: tts.model, auto }),

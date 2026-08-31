@@ -41,6 +41,8 @@ export interface ProviderContext {
   model?: string
   /** Only read by the agents, the other registries ignore it. */
   auto: AutoOptions
+  /** System prompt written in the client, absent when it kept the default. */
+  prompt?: string
 }
 
 export interface ProviderDefinition<T> {
@@ -84,6 +86,8 @@ export interface Catalog {
   agent: PartCatalog
   stt: PartCatalog
   tts: PartCatalog
+  /** What the prompt editor of the client starts from, and resets to. */
+  defaultPrompt: string
 }
 
 /** What the client sends back when it starts a call. */

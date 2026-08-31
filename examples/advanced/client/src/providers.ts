@@ -27,7 +27,10 @@ export interface PartCatalog {
   defaultProvider: string
 }
 
-export type Catalog = Record<PartName, PartCatalog>
+export type Catalog = Record<PartName, PartCatalog> & {
+  /** The system prompt the editor starts from, and resets to. */
+  defaultPrompt: string
+}
 
 export interface Selection {
   provider?: string
@@ -108,6 +111,58 @@ const DEFAULT_AUTO: AutoOptions = {
   autoIgnoreUserNoise: false,
 }
 
+/**
+ * Languages offered for a call, the ones the hosted providers all speak. The
+ * browser language joins the list when it is missing from it, so a call always
+ * starts in the language of whoever opens the page.
+ */
+const LANGUAGES: { id: string; label: string }[] = [
+  { id: 'en-US', label: 'English (US)' },
+  { id: 'en-GB', label: 'English (UK)' },
+  { id: 'fr-FR', label: 'French' },
+  { id: 'es-ES', label: 'Spanish' },
+  { id: 'de-DE', label: 'German' },
+  { id: 'it-IT', label: 'Italian' },
+  { id: 'pt-PT', label: 'Portuguese' },
+  { id: 'nl-NL', label: 'Dutch' },
+  { id: 'pl-PL', label: 'Polish' },
+  { id: 'ru-RU', label: 'Russian' },
+  { id: 'ja-JP', label: 'Japanese' },
+  { id: 'zh-CN', label: 'Chinese' },
+]
+
+/**
+ * The language a call starts in when nothing was picked before.
+ *
+ * A browser announcing itself as "fr" means the French of the list, so the
+ * lookup compares the language alone and keeps the locale of the entry it
+ * lands on. An unlisted language is kept as it is, the option below adds it.
+ */
+function browserLanguage(): string {
+  const language = navigator.language
+  // The server takes a bare code or a full locale, nothing longer
+  if (!/^[a-z]{2}(-[A-Z]{2})?$/.test(language)) return 'en-US'
+  const listed =
+    LANGUAGES.find((option) => option.id === language) ??
+    LANGUAGES.find((option) => sameLanguage(option.id, language))
+  return listed?.id ?? language
+}
+
+/** Compares locales on their language only, so "fr" matches "fr-FR". */
+function sameLanguage(a: string, b: string): boolean {
+  return a.split('-')[0] === b.split('-')[0]
+}
+
+const BROWSER_LANGUAGE = browserLanguage()
+
+export const LANGUAGE_OPTIONS = LANGUAGES.some(
+  (option) => option.id === BROWSER_LANGUAGE
+)
+  ? LANGUAGES
+  : [{ id: BROWSER_LANGUAGE, label: BROWSER_LANGUAGE }, ...LANGUAGES]
+
+export const PARTS: PartName[] = ['agent', 'stt', 'tts']
+
 export const PART_LABELS: Record<PartName, string> = {
   agent: 'Agent',
   stt: 'Speech to text',
@@ -119,9 +174,16 @@ const STORAGE_KEY = 'micdrop-demo-providers'
 interface State {
   catalog?: Catalog
   error?: string
+  /** Language of the conversation, which a monolingual model can override. */
+  lang: string
   selections: Selections
   auto: AutoOptions
   tools: ToolOptions
+  /**
+   * The system prompt, as written in the editor. Undefined until the catalog
+   * arrives with the default one, and set back to it when the editor is reset.
+   */
+  prompt?: string
 }
 
 /**
@@ -133,9 +195,11 @@ interface State {
  * trying a provider does not mean picking it again on every refresh.
  */
 let state: State = {
+  lang: storedLanguage(),
   selections: readStored('selections', { agent: {}, stt: {}, tts: {} }),
   auto: readStored('auto', DEFAULT_AUTO),
   tools: readStored('tools', DEFAULT_TOOLS),
+  prompt: readStoredString('prompt'),
 }
 
 const listeners = new Set<() => void>()
@@ -155,14 +219,41 @@ function readStored<T>(key: 'selections' | 'auto' | 'tools', fallback: T): T {
   }
 }
 
+/**
+ * The language of the last call, kept only while the list still offers it, so
+ * a locale the demo stopped proposing gives the language of the browser back.
+ */
+function storedLanguage(): string {
+  const stored = readStoredString('lang')
+  const listed = LANGUAGE_OPTIONS.find((option) => option.id === stored)
+  return listed?.id ?? BROWSER_LANGUAGE
+}
+
+/**
+ * Reads one of the settings stored as plain text. Nothing stored means the
+ * default, which for the prompt only arrives with the catalog.
+ */
+function readStoredString(key: 'prompt' | 'lang'): string | undefined {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return undefined
+    const value = JSON.parse(stored)[key]
+    return typeof value === 'string' ? value : undefined
+  } catch {
+    return undefined
+  }
+}
+
 function persist() {
   try {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
+        lang: state.lang,
         selections: state.selections,
         auto: state.auto,
         tools: state.tools,
+        prompt: state.prompt,
       })
     )
   } catch {
@@ -196,10 +287,16 @@ function loadCatalog() {
     })
     .then((catalog) => {
       const selections = { ...state.selections }
-      for (const part of Object.keys(catalog) as PartName[]) {
+      for (const part of PARTS) {
         selections[part] = completeSelection(catalog, part, selections[part])
       }
-      setState({ catalog, selections, error: undefined })
+      setState({
+        catalog,
+        selections,
+        // The editor shows the prompt of the server until someone writes one
+        prompt: state.prompt ?? catalog.defaultPrompt,
+        error: undefined,
+      })
     })
     .catch((error: Error) => {
       loading = undefined
@@ -235,11 +332,8 @@ function completeSelection(
 }
 
 export function useProviders() {
-  const { catalog, error, selections, auto, tools } = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getSnapshot
-  )
+  const { catalog, error, lang, selections, auto, tools, prompt } =
+    useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
   useEffect(() => {
     loadCatalog()
@@ -265,16 +359,59 @@ export function useProviders() {
     persist()
   }, [])
 
+  const resetAll = useCallback(resetSettings, [])
+
+  const selectLang = useCallback((next: string) => {
+    setState({ lang: next })
+    persist()
+  }, [])
+
+  const writePrompt = useCallback((next: string) => {
+    setState({ prompt: next })
+    persist()
+  }, [])
+
   return {
     catalog,
     error,
+    lang,
+    selectLang,
     selections,
     select,
     auto,
     toggleAuto,
     tools,
     toggleTool,
+    prompt,
+    writePrompt,
+    resetAll,
   }
+}
+
+/**
+ * Puts every setting of the server card back to what the demo starts with:
+ * the providers it prefers, its prompts, its tools and its system prompt.
+ */
+function resetSettings() {
+  const empty: Selections = { agent: {}, stt: {}, tts: {} }
+  const catalog = state.catalog
+  setState({
+    lang: BROWSER_LANGUAGE,
+    selections: catalog
+      ? (Object.fromEntries(
+          PARTS.map((part) => [part, completeSelection(catalog, part, {})])
+        ) as Selections)
+      : empty,
+    auto: DEFAULT_AUTO,
+    tools: DEFAULT_TOOLS,
+    prompt: catalog?.defaultPrompt,
+  })
+  persist()
+}
+
+/** The language sent to the server when a call starts. */
+export function getLang(): string {
+  return state.lang
 }
 
 /** The selection sent to the server when a call starts. */
@@ -290,4 +427,13 @@ export function getAutoOptions(): AutoOptions {
 /** The tools the agent is given, sent to the server when a call starts. */
 export function getToolOptions(): ToolOptions {
   return state.tools
+}
+
+/**
+ * The system prompt sent when a call starts. The default one travels too, so
+ * the assistant answers with what the editor shows even if the server changes
+ * its own default between two calls.
+ */
+export function getPrompt(): string | undefined {
+  return state.prompt
 }

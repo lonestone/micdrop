@@ -1,14 +1,14 @@
 import { useMicdropState } from '@micdrop/react'
 import {
+  LANGUAGE_OPTIONS,
   PART_LABELS,
-  PartName,
+  PARTS,
   ProviderInfo,
   Selection,
   useProviders,
 } from '../providers'
 import AgentOptions from './AgentOptions'
-
-const PARTS: PartName[] = ['agent', 'stt', 'tts']
+import PromptSettings from './PromptSettings'
 
 const SELECT_CLASS =
   'form-select min-w-0 rounded-md border-gray-300 shadow-sm focus:border-blue-300 ' +
@@ -23,7 +23,8 @@ const SELECT_CLASS =
  */
 export default function ProvidersSettings() {
   const { isStarted } = useMicdropState()
-  const { catalog, error, selections, select } = useProviders()
+  const { catalog, error, lang, selectLang, selections, select } =
+    useProviders()
 
   // The agent prompts are independent of the catalog, so a server that cannot
   // be read loses the provider rows and keeps the checkboxes.
@@ -33,6 +34,22 @@ export default function ProvidersSettings() {
       {!error && !catalog && (
         <div className="text-sm text-gray-500">Loading providers…</div>
       )}
+      <div className="flex items-center gap-3">
+        <label className="w-32 shrink-0 text-sm text-gray-600">Language</label>
+        <select
+          className={`${SELECT_CLASS} w-44 shrink-0`}
+          value={lang}
+          disabled={isStarted}
+          aria-label="Language"
+          onChange={(event) => selectLang(event.target.value)}
+        >
+          {LANGUAGE_OPTIONS.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
       {catalog &&
         PARTS.map((part) => (
           <PartRow
@@ -45,6 +62,7 @@ export default function ProvidersSettings() {
           />
         ))}
       <AgentOptions />
+      <PromptSettings />
       {isStarted && (
         <p className="text-xs text-gray-500">
           Stop the call to change these settings.

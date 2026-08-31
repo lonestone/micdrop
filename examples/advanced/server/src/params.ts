@@ -36,6 +36,9 @@ export const callParamsSchema = z.object({
     .optional(),
   // Weigh the turns here rather than in the browser, ticked in the client
   smartTurn: z.boolean().optional(),
+  // System prompt written in the client. Absent, or empty, means the default
+  // one the server exposes in its catalog.
+  prompt: z.string().max(10000).optional(),
   // Absent when the client did not read the catalog, the server then falls
   // back to the providers it considers its defaults
   providers: z
@@ -66,7 +69,11 @@ export async function checkParams(socket: WebSocket): Promise<{
 
   return {
     lang: params.lang,
-    selection: { ...params.providers, auto: params.auto },
+    selection: {
+      ...params.providers,
+      auto: params.auto,
+      prompt: params.prompt,
+    },
     tools: params.tools ?? {},
     smartTurn: params.smartTurn ?? false,
   }

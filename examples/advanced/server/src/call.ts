@@ -27,6 +27,9 @@ export default async (app: FastifyInstance) => {
           `${stt.constructor.name} and ${tts.constructor.name}` +
           (off.length ? `, without ${off.join(' and ')}` : '')
       )
+      if (selection.prompt) {
+        console.log('With the system prompt written in the client')
+      }
 
       // Weigh the turns here when the client asked for it
       const turnDetector = smartTurn ? await createSmartTurn() : undefined
