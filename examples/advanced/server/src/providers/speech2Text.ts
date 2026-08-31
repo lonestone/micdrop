@@ -33,18 +33,38 @@ const speech2Text: ProviderRegistry<STT> = {
   openai: {
     label: 'OpenAI',
     requiredEnv: ['OPENAI_API_KEY'],
-    create: () =>
+    models: [
+      { id: 'gpt-4o-transcribe', label: 'gpt-4o-transcribe' },
+      { id: 'gpt-4o-mini-transcribe', label: 'gpt-4o-mini-transcribe' },
+      { id: 'gpt-live-transcribe', label: 'gpt-live-transcribe' },
+    ],
+    defaultModel: 'gpt-4o-transcribe',
+    create: ({ model }) =>
       new OpenaiSTT({
         apiKey: process.env.OPENAI_API_KEY || '',
+        model,
       }),
   },
 
   mistral: {
     label: 'Mistral',
     requiredEnv: ['MISTRAL_API_KEY'],
-    create: () =>
+    // Only the realtime Voxtral models answer on the streaming endpoint
+    models: [
+      {
+        id: 'voxtral-mini-transcribe-realtime-2602',
+        label: 'voxtral-mini-transcribe-realtime',
+      },
+      {
+        id: 'voxtral-mini-realtime-latest',
+        label: 'voxtral-mini-realtime',
+      },
+    ],
+    defaultModel: 'voxtral-mini-transcribe-realtime-2602',
+    create: ({ model }) =>
       new MistralSTT({
         apiKey: process.env.MISTRAL_API_KEY || '',
+        model,
       }),
   },
 
@@ -84,7 +104,13 @@ const speech2Text: ProviderRegistry<STT> = {
       new FallbackSTT({
         factories: [
           () => speech2Text.gladia.create(context),
-          () => speech2Text.openai.create(context),
+          // Each one keeps its own default model, the selected one belongs to
+          // the provider the client picked
+          () =>
+            speech2Text.openai.create({
+              ...context,
+              model: speech2Text.openai.defaultModel,
+            }),
         ],
       }),
   },

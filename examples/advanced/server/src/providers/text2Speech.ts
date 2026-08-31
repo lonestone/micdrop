@@ -1,5 +1,5 @@
 import { CartesiaLanguage, CartesiaTTS } from '@micdrop/cartesia'
-import { ElevenLabsTTS } from '@micdrop/elevenlabs'
+import { ElevenLabsTTS, ElevenLabsTTSOptions } from '@micdrop/elevenlabs'
 import { GradiumTTS } from '@micdrop/gradium'
 import { KOKORO_VOICE_IDS, KokoroTTS } from '@micdrop/kokoro'
 import { OpenaiTTS } from '@micdrop/openai'
@@ -52,24 +52,38 @@ const text2speech: ProviderRegistry<TTS> = {
       ]),
   },
 
+  // The voice comes from the environment, so the select offers the models,
+  // from the quickest to answer to the one speaking the most languages
   elevenlabs: {
     label: 'ElevenLabs',
     requiredEnv: ['ELEVENLABS_API_KEY', 'ELEVENLABS_VOICE_ID'],
-    create: () =>
+    models: [
+      { id: 'eleven_flash_v2_5', label: 'eleven_flash_v2_5' },
+      { id: 'eleven_turbo_v2_5', label: 'eleven_turbo_v2_5' },
+      { id: 'eleven_multilingual_v2', label: 'eleven_multilingual_v2' },
+    ],
+    defaultModel: 'eleven_flash_v2_5',
+    create: ({ model }) =>
       new ElevenLabsTTS({
         apiKey: process.env.ELEVENLABS_API_KEY || '',
         voiceId: process.env.ELEVENLABS_VOICE_ID || '',
-        modelId: 'eleven_flash_v2_5',
+        modelId: model as ElevenLabsTTSOptions['modelId'],
       }),
   },
 
   cartesia: {
     label: 'Cartesia',
     requiredEnv: ['CARTESIA_API_KEY', 'CARTESIA_VOICE_ID'],
-    create: ({ lang }) =>
+    models: [
+      { id: 'sonic-turbo', label: 'sonic-turbo' },
+      { id: 'sonic-3', label: 'sonic-3' },
+      { id: 'sonic-2', label: 'sonic-2' },
+    ],
+    defaultModel: 'sonic-turbo',
+    create: ({ lang, model }) =>
       new CartesiaTTS({
         apiKey: process.env.CARTESIA_API_KEY || '',
-        modelId: 'sonic-turbo',
+        modelId: model || 'sonic-turbo',
         voiceId: process.env.CARTESIA_VOICE_ID || '',
         language: lang.split('-')[0] as CartesiaLanguage,
       }),
@@ -162,8 +176,18 @@ const text2speech: ProviderRegistry<TTS> = {
     create: (context) =>
       new FallbackTTS({
         factories: [
-          () => text2speech.elevenlabs.create(context),
-          () => text2speech.cartesia.create(context),
+          // Each one keeps its own default model, the selected one belongs to
+          // the provider the client picked
+          () =>
+            text2speech.elevenlabs.create({
+              ...context,
+              model: text2speech.elevenlabs.defaultModel,
+            }),
+          () =>
+            text2speech.cartesia.create({
+              ...context,
+              model: text2speech.cartesia.defaultModel,
+            }),
         ],
       }),
   },

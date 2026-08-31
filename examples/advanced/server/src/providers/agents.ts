@@ -46,6 +46,18 @@ async function isOllamaRunning(): Promise<boolean> {
   }
 }
 
+/**
+ * Conversational models, from the most capable to the fastest.
+ *
+ * A voice call is judged on how quickly it answers, so the list stays on the
+ * models answering straight away rather than the ones reasoning first.
+ */
+const OPENAI_MODELS: ModelOption[] = [
+  { id: 'gpt-5.2', label: 'gpt-5.2' },
+  { id: 'gpt-5.4-mini', label: 'gpt-5.4-mini' },
+  { id: 'gpt-4.1-mini', label: 'gpt-4.1-mini' },
+]
+
 const agents: ProviderRegistry<Agent> = {
   mock: {
     label: 'Mock',
@@ -56,7 +68,7 @@ const agents: ProviderRegistry<Agent> = {
   openai: {
     label: 'OpenAI',
     requiredEnv: ['OPENAI_API_KEY'],
-    models: [{ id: 'gpt-5.2', label: 'gpt-5.2' }],
+    models: OPENAI_MODELS,
     defaultModel: 'gpt-5.2',
     create: ({ lang, model, auto }) =>
       new OpenaiAgent({
@@ -71,7 +83,7 @@ const agents: ProviderRegistry<Agent> = {
     label: 'AI SDK',
     description: 'OpenAI through the Vercel AI SDK',
     requiredEnv: ['OPENAI_API_KEY'],
-    models: [{ id: 'gpt-5.2', label: 'gpt-5.2' }],
+    models: OPENAI_MODELS,
     defaultModel: 'gpt-5.2',
     create: ({ lang, model, auto }) =>
       new AiSdkAgent({
@@ -84,7 +96,11 @@ const agents: ProviderRegistry<Agent> = {
   mistral: {
     label: 'Mistral',
     requiredEnv: ['MISTRAL_API_KEY'],
-    models: [{ id: 'mistral-large-latest', label: 'mistral-large-latest' }],
+    models: [
+      { id: 'mistral-large-latest', label: 'mistral-large-latest' },
+      { id: 'mistral-medium-latest', label: 'mistral-medium-latest' },
+      { id: 'ministral-8b-latest', label: 'ministral-8b-latest' },
+    ],
     defaultModel: 'mistral-large-latest',
     create: ({ lang, model, auto }) =>
       new MistralAgent({
