@@ -8,10 +8,12 @@ order: 18
 
 `@micdrop/react-native` runs a Micdrop call on a phone. It records the microphone, plays the assistant voice, detects who is speaking and streams both ways over a WebSocket, against the same [server](/docs/server) a browser talks to.
 
+The server holds the transcription, the agent and the voice, so no speech model ships in the app. [Speech to text in React Native](/blog/speech-to-text-react-native) compares server-side transcription with the iOS and Android recognisers and with running Whisper on the device.
+
 ## Installation
 
 ```bash
-npm install @micdrop/react-native react-native-audio-api
+npm install @micdrop/react-native @micdrop/react react-native-audio-api
 ```
 
 Audio goes through native code, so the app runs from a development build rather than from Expo Go. See [Installation](./installation) for the permissions and the config plugin.
@@ -56,7 +58,7 @@ export default function Call() {
 
 ## Same API as the browser
 
-Everything about running a call is shared with [@micdrop/react-native](/docs/client): `start`, `stop`, `mute`, `pause`, the `StateChange` event, the conversation, the error codes. Those pages apply here, with three differences:
+Everything about running a call is shared with [@micdrop/web](/docs/client): `start`, `stop`, `mute`, `pause`, the `StateChange` event, the conversation, the error codes. Those pages apply here, with three differences:
 
 - Output is a route rather than a device, see [Audio output and devices](./audio-output)
 - Voice activity detection is volume based, see [Voice activity detection](./vad)
