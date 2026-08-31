@@ -10,6 +10,8 @@ Micdrop uses a VAD (Voice Activity Detection) to detect speech and silence and s
 
 For the concepts behind these options, how volume detection compares with a Silero model and how to tune latency against false positives, read [Voice Activity Detection in the Browser](/blog/voice-activity-detection-browser).
 
+Whichever VAD decides, Micdrop keeps the last moments of audio in reserve, so the syllable spoken before it reacted is sent along with the rest of the sentence.
+
 ## Supported VAD Types
 
 Micdrop supports the following VADs by name:
@@ -69,6 +71,8 @@ Micdrop.startMic({ vad: 'volume' })
 
 It is inspired by [hark](https://github.com/otalk/hark) and triggers speech detection events based on volume changes.
 
+The level `VolumeVAD` follows is the loudest frequency rather than the overall energy: a voice concentrates its power in a few bands while a fan spreads it over all of them, which separates the two by about 25 dB instead of the 7 dB a plain average would give.
+
 You can also pass an instance of `VolumeVAD` to `MicdropClient`:
 
 ```typescript
@@ -80,7 +84,7 @@ Micdrop.start({ vad })
 ```
 
 - **Default options:** `{ history: 5, threshold: -55 }`
-- **Persistence:** Options are saved to `localStorage` and restored automatically.
+- **Persistence:** Options are saved to `localStorage` in a browser, and wherever `setMicdropStorage()` points on a phone.
 
 **When to use Volume VAD:**
 
@@ -116,6 +120,8 @@ import { setSileroOptions } from '@micdrop/web/silero'
 
 setSileroOptions({ model: '/assets/silero_vad_v5.onnx' })
 ```
+
+On a phone the model runs on the native runtime, which asks for one more package and a patch. See [Voice activity detection on React Native](/docs/react-native/vad).
 
 You can also pass an instance of `SileroVAD` to `MicdropClient`:
 
@@ -219,13 +225,50 @@ Micdrop.vad.on('ChangeStatus', (status) => {
 
 ## Custom VAD
 
-You can also pass your own VAD implementation:
+The `VAD` class is exported, so another method can be plugged in. It listens to the microphone and reports four moments: speech may have started, it is confirmed, it was only noise, it has ended.
 
 ```typescript
-Micdrop.start({ vad: new MyCustomVAD() })
+import { MicSource, VAD } from '@micdrop/web'
+
+class MyVAD extends VAD {
+  private mic?: MicSource
+
+  get isStarted() {
+    return !!this.mic
+  }
+
+  get isPaused() {
+    return false
+  }
+
+  async start(mic: MicSource) {
+    this.mic = mic
+    mic.on('Frames', this.onFrames)
+  }
+
+  async stop() {
+    this.mic?.off('Frames', this.onFrames)
+    this.mic = undefined
+  }
+
+  async pause() {}
+  async resume() {}
+
+  private onFrames = (frames: Float32Array, sampleRate: number) => {
+    // Decide, then report
+    // this.emit('StartSpeaking')
+    // this.emit('ConfirmSpeaking')
+    // this.emit('CancelSpeaking')
+    // this.emit('StopSpeaking')
+  }
+}
+
+Micdrop.start({ vad: new MyVAD() })
 ```
 
-See [VolumeVAD](https://github.com/Godefroy/micdrop/blob/main/packages/client/src/audio/vad/VolumeVAD.ts) as an example.
+`Frames` carries mono samples between -1 and 1, `Volume` carries the level in dBFS. The class lives in `@micdrop/client`, so the same detector runs in a browser and on a phone, where it is imported from `@micdrop/react-native`.
+
+See [VolumeVAD](https://github.com/Godefroy/micdrop/blob/main/packages/client/src/audio/vad/VolumeVAD.ts) as a complete example.
 
 ## VAD Delay
 

@@ -6,20 +6,14 @@ order: 25
 
 # Turn Detection
 
-[Voice activity detection](./vad) hears whether someone is speaking right now.
-Closing a turn on it alone means waiting for a fixed amount of silence, and that
-number is a compromise: short enough to answer quickly, long enough to survive a
-pause between two words. On a phone, held in the hand and often used on the
-move, the pauses are longer and the compromise is worse.
+[Turn detection](/docs/client/turn-detection) hears whether the sentence has
+landed, so the wait after the last word becomes adaptive rather than a fixed
+amount of silence. On a phone, held in the hand and often used on the move, the
+pauses are longer and a fixed wait is a worse compromise still.
 
-Turn detection hears whether the sentence has landed. Pair the two and the wait
-becomes adaptive, short when the speaker is clearly done and long when they are
-visibly searching for a word.
-
-Everything about how it behaves during a call, the deadline on a held turn, the
-threshold, and how to write a detector of your own, is in
-[Turn Detection](/docs/client/turn-detection). The state machine is the same
-code on both platforms. This page covers what is specific to a phone.
+How it behaves during a call, the deadline on a held turn, the threshold and how
+to write a detector of your own are the same code on both platforms and are
+documented on that page. This one covers what is specific to a phone.
 
 ## Installation
 

@@ -1,36 +1,42 @@
 ---
 title: 'Voice Activity Detection (VAD)'
-description: 'How Micdrop decides that someone is speaking on a phone, how to tune it, and how to plug in your own detection.'
+description: 'How Micdrop decides that someone is speaking on a phone, with volume detection or with the Silero model on the native ONNX runtime.'
 order: 24
 ---
 
 # Voice Activity Detection (VAD)
 
-Audio is only sent to the server while someone is speaking. What decides that is the VAD, and on React Native it follows the level of the microphone.
+Audio is only sent to the server while someone is speaking, and what decides that is the VAD. It is the same code on a phone as in a browser, in `@micdrop/client`, so the options, the events, the way several detectors combine and how to write one of your own are all in [Voice Activity Detection](/docs/client/vad). This page covers what a phone does differently.
 
-For the concepts behind it, and how volume detection compares with a model, read [Voice Activity Detection in the Browser](/blog/voice-activity-detection-browser).
+## Volume detection, the default
 
-## The default
-
-`VolumeVAD` measures the microphone about ten times a second and needs a few loud samples in a row before opening a turn, so a door slam or a keyboard click does not start one. The turn closes once the room has been quiet for about half a second.
-
-The level it follows is the loudest frequency rather than the overall energy: a voice concentrates its power in a few bands while a fan spreads it over all of them, which separates the two by about 25 dB instead of the 7 dB a plain average would give.
+`VolumeVAD` needs nothing beyond the package and is what a call uses when you say nothing:
 
 ```ts
 import { Micdrop, VolumeVAD } from '@micdrop/react-native'
 
 await Micdrop.start({
   url: 'wss://example.com/call',
-  vad: new VolumeVAD({
-    threshold: -55, // level above which audio counts as speech
-    history: 5, // samples kept to make up its mind
-  }),
+  vad: new VolumeVAD({ threshold: -55, history: 5 }),
 })
 ```
 
-Lower the threshold in a quiet room to catch a soft voice, raise it in a noisy one. Passing `'volume'` instead of an instance uses the defaults.
+A browser saves these options to `localStorage` and finds them again on the next visit. A phone remembers nothing until the app says where to write, with a store that answers synchronously since a VAD is built with its saved options in hand:
 
-Micdrop keeps the last moments of audio in reserve, so the syllable spoken before the VAD reacted is sent along with the rest of the sentence.
+```ts
+import { setMicdropStorage } from '@micdrop/react-native'
+import { MMKV } from 'react-native-mmkv'
+
+const mmkv = new MMKV()
+
+setMicdropStorage({
+  getItem: (key) => mmkv.getString(key) ?? null,
+  setItem: (key, value) => mmkv.set(key, value),
+  removeItem: (key) => mmkv.delete(key),
+})
+```
+
+The chosen microphone and output are kept there too.
 
 ## Silero
 
@@ -67,59 +73,7 @@ import { setSileroOptions } from '@micdrop/react-native/silero'
 setSileroOptions({ model: modelPathOnTheDevice })
 ```
 
-The state machine that turns the model's answers into turns is the very same
-code the browser runs, in `@micdrop/client`, so the two platforms behave alike
-once the model is loaded.
-
-## Your own detection
-
-The `VAD` class is exported, so another method can be plugged in. It listens to the microphone and reports four moments: speech may have started, it is confirmed, it was only noise, it has ended.
-
-```ts
-import { MicSource, VAD } from '@micdrop/react-native'
-
-class MyVAD extends VAD {
-  private mic?: MicSource
-
-  get isStarted() {
-    return !!this.mic
-  }
-
-  get isPaused() {
-    return false
-  }
-
-  async start(mic: MicSource) {
-    this.mic = mic
-    mic.on('Frames', this.onFrames)
-  }
-
-  async stop() {
-    this.mic?.off('Frames', this.onFrames)
-    this.mic = undefined
-  }
-
-  async pause() {}
-  async resume() {}
-
-  private onFrames = (frames: Float32Array, sampleRate: number) => {
-    // Decide, then report
-    // this.emit('StartSpeaking')
-    // this.emit('ConfirmSpeaking')
-    // this.emit('CancelSpeaking')
-    // this.emit('StopSpeaking')
-  }
-}
-```
-
-`Frames` carries mono samples between -1 and 1, `Volume` carries the level in dBFS. Several detectors can be combined, a turn then opens when any of them hears something and closes when all of them agree it is over:
-
-```ts
-await Micdrop.start({
-  url: 'wss://example.com/call',
-  vad: ['volume', new MyVAD()],
-})
-```
+`model` takes an address to fetch, a file already on the device, or the bytes themselves. Everything else about tuning the model is the same on both platforms, see [Silero VAD](/docs/client/vad#silero-vad-human-speech-detection-with-ai).
 
 ## Knowing when the turn is over
 

@@ -1,21 +1,18 @@
 ---
 title: 'Hooks and Call State'
-description: 'React hooks to read the Micdrop call state, react to errors and to the end of a call, and draw microphone and speaker level meters.'
+description: 'Read the Micdrop call state from a React Native screen with the same hooks a web app uses.'
 order: 22
 ---
 
 # Hooks and Call State
 
-The hooks live in `@micdrop/react` and are the same ones a web app uses, since
-the call state is the same on both platforms.
+The hooks live in `@micdrop/react` and are the same ones a web app uses, since the call state comes from `@micdrop/client` on both platforms.
 
 ```bash
 npm install @micdrop/react
 ```
 
-## useMicdropState
-
-Returns the whole state of the call, and re-renders when any of it changes.
+Only the components around them change, `Text` and `View` instead of `div`:
 
 ```tsx
 import { useMicdropState } from '@micdrop/react'
@@ -34,49 +31,19 @@ function CallStatus() {
 }
 ```
 
-| Field                 | Type                    | Meaning                                     |
-| --------------------- | ----------------------- | ------------------------------------------- |
-| `isStarting`          | `boolean`               | The call is opening                         |
-| `isStarted`           | `boolean`               | The call is running                         |
-| `isReconnecting`      | `boolean`               | The connection dropped and is being retried |
-| `isListening`         | `boolean`               | Waiting for the user to speak               |
-| `isUserSpeaking`      | `boolean`               | The user is speaking right now              |
-| `isProcessing`        | `boolean`               | The server is working on an answer          |
-| `isAssistantSpeaking` | `boolean`               | The answer is being played                  |
-| `isMuted`             | `boolean`               | The microphone is off, the call is running  |
-| `isPaused`            | `boolean`               | Both sides are on hold                      |
-| `isMicStarted`        | `boolean`               | The microphone is capturing                 |
-| `conversation`        | `MicdropConversation`   | Everything said so far                      |
-| `speakerDeviceId`     | `'speaker' \| 'earpiece'` | Where the voice is played                 |
-| `micDevices`          | `MicdropDevice[]`       | Inputs the OS offers                        |
-| `speakerDevices`      | `MicdropDevice[]`       | Outputs the OS offers                       |
-| `micDeviceId`         | `string \| undefined`   | Input in use                                |
-| `error`               | `MicdropClientError`    | The last error, if any                      |
+Every hook and every field of the state is documented once, for both platforms:
 
-## useMicdropError
+- [React hooks](/docs/client/react-hooks) for `useMicdropState`, `useMicdropError`, `useMicdropEndCall`, `useMicdropToolCall`, `useMicVolume` and `useSpeakerVolume`
+- [Call state](/docs/client/call-state) for what each field means and how the states follow one another
+- [Error handling](/docs/client/error-handling) for the error codes, which are the same when the microphone is refused or the server is unreachable
 
-Called when the microphone is refused, the server is unreachable, or the call is rejected. The codes are the same as in the browser, see [Error handling](/docs/client/error-handling).
+## What a phone reads differently
 
-```tsx
-import { useMicdropError } from '@micdrop/react'
-import { useCallback, useState } from 'react'
+`state.speakerDeviceId` is a route rather than a device, `'speaker'` or `'earpiece'`, see [Audio output and devices](./audio-output). `state.micDevices` fills up once the call has started, since the audio session has to be active for the system to answer.
 
-function CallScreen() {
-  const [message, setMessage] = useState<string>()
+## Leaving the screen when the assistant hangs up
 
-  useMicdropError(
-    useCallback((error) => setMessage(error.message || error.code), [])
-  )
-
-  return <Text>{message}</Text>
-}
-```
-
-Wrap the callback in `useCallback`, the hook resubscribes whenever it changes.
-
-## useMicdropEndCall
-
-Called when the assistant hangs up on its own, see [Auto end call](/docs/server/auto-end-call).
+`useMicdropEndCall` fires when the agent ends the call on its own, see [Auto end call](/docs/server/auto-end-call). On a phone that usually means stopping the call and going back:
 
 ```tsx
 import { useMicdropEndCall } from '@micdrop/react'
@@ -93,28 +60,11 @@ function CallScreen() {
 }
 ```
 
-## useMicdropToolCall
+Wrap the callback in `useCallback`, the hook resubscribes whenever it changes.
 
-Called when the agent runs one of its [tools](/docs/server/tools), with its name, parameters and output.
+## Level meters
 
-```tsx
-import { useMicdropToolCall } from '@micdrop/react'
-import { useCallback } from 'react'
-
-function CallScreen() {
-  useMicdropToolCall(
-    useCallback((toolCall) => {
-      if (toolCall.name === 'openMap') {
-        showMap(toolCall.parameters.place)
-      }
-    }, [])
-  )
-}
-```
-
-## useMicVolume and useSpeakerVolume
-
-Levels in decibels, updated about ten times a second, for a meter or a pulsing avatar. Silence reads as `-Infinity`, so map the range you care about.
+`useMicVolume` and `useSpeakerVolume` give levels in decibels, updated about ten times a second, for a meter or a pulsing avatar. Silence reads as `-Infinity`, so map the range you care about:
 
 ```tsx
 import { useMicVolume } from '@micdrop/react'
@@ -127,5 +77,3 @@ function MicMeter() {
   return <View style={{ width: `${ratio * 100}%`, height: 8 }} />
 }
 ```
-
-`useSpeakerVolume` works the same way for the assistant voice, and follows what is being heard rather than what has arrived, so a burst of audio does not light the meter up all at once.

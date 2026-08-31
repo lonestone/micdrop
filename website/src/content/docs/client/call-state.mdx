@@ -32,6 +32,7 @@ The `MicdropState` object contains these properties:
 | `isStarting`          | `boolean`             | Call is connecting and starting      |
 | `isStarted`           | `boolean`             | Call is active and ready             |
 | `isReconnecting`      | `boolean`             | Call is attempting to reconnect      |
+| `isMuted`             | `boolean`             | Call is muted, and still running     |
 | `isPaused`            | `boolean`             | Call is paused (no audio processing) |
 | `isListening`         | `boolean`             | Ready to detect user speech          |
 | `isProcessing`        | `boolean`             | Processing user input on server      |
@@ -41,8 +42,8 @@ The `MicdropState` object contains these properties:
 | `isMicMuted`          | `boolean`             | Microphone is muted                  |
 | `micDeviceId`         | `string`              | Active microphone device ID          |
 | `speakerDeviceId`     | `string`              | Active speaker device ID             |
-| `micDevices`          | `MediaDeviceInfo[]`   | Available microphones                |
-| `speakerDevices`      | `MediaDeviceInfo[]`   | Available speakers                   |
+| `micDevices`          | `MicdropDevice[]`     | Available microphones                |
+| `speakerDevices`      | `MicdropDevice[]`     | Available speakers                   |
 | `conversation`        | `MicdropConversation` | Message history                      |
 | `error`               | `MicdropClientError`  | Current error if any                 |
 
@@ -74,6 +75,7 @@ stateDiagram-v2
 - User can interrupt the assistant at any time by speaking during the `isProcessing` or `isAssistantSpeaking` states. This allows for natural conversation flow. To prevent interruptions during assistant responses, use the [`disableInterruption` setting](./utility-classes/micdrop-client#options).
 - When `isPaused` is true, `isStarted` stays true.
 - When `isReconnecting` is true, `isStarted` stays true.
+- On a phone, `speakerDeviceId` is a route rather than a device, `'speaker'` or `'earpiece'`. See [Audio output and devices](/docs/react-native/audio-output).
 - `isMicStarted` becomes true when we start the mic (with `Micdrop.startMic`) or start the call (with `Micdrop.start`).
 
 ## Starting a Call

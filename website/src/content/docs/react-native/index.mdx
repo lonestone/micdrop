@@ -58,11 +58,20 @@ export default function Call() {
 
 ## Same API as the browser
 
-Everything about running a call is shared with [@micdrop/web](/docs/client): `start`, `stop`, `mute`, `pause`, the `StateChange` event, the conversation, the error codes. Those pages apply here, with three differences:
+Running a call is the very same code as in a browser, `@micdrop/client`, which this package and [@micdrop/web](/docs/client) both build on. The pages of the browser section apply here as they are written, only the import changes:
+
+- [Start and stop a call](/docs/client/start-stop-call), [mute](/docs/client/mute-unmute-call) and [pause](/docs/client/pause-resume-call)
+- [Call state](/docs/client/call-state) and the [React hooks](/docs/client/react-hooks) that read it
+- [The conversation](/docs/client/display-conversation-messages), [tool calls](/docs/client/handling-tool-calls) and [error handling](/docs/client/error-handling)
+- [Voice activity detection](/docs/client/vad) and [turn detection](/docs/client/turn-detection), options and events included
+- [Reducing latency](/docs/client/latency)
+
+What the hardware underneath changes:
 
 - Output is a route rather than a device, see [Audio output and devices](./audio-output)
-- Voice activity detection is volume based, see [Voice activity detection](./vad)
-- Preferences are not persisted, the system keeps its own audio routing
+- The audio session is configured as a phone call, which is what turns on echo cancellation
+- Silero and the turn detector run on the native ONNX runtime, which takes a patch, see [Installation](./installation#the-onnx-runtime)
+- Settings are remembered only once the app installs a store, see [Voice activity detection](./vad)
 
 ## Example
 
