@@ -1,5 +1,6 @@
 import { SileroModel, SILERO_SAMPLE_RATE } from '@micdrop/client'
 import * as ort from 'onnxruntime-web'
+import { queueOnnxRun } from './onnxQueue'
 
 /** Where the model is fetched from, when the app does not provide it */
 export const DEFAULT_SILERO_MODEL_URL =
@@ -57,11 +58,13 @@ export class OnnxSileroModel implements SileroModel {
   async process(frame: Float32Array): Promise<number> {
     if (!this.session) await this.load()
 
-    const output = await this.session!.run({
-      input: new ort.Tensor('float32', frame, [1, frame.length]),
-      state: this.state,
-      sr: this.sampleRate,
-    })
+    const output = await queueOnnxRun(() =>
+      this.session!.run({
+        input: new ort.Tensor('float32', frame, [1, frame.length]),
+        state: this.state,
+        sr: this.sampleRate,
+      })
+    )
 
     this.state = output.stateN as ort.Tensor
     return (output.output.data as Float32Array)[0]

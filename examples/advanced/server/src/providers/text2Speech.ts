@@ -110,7 +110,8 @@ const text2speech: ProviderRegistry<TTS> = {
   // Local, English only: kokoro-js phonemizes every input as English
   kokoro: {
     label: 'Kokoro',
-    description: 'Local, English only',
+    description: 'English only',
+    local: true,
     models: KOKORO_VOICE_IDS.map((id) => ({
       id,
       label: id,
@@ -123,7 +124,7 @@ const text2speech: ProviderRegistry<TTS> = {
   // Local, many languages, needs the piper binary and the voice files
   piper: {
     label: 'Piper',
-    description: 'Local, needs the piper binary',
+    local: true,
     isAvailable: () => listPiperVoices().length > 0,
     models: listPiperVoices,
     create: ({ model }) =>
@@ -136,7 +137,8 @@ const text2speech: ProviderRegistry<TTS> = {
   // Local, English only, needs the weights extracted next to the demo
   pocket: {
     label: 'Pocket TTS',
-    description: 'Local, English only, clones a voice',
+    description: 'English only, clones a voice',
+    local: true,
     isAvailable: () => existsSync(POCKET_MODEL_DIR),
     models: Object.keys(BUNDLED_VOICES).map((id) => ({
       id,

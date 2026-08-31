@@ -1,0 +1,148 @@
+---
+title: 'Turn Detection'
+description: 'Hold the turn open while the user hesitates, and answer as soon as their question lands, by reading the sound of the sentence rather than counting silence.'
+order: 13
+---
+
+# Turn Detection
+
+[Voice activity detection](/docs/client/vad) hears whether someone is speaking right now. Closing a turn on it alone means waiting for a fixed amount of silence, and that number is a compromise: short enough to answer quickly, long enough to survive a pause between two words.
+
+Turn detection hears whether the sentence has landed. Pair the two and the wait becomes adaptive, short when the speaker is clearly done and long when they are visibly searching for a word.
+
+<Callout type="tip">
+  Run the detector in the browser whenever you can. The audio is already there,
+  nothing crosses the network, and the turn can then close sooner rather than
+  only later. The [server side option](/docs/server/semantic-turn-detection)
+  exists for the devices where the model has nowhere to run.
+</Callout>
+
+## Installation
+
+```bash
+npm install @micdrop/smart-turn
+```
+
+The package runs [Smart Turn v3](https://huggingface.co/pipecat-ai/smart-turn-v3), an open model that reads the last eight seconds of the turn and answers with one probability. It carries no dependency on the rest of Micdrop.
+
+## Usage
+
+```typescript
+import { Micdrop } from '@micdrop/web'
+import { SmartTurn } from '@micdrop/smart-turn'
+import '@micdrop/smart-turn/web'
+
+await Micdrop.start({
+  url: 'ws://localhost:8081',
+  vad: 'silero',
+  turnDetector: new SmartTurn(),
+})
+```
+
+Importing `@micdrop/smart-turn/web` is what registers the browser runtime. Without it the model has no way to load.
+
+## Options
+
+| Option         | Type            | Description                                                        |
+| -------------- | --------------- | ------------------------------------------------------------------ |
+| `turnDetector` | `TurnDetector`  | Reads the turn and says whether it sounds finished                  |
+| `turnMaxWait`  | `number`        | How long a turn stays open once the detector asked to wait, 4000 ms |
+
+`SmartTurn` takes a `threshold` of its own, `0.5` by default, the value the model's own benchmarks are measured at. Anything between 0.3 and 0.7 scores within half a point of it, so move it only to lean deliberately: lower to answer sooner and cut people off more often, higher to let hesitations run longer.
+
+## What changes in the call
+
+Recording and the turn become two different things.
+
+The VAD keeps deciding what is worth sending, so silences stay out of the stream and your speech to text bill is unchanged. The detector only decides when the server is told to answer. A pause in the middle of a sentence therefore sends nothing, keeps the same server side stream open, and produces one user message rather than two.
+
+## When the detector is wrong
+
+A model that hears an unfinished sentence where there is none would leave the call hanging, so a held turn always has a deadline. Once the detector asks to wait, the turn closes on its own after `turnMaxWait`, and the agent answers.
+
+The clock only runs while nobody speaks. A speaker who picks their sentence back up cancels it, and the next pause asks the detector again, so a long answer full of hesitations never runs out of time.
+
+That deadline is what you feel when a held turn is answered anyway. With the defaults, a sentence the model wants to wait on is answered just under five seconds after the last word, the silence the VAD needs plus `turnMaxWait`. Lower it to bound how long a wrong verdict can cost, raise it to give long hesitations more room.
+
+It belongs to the call rather than to the detector, since it says how long this application is willing to hold the floor, and the same detector running on a server has no clock at all.
+
+## Why the silence does not count
+
+A voice detector needs a stretch of silence before it calls a turn over, and the model reads a long silence as a sentence that has landed. Handing it that silence would undo the very hesitation it is there to catch.
+
+So the window the model reads stops shortly after the last word rather than at the last sample. The verdict is then the same whether the detector waited 200 ms or a second and a half, which means the two can be tuned independently.
+
+## Tuning the pair
+
+The point of turn detection is that the VAD no longer has to wait long enough to cover a hesitation, and `SileroVAD` already ships with the short wait that assumes it. Turning the detector off is what calls for a change:
+
+```typescript
+import { SileroVAD } from '@micdrop/web'
+
+// Without a detector the silence has to cover the hesitations on its own
+await Micdrop.start({
+  url: 'ws://localhost:8081',
+  vad: new SileroVAD({ redemptionFrames: 20, minSpeechFrames: 8 }),
+})
+```
+
+[Reducing Latency](/docs/client/latency) measures what each window costs and what it buys.
+
+## Where it runs
+
+The model answers in about 25 ms on a graphics card and needs a couple of hundred milliseconds on a processor, so `@micdrop/smart-turn/web` picks WebGPU whenever the browser offers it and falls back to WebAssembly otherwise. WebGPU reaches most visitors today, Chrome and Edge on every platform, Safari on iOS 26 and Samsung Internet among them.
+
+On a browser without WebGPU, weigh the fallback against what your users run. A laptop absorbs the WebAssembly path, a mid range phone does not, and the [server side detector](/docs/server/semantic-turn-detection) is the better answer there.
+
+## On React Native
+
+The same package covers phones, with the native ONNX runtime instead of WebAssembly:
+
+```bash
+npm install @micdrop/smart-turn onnxruntime-react-native
+```
+
+```typescript
+import { SmartTurn } from '@micdrop/smart-turn'
+import { setSmartTurnOptions } from '@micdrop/smart-turn/react-native'
+
+// Ship the checkpoint with the app rather than fetching it on the first call
+setSmartTurnOptions({ model: modelPath })
+
+await Micdrop.start({
+  url: 'ws://localhost:8081',
+  turnDetector: new SmartTurn(),
+})
+```
+
+A phone runs the model on its own processor, with none of the penalty a browser pays for WebAssembly, so the quantised checkpoint of eight megabytes is the right one and is what this entry point loads by default.
+
+## Sharing the runtime with the voice detector
+
+The ONNX runtime keeps a single active session for the whole WebAssembly module, so two models cannot be in flight together. On the WebAssembly backend each run finishes before the next task gets a turn and nothing collides. On a graphics card a run yields while it waits for the device, and `SileroVAD` scoring its next window on top of it makes both fail, one with `Session already started` and the other with `Session mismatch`.
+
+Micdrop queues its inferences on the global scope so every model takes its turn, which costs the voice detector one window of delay at a moment where the speaker has already stopped. Both `@micdrop/web/silero` and `@micdrop/smart-turn/web` export `queueOnnxRun` for the same reason, so a third model of your own can join the same queue:
+
+```typescript
+import { queueOnnxRun } from '@micdrop/smart-turn'
+
+const outputs = await queueOnnxRun(() => session.run(feeds))
+```
+
+## Writing your own
+
+`turnDetector` accepts anything shaped like this, a call to a service of your own included:
+
+```typescript
+import type { TurnDetector } from '@micdrop/web'
+
+class MyTurnDetector implements TurnDetector {
+  push(samples: Float32Array, sampleRate?: number) {}
+  async predict() {
+    return { complete: true }
+  }
+  reset() {}
+}
+```
+
+Micdrop feeds it every frame of the turn as it comes, pauses included, asks `predict()` each time the VAD hears silence, and calls `reset()` when the next turn starts.

@@ -12,6 +12,29 @@ export enum MicdropServerCommands {
   ToolCall = 'ToolCall',
 }
 
+/**
+ * Hears whether a sentence has landed, where voice activity detection only
+ * hears whether someone is speaking.
+ *
+ * `SmartTurn` from `@micdrop/smart-turn` implements it, and so can anything
+ * else, a call to a service included. Both sides of a call can hold one, the
+ * client to decide when its turn ends and the server to decide when to answer.
+ */
+export interface TurnDetector {
+  /**
+   * Feeds the audio received since the last call
+   * @param samples - Mono samples, in the -1..1 range
+   * @param sampleRate - Sample rate of `samples`, in Hz
+   */
+  push(samples: Float32Array, sampleRate?: number): void
+
+  /** Answers whether the turn pushed so far sounds finished */
+  predict(): Promise<{ complete: boolean }>
+
+  /** Starts a new turn, forgetting the previous one */
+  reset(): void
+}
+
 export interface MicdropCallSummary {
   conversation: MicdropConversation
   duration: number

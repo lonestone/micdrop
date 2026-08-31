@@ -19,6 +19,8 @@ import {
 } from '@micdrop/react-native'
 // TEMPORAIRE : onnxruntime-react-native ne configure pas sous Gradle 9
 // import '@micdrop/react-native/silero'
+// import '@micdrop/smart-turn/react-native'
+import { SmartTurn } from '@micdrop/smart-turn'
 import { StatusBar } from 'expo-status-bar'
 import React, { useCallback, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
@@ -33,6 +35,14 @@ import { StatusPill } from './src/components/StatusPill'
 import { VolumeBar } from './src/components/VolumeBar'
 import { getServerUrl } from './src/config'
 import { colors } from './src/theme'
+
+/**
+ * Hears whether a sentence has landed, so a pause in the middle of a thought
+ * keeps the floor. It holds no native code of its own: the model runs on the
+ * ONNX runtime that the commented import above brings in.
+ * https://micdrop.dev/docs/client/turn-detection
+ */
+const smartTurn = new SmartTurn()
 
 export default function App() {
   return (
@@ -49,6 +59,7 @@ function Call() {
   const { micVolume } = useMicVolume()
   const { speakerVolume } = useSpeakerVolume()
   const [error, setError] = useState<string>()
+  const [turnDetection, setTurnDetection] = useState(false)
 
   // Everything about the call lives in this one state
   // https://micdrop.dev/docs/client/call-state
@@ -79,6 +90,24 @@ function Call() {
     if (state.isPaused) Micdrop.resume()
     else Micdrop.pause()
   }, [state.isPaused])
+
+  const handleTurnDetection = useCallback(async () => {
+    const next = !turnDetection
+    setTurnDetection(next)
+    setError(undefined)
+    Micdrop.setTurnDetector(next ? smartTurn : undefined)
+    if (!next) return
+    try {
+      // A few megabytes, fetched once and kept for as long as the app runs
+      await smartTurn.load()
+    } catch (loadError) {
+      setTurnDetection(false)
+      Micdrop.setTurnDetector(undefined)
+      setError(
+        loadError instanceof Error ? loadError.message : String(loadError)
+      )
+    }
+  }, [turnDetection])
 
   const handleOutput = useCallback(() => {
     Micdrop.changeSpeakerDevice(onEarpiece ? SPEAKER_DEVICE : EARPIECE_DEVICE)
@@ -141,6 +170,12 @@ function Call() {
           icon={onEarpiece ? '📱' : '🔊'}
           active={onEarpiece}
           onPress={handleOutput}
+        />
+        <ControlButton
+          label="Smart turn"
+          icon={turnDetection ? '🧠' : '💤'}
+          active={turnDetection}
+          onPress={handleTurnDetection}
         />
       </View>
 

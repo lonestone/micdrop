@@ -1,0 +1,84 @@
+{
+  "name": "@micdrop/smart-turn",
+  "version": "0.1.0",
+  "description": "\ud83d\udd90\ufe0f\ud83c\udfa4 Micdrop: semantic end of turn detection, in the browser or on a server",
+  "author": "Godefroy de Compreignac",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Godefroy/micdrop.git",
+    "directory": "packages/smart-turn"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "turn detection",
+    "endpointing",
+    "semantic vad",
+    "voice",
+    "conversation",
+    "onnx"
+  ],
+  "peerDependencies": {
+    "onnxruntime-node": ">=1.20.0",
+    "onnxruntime-react-native": ">=1.20.0",
+    "onnxruntime-web": ">=1.20.0"
+  },
+  "peerDependenciesMeta": {
+    "onnxruntime-node": {
+      "optional": true
+    },
+    "onnxruntime-web": {
+      "optional": true
+    },
+    "onnxruntime-react-native": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.13",
+    "onnxruntime-node": "^1.23.2",
+    "onnxruntime-react-native": "^1.24.3",
+    "onnxruntime-web": "^1.23.2",
+    "tsup": "^8.5.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./web": {
+      "types": "./dist/web.d.ts",
+      "import": "./dist/web.mjs",
+      "require": "./dist/web.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.mjs",
+      "require": "./dist/node.js"
+    },
+    "./react-native": {
+      "types": "./dist/react-native.d.ts",
+      "import": "./dist/react-native.mjs",
+      "require": "./dist/react-native.js"
+    }
+  }
+}

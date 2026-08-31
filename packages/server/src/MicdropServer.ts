@@ -2,6 +2,7 @@ import { EventEmitter } from 'eventemitter3'
 import { Duplex, PassThrough, Readable } from 'stream'
 import { WebSocket } from 'ws'
 import type { Agent } from './agent'
+import { pcm16ToFloat32 } from './audio'
 import { Logger } from './Logger'
 import type { STT } from './stt'
 import type { TTS } from './tts'
@@ -10,7 +11,19 @@ import {
   MicdropClientCommands,
   MicdropConversationItem,
   MicdropServerCommands,
+  TurnDetector,
 } from './types'
+
+/** Rate the client records at, and sends its chunks in */
+const USER_SAMPLE_RATE = 16000
+
+/**
+ * How long an answer waits once the detector asked for the rest of a sentence.
+ *
+ * The way out of a wrong verdict: a speaker who never comes back still gets an
+ * answer instead of a call that goes quiet.
+ */
+const DEFAULT_TURN_MAX_WAIT = 4000 // ms
 
 export interface MicdropServerEvents {
   End: [MicdropCallSummary]
@@ -24,6 +37,19 @@ export interface MicdropConfig {
   agent: Agent
   stt: STT
   tts: TTS
+
+  /**
+   * Waits for the rest of the sentence when the speaker paused in the middle
+   * of one, instead of answering an unfinished question.
+   *
+   * Prefer running the detector in the client, which reaches the same decision
+   * without the round trip and can then close its turns sooner. This is the
+   * option for the browsers where the model has nowhere to run.
+   */
+  turnDetector?: TurnDetector
+
+  /** How long to wait for the rest of a sentence, 4000 ms by default */
+  turnMaxWait?: number
 }
 
 export class MicdropServer extends EventEmitter<MicdropServerEvents> {
@@ -41,6 +67,10 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
   // When user is speaking, we're streaming chunks for STT
   private currentUserStream?: Duplex
   private userSpeechChunks = 0
+  // Asked as soon as the speaker pauses, so it weighs that stretch of audio
+  // and not the next one
+  private turnComplete?: Promise<boolean>
+  private heldTurnTimer?: ReturnType<typeof setTimeout>
 
   constructor(socket: WebSocket, config: MicdropConfig) {
     super()
@@ -121,6 +151,7 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
   }
 
   private onClose = () => {
+    this.releaseHeldTurn()
     if (!this.config) return
     this.log('Connection closed')
     const duration = Math.round((Date.now() - this.startTime) / 1000)
@@ -175,6 +206,7 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
     this.log(`Received chunk (${chunk.byteLength} bytes)`)
     this.currentUserStream?.write(chunk)
     this.userSpeechChunks++
+    this.config?.turnDetector?.push(pcm16ToFloat32(chunk), USER_SAMPLE_RATE)
     this.emit('UserAudio', chunk)
   }
 
@@ -190,6 +222,10 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
     this.userSpeechChunks = 0
     this.currentUserStream?.end()
     this.currentUserStream = new PassThrough()
+    this.config.turnDetector?.reset()
+    this.turnComplete = undefined
+    // The rest of the sentence is arriving, so the deadline can go
+    this.releaseHeldTurn()
     this.config.stt.transcribe(this.currentUserStream)
     this.cancel()
   }
@@ -207,6 +243,9 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
       return
     }
 
+    // Weigh the stretch of audio that just ended, before the next one starts
+    this.turnComplete = this.predictTurnComplete()
+
     const conversation = this.config?.agent.conversation
     const lastMessage = conversation?.[conversation.length - 1]
     if (
@@ -216,9 +255,57 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
       this.log(
         'User stopped speaking and a transcript already exists, answering'
       )
+      this.answerUserTurn()
+    }
+  }
+
+  private async predictTurnComplete(): Promise<boolean> {
+    const detector = this.config?.turnDetector
+    if (!detector) return true
+    try {
+      const { complete } = await detector.predict()
+      this.log(`Turn sounds ${complete ? 'finished' : 'unfinished'}`)
+      return complete
+    } catch (error) {
+      this.log(`Turn detection failed: ${error}`)
+      return true
+    }
+  }
+
+  /** Answers, unless the sentence sounds like it has more coming */
+  private async answerUserTurn() {
+    const complete = await (this.turnComplete ?? Promise.resolve(true))
+    if (!complete) {
+      this.log('Waiting for the rest of the sentence')
+      this.socket?.send(MicdropServerCommands.SkipAnswer)
+      this.holdTurn()
+      return
+    }
+    this.releaseHeldTurn()
+    this.cancel()
+    this.answer()
+  }
+
+  /**
+   * Answers anyway if the rest of the sentence never comes.
+   *
+   * Without it, a detector that hears an unfinished sentence where there is
+   * none leaves the call silent for good.
+   */
+  private holdTurn() {
+    this.releaseHeldTurn()
+    this.heldTurnTimer = setTimeout(() => {
+      this.heldTurnTimer = undefined
+      this.log('Nothing more came, answering')
       this.cancel()
       this.answer()
-    }
+    }, this.config?.turnMaxWait ?? DEFAULT_TURN_MAX_WAIT)
+  }
+
+  private releaseHeldTurn() {
+    if (!this.heldTurnTimer) return
+    clearTimeout(this.heldTurnTimer)
+    this.heldTurnTimer = undefined
   }
 
   private onTranscriptSTT = async (transcript: string) => {
@@ -236,8 +323,7 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
     // Answer if user stopped speaking
     if (!this.currentUserStream) {
       this.log('User stopped speaking, answering')
-      this.cancel()
-      this.answer()
+      this.answerUserTurn()
     }
   }
 

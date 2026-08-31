@@ -7,6 +7,7 @@ import {
   ScheduledAudio,
   SpeakerDriver,
 } from '../src/audio/types'
+import { TurnDetector } from '../src/types'
 import { VAD } from '../src/audio/vad/VAD'
 
 /** A microphone that plays back whatever the test hands it */
@@ -215,4 +216,34 @@ export function sine(
 /** Builds silent samples */
 export function silence(seconds: number, sampleRate = 16000): Float32Array {
   return new Float32Array(Math.round(seconds * sampleRate))
+}
+
+/** A turn detector that answers from a script, and remembers what it heard */
+export class FakeTurnDetector implements TurnDetector {
+  public heard: Float32Array[] = []
+  public questions = 0
+  public resets = 0
+
+  /** Answers to give in order, the last one repeating for good */
+  constructor(public answers: boolean[] = [true]) {}
+
+  /** How much audio it was given since the last reset, in seconds */
+  get seconds() {
+    return this.heard.reduce((total, frames) => total + frames.length, 0) / 16000
+  }
+
+  push(samples: Float32Array) {
+    this.heard.push(samples)
+  }
+
+  async predict() {
+    const index = Math.min(this.questions, this.answers.length - 1)
+    this.questions++
+    return { complete: this.answers[index] }
+  }
+
+  reset() {
+    this.resets++
+    this.heard = []
+  }
 }

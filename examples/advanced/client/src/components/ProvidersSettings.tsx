@@ -101,6 +101,7 @@ function PartRow({
             }
           >
             {item.label}
+            {item.local ? ' (local)' : ''}
             {item.available ? '' : ' (unavailable)'}
           </option>
         ))}
@@ -121,12 +122,6 @@ function PartRow({
             </option>
           ))}
         </select>
-      )}
-
-      {provider?.description && (
-        <span className="hidden lg:block truncate text-xs text-gray-500">
-          {provider.description}
-        </span>
       )}
     </div>
   )

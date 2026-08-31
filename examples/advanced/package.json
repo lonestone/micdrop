@@ -29,6 +29,7 @@
     "@micdrop/pocket-tts": "*",
     "@micdrop/react": "*",
     "@micdrop/server": "*",
+    "@micdrop/smart-turn": "*",
     "@micdrop/web": "*",
     "@micdrop/whisper": "*",
     "dotenv": "^17.0.0",

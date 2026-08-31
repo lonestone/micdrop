@@ -123,14 +123,16 @@ You can also pass an instance of `SileroVAD` to `MicdropClient`:
 const vad = new SileroVAD({
   positiveSpeechThreshold: 0.18, // Threshold for positive speech detection
   negativeSpeechThreshold: 0.11, // Threshold for negative speech detection
-  minSpeechFrames: 8, // Minimum number of frames to consider for speech detection
-  redemptionFrames: 20, // Number of frames to consider for silence detection
+  minSpeechFrames: 4, // Windows of speech before a turn is confirmed
+  redemptionFrames: 8, // Windows of silence before a turn is closed
 })
 Micdrop.start({ vad })
 ```
 
-- **Default options:** `{ positiveSpeechThreshold: 0.18, negativeSpeechThreshold: 0.11, minSpeechFrames: 8, redemptionFrames: 20 }`
+- **Default options:** `{ positiveSpeechThreshold: 0.18, negativeSpeechThreshold: 0.11, minSpeechFrames: 4, redemptionFrames: 8 }`
 - **Persistence:** Options are saved to `localStorage` in a browser, and wherever `setMicdropStorage()` points on a phone.
+
+`redemptionFrames` is eight windows, about a quarter of a second, so a turn closes quickly and leans on [turn detection](/docs/client/turn-detection) to keep the floor when a speaker only paused. Running Silero without a turn detector, raise it to twenty, or expect the agent to answer during hesitations. See [Reducing Latency](/docs/client/latency) for what each window costs and what it buys.
 
 **When to use Silero VAD:**
 
@@ -263,8 +265,8 @@ const sensitiveVad = new SileroVAD({
 // More conservative - reduces false positives
 const conservativeVad = new SileroVAD({
   positiveSpeechThreshold: 0.22, // Higher threshold
-  minSpeechFrames: 12, // More confirmation needed
-  redemptionFrames: 30, // Longer silence confirmation
+  minSpeechFrames: 8, // More confirmation needed
+  redemptionFrames: 20, // Longer silence confirmation
 })
 ```
 

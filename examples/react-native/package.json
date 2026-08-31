@@ -18,6 +18,7 @@
   "dependencies": {
     "@micdrop/react": "*",
     "@micdrop/react-native": "*",
+    "@micdrop/smart-turn": "*",
     "expo": "~57.0.17",
     "expo-constants": "~57.0.15",
     "expo-dev-client": "~57.0.16",

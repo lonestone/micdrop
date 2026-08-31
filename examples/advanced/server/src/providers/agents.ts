@@ -99,7 +99,7 @@ const agents: ProviderRegistry<Agent> = {
   // the machine, so the list below is whatever `ollama pull` has fetched.
   ollama: {
     label: 'Ollama',
-    description: 'Local, runs on this machine',
+    local: true,
     isAvailable: isOllamaRunning,
     models: listOllamaModels,
     create: ({ lang, model, auto }) =>

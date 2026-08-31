@@ -1,7 +1,7 @@
 ---
 title: 'Voice Activity Detection (VAD)'
 description: 'How Micdrop decides that someone is speaking on a phone, how to tune it, and how to plug in your own detection.'
-order: 22
+order: 24
 ---
 
 # Voice Activity Detection (VAD)
@@ -120,5 +120,24 @@ class MyVAD extends VAD {
 await Micdrop.start({
   url: 'wss://example.com/call',
   vad: ['volume', new MyVAD()],
+})
+```
+
+## Knowing when the turn is over
+
+Voice detection says whether someone is speaking. Deciding that the turn is over then means waiting for a fixed amount of silence, which cuts people off mid-hesitation or makes every answer late.
+
+[Turn detection](/docs/client/turn-detection) reads the sound of the sentence instead, and the same package runs on a phone through the native ONNX runtime:
+
+```ts
+import { SmartTurn } from '@micdrop/smart-turn'
+import { setSmartTurnOptions } from '@micdrop/smart-turn/react-native'
+
+setSmartTurnOptions({ model: modelPath })
+
+await Micdrop.start({
+  url: 'wss://example.com/call',
+  vad: 'volume',
+  turnDetector: new SmartTurn(),
 })
 ```

@@ -9,6 +9,7 @@ import {
   MicdropConversationItem,
   MicdropServerCommands,
   MicdropToolCall,
+  TurnDetector,
 } from '../types'
 import {
   getClientErrorFromWSCloseEvent,
@@ -35,6 +36,14 @@ export interface MicdropOptions {
   url?: string
   params?: Record<string, any>
   vad?: VADConfig
+  /**
+   * Holds the turn open while the sentence sounds unfinished, so a hesitation
+   * no longer counts as the end of a question. Without one, a turn ends as
+   * soon as the VAD hears enough silence.
+   */
+  turnDetector?: TurnDetector
+  /** How long a turn may stay open after the detector asked to wait */
+  turnMaxWait?: number
   disableInterruption?: boolean
   debugLog?: boolean
   reconnect?: MicdropReconnectOptions
@@ -308,7 +317,11 @@ export class MicdropClient
           this.micRecorder.changeVad(options.vad)
         }
       } else {
-        this.micRecorder = new MicRecorder(this.options.vad)
+        this.micRecorder = new MicRecorder(
+          this.options.vad,
+          this.options.turnDetector,
+          this.options.turnMaxWait
+        )
 
         // Notify mic recorder state change
         this.micRecorder.on('StateChange', () => {
@@ -374,6 +387,30 @@ export class MicdropClient
       )
       await this.stop()
       throw error
+    }
+  }
+
+  /**
+   * Changes what decides when a turn is over, during a call or before one
+   * @param turnDetector - The new detector, or nothing to leave it to the VAD
+   */
+  setTurnDetector = (turnDetector?: TurnDetector) => {
+    this.options.turnDetector = turnDetector
+    this.micRecorder?.changeTurnDetector(turnDetector)
+  }
+
+  /**
+   * Says how long a held turn waits for the rest of the sentence.
+   *
+   * The way out of a wrong verdict: a detector can hear an unfinished sentence
+   * where there is none, and the speaker who never comes back still gets an
+   * answer once this runs out.
+   * @param milliseconds - How long to wait past the detector asking to
+   */
+  setTurnMaxWait = (milliseconds: number) => {
+    this.options.turnMaxWait = milliseconds
+    if (this.micRecorder) {
+      this.micRecorder.turnMaxWait = milliseconds
     }
   }
 

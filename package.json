@@ -16,7 +16,7 @@
     "build:website": "pnpm --filter @micdrop/website build",
     "clean": "pnpm -r clean",
     "dev:website": "pnpm --filter @micdrop/website dev",
-    "dev:main": "concurrently -n \"server,client\" -c \"blue,green\" \"pnpm --filter server dev\" \"pnpm --filter client dev\"",
+    "dev:main": "concurrently -n \"server,client,web,smart-turn,react\" -c \"blue,green,cyan,magenta,yellow\" \"pnpm --filter server dev\" \"pnpm --filter client dev\" \"pnpm --filter @micdrop/web dev\" \"pnpm --filter smart-turn dev\" \"pnpm --filter react dev\"",
     "dev:basic": "pnpm --filter @micdrop/basic dev",
     "dev:advanced": "pnpm --filter @micdrop/advanced dev",
     "dev:react-native": "pnpm --filter @micdrop/react-native-example dev",

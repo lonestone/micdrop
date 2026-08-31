@@ -1,6 +1,7 @@
-// The demo lets you switch to the Silero voice detection, which loads the ONNX
-// runtime. Importing it here keeps that weight out of an app that never asks
-// for it.
+// The demo lets you switch on the Silero voice detection and the Smart Turn
+// model, both of which load the ONNX runtime. Importing them here keeps that
+// weight out of an app that never asks for it.
+import '@micdrop/smart-turn/web'
 import '@micdrop/web/silero'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'

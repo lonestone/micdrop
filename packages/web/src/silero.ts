@@ -2,6 +2,7 @@ import { setSileroModelLoader } from '@micdrop/client'
 import { OnnxSileroModel, OnnxSileroOptions } from './vad/OnnxSileroModel'
 
 export * from './vad/OnnxSileroModel'
+export * from './vad/onnxQueue'
 
 let options: OnnxSileroOptions = {}
 

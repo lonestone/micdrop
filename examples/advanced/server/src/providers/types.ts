@@ -47,6 +47,8 @@ export interface ProviderDefinition<T> {
   label: string
   /** Shown next to the name in the select, to tell the options apart. */
   description?: string
+  /** Runs on this machine rather than behind an API. */
+  local?: boolean
   /** Environment variables without which the provider cannot run. */
   requiredEnv?: string[]
   /** Extra condition, for a provider needing more than an API key. */
@@ -65,6 +67,7 @@ export interface ProviderInfo {
   id: string
   label: string
   description?: string
+  local?: boolean
   available: boolean
   missingEnv: string[]
   models: ModelOption[]

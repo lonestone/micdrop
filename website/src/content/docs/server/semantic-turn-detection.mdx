@@ -1,56 +1,84 @@
 ---
 title: 'Semantic Turn Detection'
-description: 'Wait for a complete thought before the agent replies, so the user can pause mid-sentence and keep the floor until they actually finish speaking.'
-order: 37
+description: 'Let the user pause mid-sentence and keep the floor, either by reading the sound of their voice with a small model or by asking the agent to weigh the transcript.'
+order: 39
 ---
 
 # Semantic Turn Detection
 
-Semantic turn detection handles cases where users speak incomplete sentences, allowing for more natural conversation flow by waiting for complete thoughts before processing.
+A user who pauses in the middle of a sentence has not finished speaking. Voice activity detection cannot tell the difference, so the server answers a half question. Semantic turn detection waits for the thought to land.
 
-## Usage
+The server offers two ways of doing it, and Micdrop also offers a third that runs in the browser.
+
+<Callout type="tip">
+  Prefer [turn detection in the client](/docs/client/turn-detection). It reaches
+  the same decision without the round trip, and it is the only place that can
+  make the call answer *sooner*, since the client is what closes the turn. Run a
+  detector on the server to spare the browsers where the model has nowhere to
+  run, knowing it can only ever decide to wait longer.
+</Callout>
+
+## Reading the sound of the sentence
+
+`turnDetector` hands the audio of each stretch of speech to a small model, which answers in a few tens of milliseconds without spending a token.
+
+```typescript
+import { MicdropServer } from '@micdrop/server'
+import { SmartTurn } from '@micdrop/smart-turn'
+import { setSmartTurnOptions } from '@micdrop/smart-turn/node'
+
+// Keep the checkpoint next to the code so the server never reaches out at boot
+setSmartTurnOptions({ model: './smart-turn-v3.2-cpu.onnx' })
+
+new MicdropServer(socket, {
+  agent,
+  stt,
+  tts,
+  turnDetector: new SmartTurn(),
+  turnMaxWait: 4000,
+})
+```
+
+When the sentence sounds unfinished the server sends `SkipAnswer` and waits for the rest, which arrives as a second user message. The agent then answers with both in front of it.
+
+A model can hear an unfinished sentence where there is none, so the wait has a deadline. `turnMaxWait` says how long it lasts, four seconds by default, and the agent answers on its own once it runs out. The clock stops as soon as the speaker starts again, so a long answer full of hesitations never runs out of time.
+
+### What it costs
+
+The model reads the last eight seconds of the stretch that just ended and answers in about 13 ms on a laptop processor, 40 ms on a single server core. It works on every call, whatever the browser, and the audio never leaves your infrastructure.
+
+The delay it adds is the one that made the client the better place for it. By the time the server hears the pause, the client has already stopped its turn, so lowering the silence the browser waits for is out of reach here.
+
+## Asking the agent
+
+`autoSemanticTurn` puts the question to the language model instead, as a tool it can call on the transcript.
 
 ```typescript
 const agent = new OpenaiAgent({
   apiKey: process.env.OPENAI_API_KEY || '',
   systemPrompt: 'You are a helpful assistant',
-  autoSemanticTurn: true, // Wait for complete thoughts
-  // or provide custom prompt:
+  autoSemanticTurn: true,
+  // or provide your own wording:
   // autoSemanticTurn: 'Last user message is an incomplete sentence',
 })
 ```
-
-## Configuration Options
 
 | Option             | Type                | Description                               |
 | ------------------ | ------------------- | ----------------------------------------- |
 | `autoSemanticTurn` | `boolean \| string` | Enable detection or provide custom prompt |
 
-- **`true`**: Uses the default incomplete sentence detection logic
-- **`string`**: Provides a custom prompt for the AI to use when determining if a message is incomplete
+Reading the transcript catches what the sound alone cannot, a sentence that is grammatically complete yet obviously leads somewhere. It costs a full round trip to the language model and its tokens on every pause, so it sits well in a call where the agent is already thinking between turns, and poorly in one tuned for latency.
 
-## How it Works
+## What each of them changes
 
-The semantic turn detection feature analyzes user messages to determine if they represent complete thoughts or incomplete sentences. When an incomplete sentence is detected, the agent emits a `SkipAnswer` event to skip the answer.
+Take a user saying "I want to..." and pausing.
 
-## Example Scenarios
+Without any of this, the agent answers the fragment and talks over the rest of the sentence.
 
-**Without Semantic Turn Detection:**
+With detection in the client, nothing is sent, the turn stays open, and "book a flight" joins the same message. The agent sees one question and answers it once.
 
-- User: "I want to..."
-- Agent: "What would you like to do?"
-- User: "book a flight"
+With detection on the server, the fragment reaches the agent and the answer is held back. "book a flight" arrives as a second message, and the agent answers with both.
 
-**With Semantic Turn Detection:**
+## Combining them
 
-- User: "I want to..."
-- _Agent waits_
-- User: "book a flight"
-- Agent: "I'd be happy to help you book a flight. Where would you like to go?"
-
-## Best Practices
-
-- Use this feature for conversational applications where users might pause mid-sentence
-- Consider the speech-to-text accuracy when enabling this feature
-- Test with various incomplete sentence patterns to ensure proper detection
-- Balance responsiveness with waiting for complete thoughts
+The three can be layered. The client decides when to close its turn, the server decides whether the audio deserves an answer, and the agent has the last word on the transcript. Start with the client alone, and add the others when you meet a case it misses.

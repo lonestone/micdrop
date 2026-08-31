@@ -1,11 +1,20 @@
 import { EventEmitter } from 'eventemitter3'
 import { concatFloat32, floatToPcm16, resample } from './pcm'
+import { TurnDetector } from '../types'
 import { MicSource } from './types'
 import { equalVADConfig, getVAD, VADConfig } from './vad/getVAD'
 import { VAD } from './vad/VAD'
 
 const SAMPLE_RATE = 16000
 const CHUNK_INTERVAL = 100 // ms
+
+/**
+ * How long a turn may stay open after the detector asked to wait.
+ *
+ * Long enough to cover the pause of someone looking for their words, and short
+ * enough that a wrong verdict costs one awkward silence rather than the call.
+ */
+export const DEFAULT_TURN_MAX_WAIT = 4000 // ms
 
 export interface MicRecorderState {
   isStarting: boolean
@@ -31,6 +40,11 @@ export interface MicRecorderEvents {
  *
  * It only records while the VAD hears someone, and keeps a short reserve of
  * audio so the first syllable, spoken before the VAD reacted, is sent too.
+ *
+ * Recording and the turn are two different things. The VAD decides what is
+ * worth sending, so the silences stay out of the stream either way. A
+ * {@link TurnDetector}, when there is one, decides when the turn is over, and
+ * a pause the speaker is about to fill leaves it open.
  */
 export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   public state: MicRecorderState
@@ -46,7 +60,25 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   private bufferLength = 0
   private queuedChunks: Int16Array[] = []
 
-  constructor(private vadConfig?: VADConfig) {
+  // The turn is open between the first confirmed word and the moment the
+  // server is told to answer, which can span several pauses
+  private turnOpen = false
+  private turnListening = false
+  private turnTimer: ReturnType<typeof setTimeout> | undefined
+  // Bumped whenever the turn moves on, so a late answer is dropped
+  private turnRound = 0
+
+  constructor(
+    private vadConfig?: VADConfig,
+    private turnDetector?: TurnDetector,
+    /**
+     * How long a turn stays open once the detector asked to wait.
+     *
+     * The way out of a detector that hears an unfinished sentence where there
+     * is none: the speaker who never comes back still gets an answer.
+     */
+    public turnMaxWait = DEFAULT_TURN_MAX_WAIT
+  ) {
     super()
 
     // Set initial state
@@ -94,6 +126,7 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       isStarted: false,
       isSpeaking: false,
     })
+    this.cancelPendingClose()
 
     try {
       // Stop listening to the captured audio
@@ -113,6 +146,19 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     this.resetBuffers()
   }
 
+  /**
+   * Changes what decides when a turn is over
+   * @param turnDetector - The new detector, or nothing to leave it to the VAD
+   */
+  changeTurnDetector = (turnDetector?: TurnDetector) => {
+    if (turnDetector === this.turnDetector) return
+    // A turn opened under the previous detector has to end somewhere
+    if (this.turnOpen) {
+      this.endTurn()
+    }
+    this.turnDetector = turnDetector
+  }
+
   changeVad = (vadConfig: VADConfig) => {
     if (equalVADConfig(vadConfig, this.vadConfig)) return
 
@@ -130,6 +176,12 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }
 
   private onFrames = (frames: Float32Array, sampleRate: number) => {
+    // The detector hears the turn as it was spoken, pauses included, where the
+    // stream sent to the server has the silences cut out of it
+    if (this.turnListening) {
+      this.turnDetector?.push(frames, sampleRate)
+    }
+
     if (sampleRate !== this.sourceSampleRate) {
       // The device changed its mind about the sample rate, start over
       this.flushChunks()
@@ -169,13 +221,31 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
     this.bufferLength = this.reserveLength
     this.reserve = []
     this.reserveLength = 0
+
+    // A new turn starts on the reserve too, so the model hears the first
+    // syllable. An open turn keeps the audio it already has.
+    if (this.turnDetector && !this.turnListening) {
+      this.turnDetector.reset()
+      this.turnListening = true
+      for (const frames of this.buffer) {
+        this.turnDetector.push(frames, this.sourceSampleRate)
+      }
+    }
+
     this.flushChunks()
   }
 
   private onConfirmSpeaking = () => {
     this.speakingConfirmed = true
     this.changeState({ isSpeaking: true })
-    this.emit('StartSpeaking')
+
+    // The speaker picked their sentence back up, so the turn they had left
+    // open carries on and the server keeps the same stream
+    this.cancelPendingClose()
+    if (!this.turnOpen) {
+      this.turnOpen = true
+      this.emit('StartSpeaking')
+    }
 
     // Send what was recorded before the speech was confirmed
     for (const chunk of this.queuedChunks) {
@@ -185,8 +255,12 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   }
 
   private onCancelSpeaking = () => {
-    // It was only noise, forget it
+    // It was only noise, forget it. A turn already open keeps waiting, and
+    // keeps whatever timer it was running.
     this.stopRecording()
+    if (!this.turnOpen) {
+      this.turnListening = false
+    }
   }
 
   private onStopSpeaking = () => {
@@ -198,7 +272,63 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
       this.flushChunks(true)
     }
     this.stopRecording()
+    this.closeTurn()
+  }
+
+  /**
+   * Ends the turn, unless the detector hears an unfinished sentence.
+   *
+   * A microphone that is no longer listening ends it straight away: a muted or
+   * paused call has nothing more to say, whatever the sentence sounded like.
+   */
+  private async closeTurn() {
+    if (
+      !this.turnDetector ||
+      !this.turnOpen ||
+      !this.vad.isStarted ||
+      this.vad.isPaused
+    ) {
+      this.endTurn()
+      return
+    }
+
+    const round = this.turnRound
+    try {
+      const { complete } = await this.turnDetector.predict()
+      // The speaker started again, or the call moved on, while it was thinking
+      if (round !== this.turnRound) return
+      if (complete) {
+        this.endTurn()
+        return
+      }
+    } catch (error) {
+      console.error('[Micdrop] Turn detection failed', error)
+      this.endTurn()
+      return
+    }
+
+    // Leave the turn open, and close it if the sentence never comes back
+    this.cancelPendingClose()
+    this.turnTimer = setTimeout(() => {
+      this.turnTimer = undefined
+      this.endTurn()
+    }, this.turnMaxWait)
+  }
+
+  private endTurn() {
+    this.cancelPendingClose()
+    this.turnOpen = false
+    this.turnListening = false
     this.emit('StopSpeaking')
+  }
+
+  /** Drops the pending close, both the timer and the answer still owed */
+  private cancelPendingClose() {
+    this.turnRound++
+    if (this.turnTimer) {
+      clearTimeout(this.turnTimer)
+      this.turnTimer = undefined
+    }
   }
 
   private stopRecording() {
@@ -256,6 +386,8 @@ export class MicRecorder extends EventEmitter<MicRecorderEvents> {
   private resetBuffers() {
     this.isRecording = false
     this.speakingConfirmed = false
+    this.turnOpen = false
+    this.turnListening = false
     this.reserve = []
     this.reserveLength = 0
     this.buffer = []

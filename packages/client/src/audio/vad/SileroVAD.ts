@@ -48,8 +48,8 @@ export type SileroVADOptions = {
 const defaultOptions: SileroVADOptions = {
   positiveSpeechThreshold: 0.18,
   negativeSpeechThreshold: 0.11,
-  minSpeechFrames: 8,
-  redemptionFrames: 20,
+  minSpeechFrames: 4,
+  redemptionFrames: 8,
 }
 
 let loadModel: SileroModelLoader | undefined

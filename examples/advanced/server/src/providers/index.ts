@@ -76,6 +76,7 @@ async function describeProvider<T>(
     id,
     label: definition.label,
     description: definition.description,
+    local: definition.local,
     available,
     missingEnv: missingEnv(definition),
     // Listing the models of a provider that cannot run would fail anyway

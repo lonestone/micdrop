@@ -14,6 +14,8 @@ export interface ProviderInfo {
   id: string
   label: string
   description?: string
+  /** Runs on the machine serving the call rather than behind an API */
+  local?: boolean
   available: boolean
   missingEnv: string[]
   models: ModelOption[]
@@ -55,7 +57,7 @@ export const AUTO_OPTIONS: { name: AutoName; label: string; help: string }[] = [
   {
     name: 'autoSemanticTurn',
     label: 'Semantic turn detection',
-    help: 'The assistant waits instead of answering when the sentence it just heard sounds unfinished, so a pause in the middle of a thought no longer cuts the user off.',
+    help: 'The assistant waits instead of answering when the transcript it just read sounds unfinished. Smart Turn does the same from the sound of the voice, without a round trip to the model, so turn it on here only to compare the two.',
   },
   {
     name: 'autoIgnoreUserNoise',
@@ -98,8 +100,12 @@ const DEFAULT_TOOLS: ToolOptions = {
 
 const DEFAULT_AUTO: AutoOptions = {
   autoEndCall: true,
-  autoSemanticTurn: true,
-  autoIgnoreUserNoise: true,
+  // Smart Turn answers the same question in the browser, for a fraction of the
+  // delay and no token at all, so the agent is left out of it by default
+  autoSemanticTurn: false,
+  // Another tool call on every turn, for a case the transcript rarely gets
+  // wrong, so it is left to whoever wants to try it
+  autoIgnoreUserNoise: false,
 }
 
 export const PART_LABELS: Record<PartName, string> = {

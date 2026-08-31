@@ -2,7 +2,13 @@ import assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
 import { MicRecorder } from '../src/audio/MicRecorder'
 import { pcm16ToFloat } from '../src/audio/pcm'
-import { FakeMicSource, ManualVAD, silence, sine } from './fakes'
+import {
+  FakeMicSource,
+  FakeTurnDetector,
+  ManualVAD,
+  silence,
+  sine,
+} from './fakes'
 
 const CHUNK_SAMPLES = 1600 // 100 ms at 16 kHz
 
@@ -180,5 +186,224 @@ describe('MicRecorder', () => {
     feed(0.5, true)
     vad.emit('StopSpeaking')
     assert.ok(first > 0 && chunks.length > 0)
+  })
+})
+
+describe('MicRecorder with a turn detector', () => {
+  let mic: FakeMicSource
+  let vad: ManualVAD
+  let detector: FakeTurnDetector
+  let recorder: MicRecorder
+  let chunks: Int16Array[]
+  let events: string[]
+
+  /** Lets the detector answer, since it is asked asynchronously */
+  const settle = () => new Promise((resolve) => setImmediate(resolve))
+
+  async function setup(answers: boolean[], maxWait?: number) {
+    mic = new FakeMicSource()
+    vad = new ManualVAD()
+    detector = new FakeTurnDetector(answers)
+    recorder = new MicRecorder(vad, detector, maxWait)
+    chunks = []
+    events = []
+    recorder.on('Chunk', (chunk) => chunks.push(chunk))
+    recorder.on('StartSpeaking', () => events.push('StartSpeaking'))
+    recorder.on('StopSpeaking', () => events.push('StopSpeaking'))
+    await recorder.start(mic)
+  }
+
+  function feed(seconds: number, loud: boolean, sampleRate = 16000) {
+    const frames = Math.round((seconds * 1000) / 10)
+    for (let i = 0; i < frames; i++) {
+      mic.emit(
+        'Frames',
+        loud
+          ? sine(0.01, { amplitude: 0.4, sampleRate })
+          : silence(0.01, sampleRate),
+        sampleRate
+      )
+    }
+  }
+
+  /** One spoken stretch, from the first syllable to the pause after it */
+  async function speak(seconds: number) {
+    vad.emit('StartSpeaking')
+    feed(seconds, true)
+    vad.emit('ConfirmSpeaking')
+    vad.emit('StopSpeaking')
+    await settle()
+  }
+
+  it('ends the turn as usual when the sentence sounds finished', async () => {
+    await setup([true])
+    await speak(0.5)
+    assert.deepEqual(events, ['StartSpeaking', 'StopSpeaking'])
+    assert.equal(detector.questions, 1)
+  })
+
+  it('holds the turn open when the sentence sounds unfinished', async () => {
+    await setup([false, true])
+    await speak(0.5)
+    assert.deepEqual(events, ['StartSpeaking'], 'the server is not told yet')
+
+    feed(0.4, false)
+    await speak(0.5)
+    assert.deepEqual(events, ['StartSpeaking', 'StopSpeaking'])
+  })
+
+  it('opens the turn once, however many pauses it holds', async () => {
+    await setup([false, false, true])
+    await speak(0.4)
+    feed(0.3, false)
+    await speak(0.4)
+    feed(0.3, false)
+    await speak(0.4)
+    assert.deepEqual(events, ['StartSpeaking', 'StopSpeaking'])
+  })
+
+  it('keeps the silence out of the stream while the turn stays open', async () => {
+    await setup([false, true])
+    await speak(0.5)
+    const sent = chunks.length
+
+    feed(1, false)
+    assert.equal(chunks.length, sent, 'a pause is still worth nothing to send')
+
+    await speak(0.5)
+    assert.ok(chunks.length > sent, 'the rest of the sentence goes out')
+  })
+
+  it('lets the model hear the pause the server never receives', async () => {
+    await setup([false, true])
+    await speak(0.5)
+    const heardBefore = detector.seconds
+
+    feed(1, false)
+    assert.ok(
+      detector.seconds > heardBefore + 0.9,
+      `the model heard ${detector.seconds - heardBefore} s of the pause`
+    )
+    assert.equal(detector.resets, 1, 'the turn is still the same one')
+  })
+
+  it('closes the turn on its own when the speaker never comes back', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] })
+    await setup([false], 1500)
+    await speak(0.5)
+    assert.deepEqual(events, ['StartSpeaking'])
+
+    t.mock.timers.tick(1499)
+    assert.deepEqual(events, ['StartSpeaking'])
+    t.mock.timers.tick(1)
+    assert.deepEqual(events, ['StartSpeaking', 'StopSpeaking'])
+  })
+
+  it('starts a new turn once the previous one is answered', async () => {
+    await setup([true])
+    await speak(0.4)
+    await speak(0.4)
+    assert.deepEqual(events, [
+      'StartSpeaking',
+      'StopSpeaking',
+      'StartSpeaking',
+      'StopSpeaking',
+    ])
+    assert.equal(detector.resets, 2)
+  })
+
+  it('drops a pending close when the speaker starts again', async () => {
+    await setup([false, false])
+    await speak(0.4)
+    vad.emit('StartSpeaking')
+    feed(0.3, true)
+    vad.emit('ConfirmSpeaking')
+    assert.deepEqual(events, ['StartSpeaking'], 'still the same turn')
+  })
+
+  it('ends the turn without asking when the microphone stops', async () => {
+    await setup([false])
+    vad.emit('StartSpeaking')
+    feed(0.5, true)
+    vad.emit('ConfirmSpeaking')
+
+    await vad.stop()
+    vad.emit('StopSpeaking')
+    await settle()
+    assert.deepEqual(events, ['StartSpeaking', 'StopSpeaking'])
+    assert.equal(detector.questions, 0, 'a stopped call has nothing to weigh')
+  })
+
+  it('ends the turn without asking when the call is paused', async () => {
+    await setup([false])
+    vad.emit('StartSpeaking')
+    feed(0.5, true)
+    vad.emit('ConfirmSpeaking')
+
+    await vad.pause()
+    vad.emit('StopSpeaking')
+    await settle()
+    assert.deepEqual(events, ['StartSpeaking', 'StopSpeaking'])
+    assert.equal(detector.questions, 0)
+  })
+})
+
+describe('MicRecorder switching detector', () => {
+  let mic: FakeMicSource
+  let vad: ManualVAD
+  let recorder: MicRecorder
+  let events: string[]
+
+  const settle = () => new Promise((resolve) => setImmediate(resolve))
+
+  beforeEach(async () => {
+    mic = new FakeMicSource()
+    vad = new ManualVAD()
+    recorder = new MicRecorder(vad)
+    events = []
+    recorder.on('StartSpeaking', () => events.push('StartSpeaking'))
+    recorder.on('StopSpeaking', () => events.push('StopSpeaking'))
+    await recorder.start(mic)
+  })
+
+  function say() {
+    vad.emit('StartSpeaking')
+    for (let i = 0; i < 30; i++) {
+      mic.emit('Frames', sine(0.01, { amplitude: 0.4 }), 16000)
+    }
+    vad.emit('ConfirmSpeaking')
+  }
+
+  it('goes back to closing turns on silence once the detector leaves', async () => {
+    const detector = new FakeTurnDetector([false])
+    recorder.changeTurnDetector(detector)
+    say()
+    vad.emit('StopSpeaking')
+    await settle()
+    assert.deepEqual(events, ['StartSpeaking'], 'the turn is being held')
+
+    recorder.changeTurnDetector(undefined)
+    assert.deepEqual(events, ['StartSpeaking', 'StopSpeaking'], 'and released')
+
+    say()
+    vad.emit('StopSpeaking')
+    await settle()
+    assert.deepEqual(events, [
+      'StartSpeaking',
+      'StopSpeaking',
+      'StartSpeaking',
+      'StopSpeaking',
+    ])
+    assert.equal(detector.questions, 1, 'it was asked nothing more')
+  })
+
+  it('starts weighing turns as soon as a detector arrives', async () => {
+    const detector = new FakeTurnDetector([false, true])
+    recorder.changeTurnDetector(detector)
+    say()
+    vad.emit('StopSpeaking')
+    await settle()
+    assert.deepEqual(events, ['StartSpeaking'])
+    assert.ok(detector.seconds > 0, 'it heard the sentence it was asked about')
   })
 })

@@ -2,7 +2,7 @@
 title: 'AI Integration'
 description: 'Integrate speech-to-text, text-to-speech, and AI agents from multiple providers or build custom implementations.'
 sidebarLabel: 'AI Integrations'
-order: 40
+order: 42
 ---
 
 # AI Integration
@@ -80,7 +80,7 @@ new MicdropServer(socket, {
   // Speech-to-Text
   stt: new GladiaSTT({
     apiKey: process.env.GLADIA_API_KEY,
-    language: 'en',
+    settings: { language_config: { languages: ['en'] } },
   }),
 
   // Text-to-Speech

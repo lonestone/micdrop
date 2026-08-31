@@ -61,7 +61,7 @@ const speech2Text: ProviderRegistry<STT> = {
   // Transformers.js cache, then shared by every call of the process.
   whisper: {
     label: 'Whisper',
-    description: 'Local, runs on this machine',
+    local: true,
     models: Object.entries(WHISPER_MODEL_INFO).map(([id, info]) => ({
       id,
       label: info.label,

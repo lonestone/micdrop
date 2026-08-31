@@ -1,0 +1,114 @@
+---
+title: 'Reducing Latency'
+description: 'Where the time goes between the last word a user says and the first word the agent says back, and which settings actually move it.'
+order: 14
+---
+
+# Reducing Latency
+
+A voice agent feels quick or slow long before the language model is involved. This page follows one turn from the last syllable to the first sound of the answer, says what each step costs, and points at the settings worth touching.
+
+## The budget of one turn
+
+The numbers below were measured on a MacBook Pro M2, in Chromium, over the French half of the Smart Turn test set. Your own will differ, the order of the steps will not.
+
+| Step | Time |
+| --- | --- |
+| Silence before the turn closes | ~760 ms, or ~1060 ms with Silero at twenty windows |
+| Turn detection, on a graphics card | ~25 ms |
+| Turn detection, on WebAssembly | 190 ms to 1.2 s |
+| Audio reaching the server | already there, streamed every 100 ms |
+| Transcription, agent and voice | [see the local models page](/docs/ai-integration/local-models/performance) |
+
+The first line is the one that surprises people. Before any model has read anything, most of a second has already gone by waiting to be sure the speaker stopped, and that wait is a setting rather than a law.
+
+## The silence is the setting
+
+A voice detector cannot know a sentence is over, so it waits. `SileroVAD` counts `redemptionFrames` of silence. Eight windows is about a quarter of a second of audio, and measures longer in practice, because the counter only starts once the model stops hearing speech and a voice fades before it disappears.
+
+That number used to be twenty, a compromise with nothing behind it but fear of cutting people off. [Turn detection](/docs/client/turn-detection) removes the fear, so the default came down. Without a detector, put it back:
+
+```typescript
+import { Micdrop, SileroVAD } from '@micdrop/web'
+
+// No turn detection, so the wait has to cover the hesitations itself
+await Micdrop.start({
+  url: 'wss://example.com/call',
+  vad: new SileroVAD({ redemptionFrames: 20, minSpeechFrames: 8 }),
+})
+```
+
+Measured over 120 turns, the defaults close a turn in **760 ms instead of the 1060 ms** the old ones took, for four points of accuracy that turn detection is there to absorb.
+
+| Voice detection | Turn opens after | Turn closes after | Right |
+| --- | --- | --- | --- |
+| Silero at twenty windows, the old defaults | 300 ms | 1060 ms | 90.8% |
+| The defaults today | 280 ms | 760 ms | 86.7% |
+| The same with volume history at 3 | 280 ms | 600 ms | 83.3% |
+
+The two kinds of mistake do not cost the same. A turn held when it should have been answered only waits, and gets its answer when `turnMaxWait` runs out. A turn answered when it should have been held cuts the speaker off. So read the last column as how often the call feels right rather than as a score.
+
+## Every setting, and whether to touch it
+
+Measured one at a time from the same baseline, on the French half of the test set.
+
+| Setting | Default | What it does | Moving it | Verdict |
+| --- | --- | --- | --- | --- |
+| `redemptionFrames` | 8 | Silence Silero waits before closing | 20 closes 300 ms later | Raise it when running without turn detection |
+| `negativeSpeechThreshold` | 0.11 | Below this, a window counts as silence, which is when the countdown starts | 0.4 closes 70 ms sooner | Leave it |
+| `positiveSpeechThreshold` | 0.18 | Above this, a window counts as speech and resets the countdown | 0.35 closes 40 ms sooner | Leave it |
+| `minSpeechFrames` | 4 | Speech Silero needs before confirming a turn | 8 opens 40 ms later | Raise it if noise opens turns |
+| `history` (volume) | 5 | Quiet reports the volume detector needs, one per 100 ms | 3 closes 160 ms sooner, costs 3 points | Leave it |
+| `threshold` (volume) | -55 dB | Level that counts as speech | -45 dB closes 70 ms sooner on clean audio | Leave it, a quiet room is not every room |
+| `threshold` (Smart Turn) | 0.5 | Where the verdict is cut | Flat between 0.3 and 0.7 | Leave it |
+| `turnMaxWait` | 4000 ms | How long a held turn waits | Bounds what a wrong verdict costs | Leave it |
+
+The settings that only shave tens of milliseconds each look free on their own and stop being free together: the defaults pay four points for three hundred milliseconds against the old ones, where `redemptionFrames` alone pays about two.
+
+Everything measured here comes from clean recordings. A noisy room moves the two volume settings first, so tune those against your own audio rather than against this table.
+
+## Choosing the detectors
+
+Each voice detector has its own idea of when silence begins, and combining them means waiting for the slowest.
+
+`VolumeVAD` is quick because it only watches a level, and it takes a door slam for a word. `SileroVAD` tells a voice from a noise and pays for it in time. Running both is the safe default, and lowering Silero's redemption is what makes the pair quick again.
+
+Dropping the volume detector and running Silero alone at four frames closes turns in about 360 ms, and gives up far too much: it cuts sentences in the middle, which asks the turn detection model 60% more often and gives it that many more chances to be wrong. Accuracy fell to 75.8% in that setting.
+
+## Where turn detection runs
+
+The model itself is cheap next to the silence it saves, provided it runs somewhere sensible.
+
+| Backend | Time |
+| --- | --- |
+| WebGPU | ~25 ms, whatever the device |
+| WebAssembly, one thread | 190 ms on a laptop, over a second on a slow phone |
+| Native runtime, server or React Native | ~15 ms |
+
+`@micdrop/smart-turn/web` picks WebGPU whenever the browser offers it. On a browser without it, weigh the fallback against what your users run, and consider the [server side detector](/docs/server/semantic-turn-detection) instead, which costs a round trip but leaves the phone alone.
+
+Building the features costs 0.5 ms per 100 ms of audio while the speaker talks, so it never lands on the critical path at all.
+
+## The rest of the chain
+
+Once the turn closes, the audio is already on the server, since chunks are streamed every 100 ms while the user speaks rather than sent in one go at the end. What remains is transcription, the agent and the voice.
+
+Those three are where a local setup spends its second, and the [local models page](/docs/ai-integration/local-models/performance) measures each of them.
+
+The structural one is transcription. A batch model such as Whisper only starts once the turn closes, so its time lands entirely on the critical path, around 440 ms for a three second sentence. A streaming speech to text such as [Gladia](/docs/ai-integration/provided-integrations/gladia) transcribes while the person is still talking, so the transcript is all but ready when the turn ends and that time mostly disappears. It is the largest single saving available to a local setup, ahead of any model swap.
+
+Three habits then matter more than which model you pick:
+
+Keep the models loaded between calls, and run a warm-up at startup so the first inference happens while the call is being set up rather than while a user waits.
+
+Speak the first sentence as soon as it exists rather than the whole answer once it is finished. The `SentenceTTS` base class does this, so the voice starts while the agent is still writing.
+
+Count the automatic prompts. Each of `autoEndCall`, `autoSemanticTurn` and `autoIgnoreUserNoise` can cost the agent a tool call, and a second pass through the model costs more than the transcription and the voice put together. `autoSemanticTurn` in particular has no reason to be on when turn detection runs in the browser.
+
+## What is not worth your time
+
+The turn detection model is about 2% of the budget of a turn, and the features it reads are free. Tuning its threshold changes who gets interrupted, not how fast the call feels.
+
+The audio chunks are not a bottleneck either. They leave every 100 ms during speech, so by the time the turn closes the server is holding everything but the tail.
+
+Spend your attention on the silence, on keeping the models warm, and on speaking before the answer is complete.

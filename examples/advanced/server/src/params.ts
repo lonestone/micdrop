@@ -34,6 +34,8 @@ export const callParamsSchema = z.object({
       say_something_later: z.boolean().optional(),
     })
     .optional(),
+  // Weigh the turns here rather than in the browser, ticked in the client
+  smartTurn: z.boolean().optional(),
   // Absent when the client did not read the catalog, the server then falls
   // back to the providers it considers its defaults
   providers: z
@@ -51,6 +53,7 @@ export async function checkParams(socket: WebSocket): Promise<{
   lang: string
   selection: CallSelection
   tools: ToolSelection
+  smartTurn: boolean
 }> {
   // Get params from first message
   const params = await waitForParams(socket, callParamsSchema.parse)
@@ -65,5 +68,6 @@ export async function checkParams(socket: WebSocket): Promise<{
     lang: params.lang,
     selection: { ...params.providers, auto: params.auto },
     tools: params.tools ?? {},
+    smartTurn: params.smartTurn ?? false,
   }
 }

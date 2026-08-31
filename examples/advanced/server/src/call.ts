@@ -3,6 +3,7 @@ import { FastifyInstance } from 'fastify'
 import { checkParams } from './params'
 import { createProviders, getCatalog } from './providers'
 import { record } from './record'
+import { createSmartTurn } from './smartTurn'
 import { addTools } from './tools'
 
 export default async (app: FastifyInstance) => {
@@ -11,7 +12,7 @@ export default async (app: FastifyInstance) => {
 
   app.get('/call', { websocket: true }, async (socket) => {
     try {
-      const { lang, selection, tools } = await checkParams(socket)
+      const { lang, selection, tools, smartTurn } = await checkParams(socket)
 
       // Build the providers picked in the client (see the providers folder)
       const { agent, stt, tts, ...call } = await createProviders(
@@ -27,6 +28,12 @@ export default async (app: FastifyInstance) => {
           (off.length ? `, without ${off.join(' and ')}` : '')
       )
 
+      // Weigh the turns here when the client asked for it
+      const turnDetector = smartTurn ? await createSmartTurn() : undefined
+      if (turnDetector) {
+        console.log('Turn detection on the server')
+      }
+
       // Start call
       const server = new MicdropServer(socket, {
         // firstMessage: 'Hello!',
@@ -34,6 +41,7 @@ export default async (app: FastifyInstance) => {
         agent,
         stt,
         tts,
+        turnDetector,
       })
 
       // Listen to End event
