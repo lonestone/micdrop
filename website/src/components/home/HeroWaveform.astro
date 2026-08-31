@@ -1,0 +1,345 @@
+---
+/**
+ * The band that closes the hero: a mirrored, glowing waveform painted on a
+ * transparent canvas, so it dissolves into the page instead of sitting on a
+ * panel. It replaces the rule that used to separate the hero from the rest of
+ * the page, which on a library about voice says more than a 1px border.
+ *
+ * The motion mimics natural speech: long bursts carried by irregular
+ * syllables, parted by the rare short breath where the spikes collapse onto
+ * the spine. Colours are read off the theme at runtime, so the wave follows
+ * the light and dark palettes and re-reads them when the toggle flips.
+ *
+ * Hidden from assistive tech, paused when scrolled out of view, and frozen on
+ * a single resting frame under `prefers-reduced-motion`.
+ */
+interface Props {
+  class?: string
+}
+
+const { class: className } = Astro.props
+---
+
+<div class:list={['hero-waveform', className]} aria-hidden="true">
+  <canvas></canvas>
+</div>
+
+<style>
+  .hero-waveform {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    pointer-events: none;
+    /**
+     * Emerald, in three steps. `mid` carries the body of the wave, `edge` its
+     * loudest point in the middle and `core` the halo underneath. Dark pages
+     * want the centre brighter than the body, light pages want it deeper, so
+     * the two ends of the ramp swap with the theme.
+     */
+    --wave-edge: #6ee7b7;
+    --wave-mid: #10b981;
+    --wave-core: #34d399;
+  }
+
+  :global([data-theme='light']) .hero-waveform {
+    --wave-edge: #047857;
+    --wave-mid: #059669;
+    --wave-core: #6ee7b7;
+  }
+
+  .hero-waveform canvas {
+    width: 100%;
+    height: 100%;
+    /* Bloom around the spikes. Done here rather than with `shadowBlur` in the
+       2D context: the compositor blurs the layer once instead of the canvas
+       rasterising a shadow under every spike, every frame. */
+    filter: drop-shadow(
+      0 0 6px color-mix(in srgb, var(--wave-mid) 70%, transparent)
+    );
+    /* Dissolve the band into the page rather than cutting it off: sideways at
+       the edges of the viewport, and at the tip of the tallest spikes so they
+       melt out instead of ending on a hard cap. */
+    mask-image:
+      linear-gradient(to right, transparent, #000 14%, #000 86%, transparent),
+      linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+    mask-composite: intersect;
+  }
+</style>
+
+<script>
+  interface Seed {
+    /** Static height multiplier: what makes neighbouring spikes uneven. */
+    jag: number
+    /** Own micro rhythm, so a spike never moves in lockstep with the next. */
+    freq: number
+    phase: number
+  }
+
+  /** Fallbacks matching the emerald tokens, in case the vars are unavailable. */
+  const FALLBACK = { edge: '#6ee7b7', mid: '#10b981', core: '#34d399' }
+
+  /** `#RGB` / `#RRGGBB` to an `r, g, b` triple usable inside `rgba()`. */
+  function toRgb(value: string, fallback: string): string {
+    const hex = (value.trim() || fallback).replace('#', '')
+    const full = hex.length === 3 ? hex.replace(/./g, (c) => c + c) : hex
+    if (full.length !== 6) return toRgb(fallback, fallback)
+    const n = Number.parseInt(full, 16)
+    return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`
+  }
+
+  function setup(root: HTMLElement) {
+    const canvas = root.querySelector('canvas')
+    const ctx = canvas?.getContext('2d')
+    if (!canvas || !ctx) return
+
+    /** Horizontal distance between two spikes, in CSS pixels. */
+    const SPACING = 5
+    const LINE_WIDTH = 1.9
+    /** Below this, the band is too narrow to read as a waveform: skip it. */
+    const MIN_SPAN = 40
+
+    const styles = getComputedStyle(root)
+
+    let width = 0
+    let height = 0
+    let dpr = 1
+    let cols = 0
+    let seeds: Seed[] = []
+    /** Screen x of every spike, and its own bell weighting. */
+    let xs: number[] = []
+    let bells: number[] = []
+    let strokeGradient: CanvasGradient | null = null
+    let haloGradient: CanvasGradient | null = null
+
+    function measure() {
+      const rect = canvas!.getBoundingClientRect()
+      if (rect.width < 1 || rect.height < 1) return false
+
+      width = rect.width
+      height = rect.height
+      dpr = Math.min(2, window.devicePixelRatio || 1)
+      canvas!.width = Math.round(width * dpr)
+      canvas!.height = Math.round(height * dpr)
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+      const next =
+        width >= MIN_SPAN ? Math.max(8, Math.floor(width / SPACING)) : 0
+
+      if (next !== cols) {
+        cols = next
+        seeds = Array.from({ length: cols }, () => ({
+          jag: 0.5 + Math.random() ** 1.3 * 0.5,
+          freq: 6 + Math.random() * 7,
+          phase: Math.random() * Math.PI * 2,
+        }))
+      }
+
+      xs = []
+      bells = []
+      for (let i = 0; i < cols; i++) {
+        const u = (i + 0.5) / cols
+        xs.push(u * width)
+        // Centre-weighted, like a microphone meter reacting to a voice: the
+        // band is loudest in the middle and quiets down as it runs outwards.
+        // Precomputed, since it only moves when the geometry does.
+        const c = (u - 0.5) * 2
+        bells.push(0.32 + 0.68 * Math.exp(-c * c * 2.2))
+      }
+
+      // Read on every measure rather than once at setup, so flipping the theme
+      // repaints the wave in the other palette.
+      const edge = toRgb(styles.getPropertyValue('--wave-edge'), FALLBACK.edge)
+      const mid = toRgb(styles.getPropertyValue('--wave-mid'), FALLBACK.mid)
+      const core = toRgb(styles.getPropertyValue('--wave-core'), FALLBACK.core)
+
+      strokeGradient = ctx!.createLinearGradient(0, 0, width, 0)
+      strokeGradient.addColorStop(0, `rgba(${mid}, 0)`)
+      strokeGradient.addColorStop(0.14, `rgba(${mid}, 0.3)`)
+      strokeGradient.addColorStop(0.34, `rgba(${mid}, 0.62)`)
+      strokeGradient.addColorStop(0.5, `rgba(${edge}, 0.7)`)
+      strokeGradient.addColorStop(0.66, `rgba(${mid}, 0.62)`)
+      strokeGradient.addColorStop(0.86, `rgba(${mid}, 0.3)`)
+      strokeGradient.addColorStop(1, `rgba(${mid}, 0)`)
+
+      haloGradient = ctx!.createRadialGradient(0, 0, 0, 0, 0, width * 0.5)
+      haloGradient.addColorStop(0, `rgba(${mid}, 0.1)`)
+      haloGradient.addColorStop(0.5, `rgba(${core}, 0.05)`)
+      haloGradient.addColorStop(1, `rgba(${core}, 0)`)
+
+      return true
+    }
+
+    // Voice envelope, on two scales. Long speech bursts parted by the rare
+    // short breath, and inside a burst a stream of syllables that each get
+    // their own length and peak: a fixed sine there would turn the whole thing
+    // into an obvious loop.
+    let inBurst = true
+    let burstTimeLeft = 3.2
+    let pauseTimeLeft = 0
+    let burstAmp = 0.9
+    let syllableTimeLeft = 0
+    let syllableSpan = 0.2
+    let syllablePeak = 0.9
+    let envelope = 0.5
+
+    function advance(dt: number) {
+      if (inBurst) {
+        burstTimeLeft -= dt
+        if (burstTimeLeft <= 0) {
+          inBurst = false
+          pauseTimeLeft = 0.09 + Math.random() * 0.16
+        }
+      } else {
+        pauseTimeLeft -= dt
+        if (pauseTimeLeft <= 0) {
+          inBurst = true
+          burstTimeLeft = 2.6 + Math.random() * 4.5
+          burstAmp = 0.75 + Math.random() * 0.25
+        }
+      }
+
+      syllableTimeLeft -= dt
+      if (syllableTimeLeft <= 0) {
+        syllableSpan = 0.1 + Math.random() * 0.24
+        syllableTimeLeft = syllableSpan
+        // One syllable in five is stressed, which is what carries the accent.
+        syllablePeak = Math.random() < 0.22 ? 1 : 0.55 + Math.random() * 0.4
+      }
+      const progress = 1 - Math.max(0, syllableTimeLeft) / syllableSpan
+      const shape = Math.sin(Math.PI * progress)
+
+      const target = inBurst
+        ? burstAmp * (0.62 + 0.38 * syllablePeak * shape)
+        : 0.06
+      // Fast attack, slower release: a level meter reacting to a voice.
+      envelope +=
+        (target - envelope) * Math.min(1, dt * (target > envelope ? 26 : 12))
+    }
+
+    function render(t: number) {
+      if (!strokeGradient || !haloGradient) return
+      const cx = width / 2
+      const cy = height / 2
+      const maxHalf = height * 0.46
+
+      ctx!.clearRect(0, 0, width, height)
+
+      // Elliptical halo: a stroke alone reads flat, this gives the wave
+      // something to glow into. Kept faint, so it reads as air around the
+      // spikes rather than as a panel behind them, and held at a constant
+      // intensity so only the spikes carry the movement.
+      ctx!.save()
+      ctx!.translate(cx, cy)
+      ctx!.scale(1, 0.4)
+      ctx!.globalAlpha = 0.28
+      ctx!.fillStyle = haloGradient
+      ctx!.beginPath()
+      ctx!.arc(0, 0, width * 0.5, 0, Math.PI * 2)
+      ctx!.fill()
+      ctx!.restore()
+
+      if (cols === 0) return
+
+      const spikes = new Path2D()
+      for (let i = 0; i < cols; i++) {
+        const p = (i + 0.5) / cols
+        const seed = seeds[i]
+        // Three travelling waves at different scales: neighbouring spikes stay
+        // related, which is what makes the row read as a waveform instead of a
+        // bar chart.
+        const detail =
+          0.62 +
+          0.22 * Math.sin(p * 24 + t * 2.3) +
+          0.14 * Math.sin(p * 53 - t * 3.7) +
+          0.09 * Math.sin(p * 101 + t * 1.6)
+        const flicker = 0.82 + 0.18 * Math.sin(t * seed.freq + seed.phase)
+
+        const amp = Math.max(
+          0.012,
+          Math.min(1, bells[i] * envelope * detail * seed.jag * flicker)
+        )
+        const half = amp * maxHalf
+        spikes.moveTo(xs[i], cy - half)
+        spikes.lineTo(xs[i], cy + half)
+      }
+
+      // One pass only. The glow is a CSS `drop-shadow` on the canvas, which the
+      // compositor handles: `shadowBlur` here meant rasterising a blur over
+      // every spike on every frame.
+      ctx!.lineCap = 'round'
+      ctx!.strokeStyle = strokeGradient
+      ctx!.lineWidth = LINE_WIDTH
+      ctx!.stroke(spikes)
+    }
+
+    let raf = 0
+    let last = 0
+    let visible = false
+
+    function tick(now: number) {
+      const dt = Math.min(0.05, (now - last) / 1000)
+      last = now
+      advance(dt)
+      render(now / 1000)
+      raf = requestAnimationFrame(tick)
+    }
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+    function stop() {
+      if (!raf) return
+      cancelAnimationFrame(raf)
+      raf = 0
+    }
+
+    function start() {
+      if (raf || !visible || cols === 0) return
+      if (reduce.matches) {
+        // Resting silhouette, no animation.
+        envelope = 0.7
+        render(0)
+        return
+      }
+      last = performance.now()
+      raf = requestAnimationFrame(tick)
+    }
+
+    function refresh() {
+      if (!measure()) return
+      // While animating, the next frame already picks up the new size.
+      if (!raf) {
+        render(performance.now() / 1000)
+        start()
+      }
+    }
+
+    new ResizeObserver(refresh).observe(root)
+
+    // Idle while the band is off-screen.
+    new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        visible = entry.isIntersecting
+        if (visible) start()
+        else stop()
+      }
+    }).observe(root)
+
+    reduce.addEventListener('change', () => {
+      stop()
+      start()
+    })
+
+    // The theme toggle swaps `data-theme` on `<html>`; the gradients are built
+    // from the tokens, so they have to be rebuilt when it moves.
+    new MutationObserver(refresh).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    })
+
+    measure()
+  }
+
+  document.querySelectorAll<HTMLElement>('.hero-waveform').forEach(setup)
+</script>

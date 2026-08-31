@@ -1,42 +1,17 @@
 ---
-/**
- * A selling point with a large emerald glyph. The icons are inline SVG so the
- * section carries no icon package; pick one by name.
- */
+/** One selling point, under a rule that runs the width of its grid cell. */
 interface Props {
   title: string
-  icon: 'bolt' | 'robot' | 'code' | 'server' | 'devices'
 }
 
-const { title, icon } = Astro.props
-
-const paths = {
-  bolt: 'M13.3 1.7a1 1 0 0 1 .7 1V8h4.5a1 1 0 0 1 .8 1.6l-8.6 12.1a1 1 0 0 1-1.8-.6V16H4.5a1 1 0 0 1-.8-1.6l8.6-12.1a1 1 0 0 1 1-.6z',
-  robot:
-    'M12 1a1 1 0 0 1 1 1v2h4a4 4 0 0 1 4 4v3h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1V8a4 4 0 0 1 4-4h4V2a1 1 0 0 1 1-1zm-3 8.5a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5zm6 0a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5zM8.5 16a1 1 0 0 0 0 2h7a1 1 0 0 0 0-2h-7z',
-  server:
-    'M4 3h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm2.5 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM4 13h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2zm2.5 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
-  code: 'M20 3H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM9.3 15.7a1 1 0 0 1-1.4 1.4l-3.3-3.3a1 1 0 0 1 0-1.4l3.3-3.3a1 1 0 1 1 1.4 1.4L6.7 13l2.6 2.7zm6.8-5.2-3.3 3.3a1 1 0 0 1-1.4-1.4l2.6-2.6-2.6-2.7a1 1 0 0 1 1.4-1.4l3.3 3.3a1 1 0 0 1 0 1.5z',
-  devices:
-    'M5 2h9a2 2 0 0 1 2 2v3h-2V4H5v16h9v-3h2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm4.5 16.5h0zM18 8h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2zm0 2v9h3v-9h-3z'
-}
+const { title } = Astro.props
 ---
 
-<div class="min-w-[260px] max-w-[340px] flex-1">
-  <div class="mb-6 text-center">
-    <svg
-      class="mx-auto mb-4 h-32 w-32 text-ai-primary-500 dark:text-ai-primary-400"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d={paths[icon]}></path>
-    </svg>
-  </div>
-  <div class="px-4 text-center">
-    <h3 class="mt-0 mb-4 text-xl font-bold dark:text-ai-primary-300">{title}</h3>
-    <p class="mb-0 leading-relaxed text-ai-surface-700 dark:text-ai-surface-300">
-      <slot />
-    </p>
-  </div>
+<div class="reveal border-t border-border pt-6">
+  <h3 class="mt-0 mb-3 text-xl font-semibold tracking-tight text-text-main">
+    {title}
+  </h3>
+  <p class="mb-0 max-w-[68ch] leading-relaxed text-text-secondary">
+    <slot />
+  </p>
 </div>

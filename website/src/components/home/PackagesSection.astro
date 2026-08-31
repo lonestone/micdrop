@@ -1,4 +1,12 @@
 ---
+/**
+ * The package index, as a four cell bento. The grid spans are set here rather
+ * than passed from the content, so the MDX file stays a list of groups: the
+ * first cell is the widest because it is where a reader starts, and the two
+ * provider groups share the second row.
+ */
+import HomeSection from './HomeSection.astro'
+
 interface Props {
   title: string
   intro: string
@@ -7,13 +15,10 @@ interface Props {
 const { title, intro } = Astro.props
 ---
 
-<section class="container mx-auto px-4">
-  <div class="mb-8 text-center">
-    <h2 class="mt-0 mb-4 text-3xl font-bold">{title}</h2>
-    <p class="mb-0 text-lg text-ai-surface-700 dark:text-ai-surface-300">{intro}</p>
-  </div>
-
-  <div class="mb-8 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+<HomeSection title={title} intro={intro} band>
+  <div
+    class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6 lg:[&>*:nth-child(1)]:col-span-4 lg:[&>*:nth-child(2)]:col-span-2 lg:[&>*:nth-child(3)]:col-span-3 lg:[&>*:nth-child(4)]:col-span-3"
+  >
     <slot />
   </div>
-</section>
+</HomeSection>

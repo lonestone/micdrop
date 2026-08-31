@@ -14,7 +14,7 @@ const { videoId, aspect = '16/9', class: className } = Astro.props
 ---
 
 <div
-  class:list={['relative overflow-hidden rounded-2xl cursor-pointer group bg-ai-surface-900', className]}
+  class:list={['relative overflow-hidden rounded-xl cursor-pointer group bg-ai-surface-900', className]}
   style={`aspect-ratio: ${aspect}`}
   data-video-trigger
   data-video-id={videoId}
@@ -35,7 +35,7 @@ const { videoId, aspect = '16/9', class: className } = Astro.props
       <path d="M45 24L27 14v20" fill="white"></path>
     </svg>
   </div>
-  <div class="hidden absolute inset-0 rounded-2xl overflow-hidden" data-video-embed>
+  <div class="hidden absolute inset-0 rounded-xl overflow-hidden" data-video-embed>
     <iframe
       class="w-full h-full"
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

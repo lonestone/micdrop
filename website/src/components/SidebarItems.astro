@@ -3,6 +3,11 @@
  * One level of the docs sidebar, recursing into its groups. Split from
  * `Sidebar` so a group can render its own children.
  *
+ * Nested levels hang off a hairline rail, and the current page paints its own
+ * emerald segment over that rail rather than filling a pill: the marker sits
+ * where the eye already follows the indentation, and the labels keep the same
+ * weight from one level to the next.
+ *
  * A group whose folder holds an `index` page shows its title as a link, next to
  * the chevron that collapses it, the way the previous docs site did.
  */
@@ -16,28 +21,38 @@ interface Props {
 
 const { items, currentPath, depth = 0 } = Astro.props
 
+// Nested links sit on the rail and can override it; top-level ones have no
+// rail to override, so they carry the marker as a background instead.
 const linkClass = (active: boolean) =>
   [
-    'block rounded-md px-3 py-1.5 text-sm no-underline transition-colors hover:no-underline',
+    'block py-1.5 text-sm no-underline transition-colors hover:no-underline',
+    depth > 0
+      ? '-ml-px border-l-2 pl-3'
+      : 'rounded-lg px-3',
     active
-      ? 'bg-ai-primary-500/10 font-medium text-primary'
-      : 'text-text-secondary hover:bg-bg-elevated hover:text-text-main',
+      ? depth > 0
+        ? 'border-primary font-medium text-primary'
+        : 'bg-ai-primary-500/10 font-medium text-primary'
+      : [
+          'text-text-secondary hover:text-text-main',
+          depth > 0 ? 'border-transparent' : 'hover:bg-bg-elevated',
+        ].join(' '),
   ].join(' ')
 
 const groupLabelClass = (active: boolean) =>
   [
-    'flex-1 rounded-md px-2 py-1.5 text-sm font-semibold no-underline transition-colors hover:no-underline',
+    'flex-1 rounded-lg px-2 py-1.5 text-sm font-medium no-underline transition-colors hover:no-underline',
     active
-      ? 'bg-ai-primary-500/10 text-primary'
+      ? 'text-primary'
       : 'text-text-main hover:bg-bg-elevated',
   ].join(' ')
 ---
 
-<ul class:list={['m-0 list-none p-0', depth > 0 && 'ml-2 border-l border-border pl-2']}>
+<ul class:list={['m-0 list-none p-0', depth > 0 && 'ml-3.5 border-l border-border']}>
   {
     items.map((item) =>
       item.type === 'link' ? (
-        <li class="mb-0.5">
+        <li>
           <a
             href={item.href}
             class={linkClass(currentPath === item.href)}
@@ -47,11 +62,11 @@ const groupLabelClass = (active: boolean) =>
           </a>
         </li>
       ) : (
-        <li class="mb-1">
+        <li class="mt-1 mb-2">
           <details open={containsPath(item, currentPath)} class="group/details">
-            <summary class="flex list-none items-center gap-1">
+            <summary class="flex list-none items-center gap-0.5">
               <span
-                class="shrink-0 cursor-pointer rounded p-1 text-text-secondary hover:bg-bg-elevated hover:text-text-main"
+                class="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-main"
                 aria-hidden="true"
               >
                 <svg

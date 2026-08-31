@@ -22,9 +22,12 @@ const sizeClasses = {
   md: 'px-5 py-2.5',
 }
 
+// `cta` carries its own foreground token, so the label keeps a comfortable
+// contrast ratio on the emerald fill in both themes.
 const variantClasses = {
-  primary: 'bg-primary text-white hover:bg-primary-light',
-  secondary: 'bg-bg-elevated text-text-main hover:bg-border',
+  primary: 'bg-cta text-on-cta hover:brightness-110',
+  secondary:
+    'border border-border bg-bg-elevated text-text-main hover:border-text-secondary',
   outline: 'border border-primary text-primary hover:bg-ai-primary-500/10',
 }
 ---
@@ -34,7 +37,7 @@ const variantClasses = {
   target={targetBlank ? '_blank' : undefined}
   rel={targetBlank ? 'noopener noreferrer' : undefined}
   class:list={[
-    'inline-block rounded-lg font-medium whitespace-nowrap no-underline transition-colors hover:no-underline',
+    'inline-block rounded-lg font-medium whitespace-nowrap no-underline transition duration-200 hover:no-underline active:translate-y-px',
     sizeClasses[size],
     variantClasses[variant],
     className,

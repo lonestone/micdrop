@@ -6,40 +6,80 @@ fullWidth: true
 ---
 
 <HomeHeader
-  tagline="Real-time voice conversations with AI, in the browser and on mobile"
-  description="Integrate a powerful voice mode in your webapp or your React Native app with a few lines of code using Micdrop. One server, the same call on every platform. Use provided AI integrations (agents, STT, TTS) or build your own."
-  primaryLabel="Start Building (5 min)"
+  title="Real-time voice conversations with AI"
+  description="Add a full voice mode to your web or React Native app with a few lines of TypeScript."
+  primaryLabel="Start building"
   primaryHref="/docs/getting-started"
   secondaryLabel="View on GitHub"
-  note="Free, open source (MIT). Bring your own API keys, or run the models on your own machine."
 />
 
 <HomeMain>
 
-<ArchitectureSection
-  title="How It Works"
-  intro="Micdrop orchestrates a complete voice conversation pipeline. Watch how voice data flows through each component in real-time, from your microphone to AI responses and back to your speakers."
+<UseCasesSection
+  title="What you can build"
+  intro="Micdrop takes care of the audio loop, so what is left to write is the product around it."
 >
-  <ArchitectureStep title="🎤 Voice Input">
-    Client captures microphone input, VAD detects speech, and audio chunks are
-    sent to the server for processing.
+  <UseCaseItem
+    title="A voice mode in your product"
+    href="/docs/client"
+    linkLabel="Read the docs"
+  />
+  <UseCaseItem
+    title="A React Native app that talks"
+    href="/docs/react-native"
+    linkLabel="Read the docs"
+  />
+  <UseCaseItem
+    title="An agent that acts while it talks"
+    href="/docs/server/tools"
+    linkLabel="Read the docs"
+  />
+  <UseCaseItem
+    title="Forms filled by speaking"
+    href="https://github.com/Godefroy/micdrop-form-demo"
+    linkLabel="See the demo"
+    external
+  />
+  <UseCaseItem
+    title="A 3D world that answers back"
+    href="https://github.com/Godefroy/micdrop/tree/main/examples/demo-world"
+    linkLabel="See the demo"
+    external
+  />
+  <UseCaseItem title="Voice onboarding in a SaaS" />
+  <UseCaseItem title="Coaching and language practice" />
+  <UseCaseItem title="Spoken assessments" />
+  <UseCaseItem
+    title="Whatever else you have in mind"
+    href="/docs/getting-started"
+    linkLabel="Start building"
+  />
+</UseCasesSection>
+
+<ArchitectureSection
+  title="How it works"
+  intro="Audio leaves the microphone, crosses the client and your server, runs through transcription, the agent and speech synthesis, and comes back as a voice."
+>
+  <ArchitectureStep title="Voice input">
+    The client captures the microphone, voice activity detection spots speech,
+    and the audio is streamed to your server.
   </ArchitectureStep>
-  <ArchitectureStep title="🤖 AI Processing">
-    Server orchestrates STT transcription, AI agent reasoning, tool calls, and
-    TTS generation for natural responses.
+  <ArchitectureStep title="AI processing">
+    The server runs the transcription, the agent reasoning and its tool calls,
+    then the speech synthesis of the answer.
   </ArchitectureStep>
-  <ArchitectureStep title="🔊 Voice Output">
-    Generated audio streams back to the client for playback, with full support
-    for interruptions and real-time interaction.
+  <ArchitectureStep title="Voice output">
+    The generated audio streams back and plays, with interruptions handled the
+    moment the user speaks over the assistant.
   </ArchitectureStep>
 </ArchitectureSection>
 
 <PackagesSection
-  title="📦 Packages"
-  intro="Modular architecture with specialized packages for different use cases"
+  title="Packages"
+  intro="One server, the client for the platform you ship on, and the AI providers you choose."
 >
   <PackageGroup
-    title="Core Packages"
+    title="Core packages"
     description="One server, and the client for the platform you are building for"
     variant="core"
   >
@@ -49,7 +89,15 @@ fullWidth: true
   </PackageGroup>
 
 <PackageGroup
-  title="AI Integrations"
+  title="Utilities"
+  description="React hooks that re-render your components as the call state changes, in the browser and in React Native"
+  variant="utility"
+>
+  <PackageLink name="@micdrop/react" href="/docs/client/react-hooks" />
+</PackageGroup>
+
+<PackageGroup
+  title="AI integrations"
   description="Ready-to-use integrations with popular AI providers"
   variant="ai"
 >
@@ -83,76 +131,62 @@ fullWidth: true
   />
 </PackageGroup>
 
-<PackageGroup
-  title="Local Models"
-  description="Transcription and voice that run inside your Node process. The audio stays on the machine."
-  variant="ai"
->
-  <PackageLink
-    name="@micdrop/whisper"
-    href="/docs/ai-integration/provided-integrations/whisper"
-  />
-  <PackageLink
-    name="@micdrop/kokoro"
-    href="/docs/ai-integration/provided-integrations/kokoro"
-  />
-  <PackageLink
-    name="@micdrop/piper"
-    href="/docs/ai-integration/provided-integrations/piper"
-  />
-  <PackageLink
-    name="@micdrop/pocket-tts"
-    href="/docs/ai-integration/provided-integrations/pocket-tts"
-  />
-</PackageGroup>
-
   <PackageGroup
-    title="Utilities"
-    description="React hooks that re-render your components as the call state changes, in the browser and in React Native"
-    variant="utility"
+    title="Local models"
+    description="Transcription and voice that run inside your Node process. The audio stays on the machine."
+    variant="local"
   >
-    <PackageLink name="@micdrop/react" href="/docs/client/react-hooks" />
+    <PackageLink
+      name="@micdrop/whisper"
+      href="/docs/ai-integration/provided-integrations/whisper"
+    />
+    <PackageLink
+      name="@micdrop/kokoro"
+      href="/docs/ai-integration/provided-integrations/kokoro"
+    />
+    <PackageLink
+      name="@micdrop/piper"
+      href="/docs/ai-integration/provided-integrations/piper"
+    />
+    <PackageLink
+      name="@micdrop/pocket-tts"
+      href="/docs/ai-integration/provided-integrations/pocket-tts"
+    />
   </PackageGroup>
 </PackagesSection>
 
-<QuoteSection
-  before="Just call"
-  code="start()"
-  after="and your app has complete voice AI."
-  note="Micdrop handles all the complexity for you."
-/>
-
-<FeaturesSection>
-  <FeatureCard title="Low Latency" icon="bolt">
-    Optimized for minimal delay with streaming audio processing, voice activity
-    detection (VAD), and efficient WebSocket communication for near real-time
-    voice interactions.
+<FeaturesSection
+  title="What Micdrop handles for you"
+  intro="The parts that make a call feel live: latency, interruptions, device permissions and the freedom to change provider."
+>
+  <FeatureCard title="Low latency">
+    Streaming audio processing, voice activity detection (VAD) and an efficient
+    WebSocket transport keep the delay close to real time.
   </FeatureCard>
-  <FeatureCard title="AI Provider Agnostic" icon="robot">
+  <FeatureCard title="AI provider agnostic">
     Choose the best AI providers for your use case. Mix and match OpenAI,
     ElevenLabs, Cartesia, Mistral, Gladia, and more. Build custom integrations
     using our abstract interfaces.
   </FeatureCard>
-  <FeatureCard title="Runs On Your Machine" icon="server">
+  <FeatureCard title="Runs on your machine">
     The local packages run the speech models inside your Node process and the
     agent on Ollama, so the whole conversation works offline, with no API key
     and no audio leaving the machine.
   </FeatureCard>
-  <FeatureCard title="Web and Mobile" icon="devices">
+  <FeatureCard title="Web and mobile">
     The browser and React Native clients are two thin layers over the same
-    engine, so a call behaves the same on a laptop and on a phone, against the
-    server you already run. Microphone permission, audio session and echo
-    cancellation are handled for you.
+    engine, so a call behaves the same on a laptop and on a phone. Microphone
+    permission, audio session and echo cancellation are handled for you.
   </FeatureCard>
-  <FeatureCard title="Developer Experience" icon="code">
-    Built with TypeScript for excellent DX. Comprehensive documentation, React
-    hooks, demo applications, and detailed examples to get you started quickly.
+  <FeatureCard title="Developer experience">
+    Written in TypeScript, with typed events, React hooks, runnable examples and
+    documentation that covers every provider.
   </FeatureCard>
 </FeaturesSection>
 
 <SovereignSection
-  title="Build Sovereign Voice AI"
-  intro="Micdrop is the perfect solution to build sovereign voice AI applications, especially in French. Combine European AI providers to keep your data and infrastructure fully within EU borders."
+  title="Build sovereign voice AI"
+  intro="Combine European AI providers to keep your data and your infrastructure inside EU borders, in French as well as in 90 other languages."
   note="100% open-source stack. Your data stays in the EU, or on your own machine with local models. Full GDPR compliance."
   linkLabel="Learn more about sovereign voice AI"
   linkHref="/docs/ai-integration/sovereign-voice-ai"
@@ -188,10 +222,18 @@ fullWidth: true
 </SovereignSection>
 
 <DemoSection
-  title="🎥 See it in Action"
-  intro="Watch the creator explain Micdrop and voice AI technology"
-  buttonLabel="Watch Demo Video ▶️"
-  buttonHref="https://www.youtube.com/watch?v=fcqVOvESQ8o"
+  title="See it in action"
+  intro="The creator walks through Micdrop and how the pieces of a voice pipeline fit together."
+  videoId="fcqVOvESQ8o"
+/>
+
+<ClosingSection
+  before="Just call"
+  code="Micdrop.start()"
+  after="and your app holds a conversation."
+  note="Free and open source under the MIT license. Bring your own API keys, or run the models on your own machine."
+  ctaLabel="Start building"
+  ctaHref="/docs/getting-started"
 />
 
 <SiteJsonLd />

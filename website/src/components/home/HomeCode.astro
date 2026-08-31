@@ -1,166 +1,204 @@
 ---
 /**
- * The install + first-call snippets shown next to the hero, in two tabs.
- * Both panels are rendered at build time and the script only flips which one is
- * visible, so the code is highlighted server side and readable without JS.
+ * The four surfaces Micdrop runs on, as four tabs: the browser, React, React
+ * Native and the Node server. Every panel is rendered at build time and the
+ * script only changes which one is visible, so the code is highlighted server
+ * side and readable without JavaScript.
+ *
+ * The panels are stacked in a single grid cell rather than shown one at a
+ * time, so the card is always as tall as its tallest snippet and switching
+ * tabs moves nothing on the page.
  */
 // The same highlighter as the documentation, so both use one theme and one
-// configuration (see `expressiveCode` in astro.config.ts). `frame="none"` drops
-// the chrome, since these snippets sit inside the card below.
+// configuration (see `ec.config.mjs`). `frame="none"` drops the chrome, since
+// these snippets sit inside the card below.
 import { Code } from 'astro-expressive-code/components'
 
-const clientInstall = 'npm install @micdrop/client'
+const panels = [
+  {
+    id: 'web',
+    label: 'Web',
+    install: 'npm install @micdrop/web',
+    lang: 'typescript',
+    code: `import { Micdrop } from '@micdrop/web'
 
-const clientCode = `import { Micdrop } from '@micdrop/client'
+Micdrop.start({ url: 'wss://your-server.com' })
 
-// Start a voice conversation
-Micdrop.start({
-  url: 'wss://your-server.com/'
-})
-
-// Listen for events
 Micdrop.on('StateChange', (state) => {
-  console.log('Conversation:', state.conversation)
-  console.log('isAssistantSpeaking:', state.isAssistantSpeaking)
+  console.log(state.conversation)
+  console.log(state.isAssistantSpeaking)
 })
 
 Micdrop.on('EndCall', () => {
   console.log('Call ended by assistant')
-})`
+})
 
-const serverInstall = `npm install @micdrop/server \\
-  @micdrop/openai \\
-  @micdrop/gladia \\
-  @micdrop/elevenlabs`
+// Hang up
+Micdrop.stop()`,
+  },
+  {
+    id: 'react',
+    label: 'React',
+    install: 'npm install @micdrop/web @micdrop/react',
+    lang: 'tsx',
+    code: `import { Micdrop } from '@micdrop/web'
+import { useMicdropState } from '@micdrop/react'
 
-const serverCode = `import { MicdropServer } from '@micdrop/server'
+const start = () => Micdrop.start({ url: 'wss://your-server.com' })
+
+function Call() {
+  const { conversation } = useMicdropState()
+  return (
+    <>
+      <button onClick={start}>Start the call</button>
+      {conversation.map(({ role, content }, i) => (
+        <p key={i}>{role}: {content}</p>
+      ))}
+    </>
+  )
+}`,
+  },
+  {
+    id: 'native',
+    label: 'React Native',
+    install: 'npm install @micdrop/react-native react-native-audio-api',
+    lang: 'tsx',
+    code: `import { Micdrop, useMicdropState } from '@micdrop/react-native'
+import { Button, Text, View } from 'react-native'
+
+const start = () => Micdrop.start({ url: 'wss://your-server.com' })
+
+function Call() {
+  const { conversation } = useMicdropState()
+  return (
+    <View>
+      <Button title="Start the call" onPress={start} />
+      {conversation.map(({ role, content }, i) => (
+        <Text key={i}>{role}: {content}</Text>
+      ))}
+    </View>
+  )
+}`,
+  },
+  {
+    id: 'server',
+    label: 'Server',
+    install:
+      'npm install @micdrop/server @micdrop/openai @micdrop/gladia @micdrop/elevenlabs',
+    lang: 'typescript',
+    code: `import { MicdropServer } from '@micdrop/server'
 import { OpenaiAgent } from '@micdrop/openai'
 import { GladiaSTT } from '@micdrop/gladia'
 import { ElevenLabsTTS } from '@micdrop/elevenlabs'
-import { WebSocketServer } from 'ws'
 
-const wss = new WebSocketServer({ port: 443 })
+const { OPENAI_KEY, GLADIA_KEY, TTS_KEY, VOICE } = process.env
+const systemPrompt = 'You are a helpful assistant'
 
 wss.on('connection', (socket) => {
-  // Handle voice conversation
   new MicdropServer(socket, {
     firstMessage: 'How can I help you today?',
-
-    agent: new OpenaiAgent({
-      apiKey: process.env.OPENAI_API_KEY,
-      systemPrompt: 'You are a helpful assistant'
-    }),
-
-    stt: new GladiaSTT({
-      apiKey: process.env.GLADIA_API_KEY
-    }),
-
-    tts: new ElevenLabsTTS({
-      apiKey: process.env.ELEVENLABS_API_KEY,
-      voiceId: process.env.ELEVENLABS_VOICE_ID
-    })
+    agent: new OpenaiAgent({ apiKey: OPENAI_KEY, systemPrompt }),
+    stt: new GladiaSTT({ apiKey: GLADIA_KEY }),
+    tts: new ElevenLabsTTS({ apiKey: TTS_KEY, voiceId: VOICE }),
   })
-})`
+})`,
+  },
+]
 
-const tabClass =
-  'flex-1 cursor-pointer px-6 py-3 font-mono text-sm font-medium transition-colors'
-
-// Kept in step with the two class sets the script swaps between.
-const activeTab =
-  'tab-active text-ai-primary-800 dark:text-ai-primary-200 bg-ai-surface-100 dark:bg-ai-surface-800'
-const inactiveTab =
-  'tab-inactive text-ai-surface-700 dark:text-ai-surface-400 bg-ai-surface-200 dark:bg-ai-surface-700'
+const tabBase =
+  'cursor-pointer border-b-2 px-3.5 py-2 text-[13px] font-medium whitespace-nowrap transition-colors'
+const tabOn = 'border-primary text-text-main'
+const tabOff = 'border-transparent text-text-secondary hover:text-text-main'
 ---
 
 <div
-  class="shadow-glow flex h-full flex-col rounded-xl bg-ai-surface-100 dark:bg-ai-surface-800"
+  class="overflow-hidden rounded-xl border border-border bg-bg-secondary"
   data-home-code
 >
-  <div class="flex" role="tablist" aria-label="Micdrop quick start">
-    <button
-      type="button"
-      role="tab"
-      id="home-code-tab-client"
-      aria-controls="home-code-panel-client"
-      aria-selected="true"
-      data-tab="client"
-      class:list={[tabClass, activeTab, 'rounded-tl-xl']}
-    >
-      Client (browser)
-    </button>
-    <button
-      type="button"
-      role="tab"
-      id="home-code-tab-server"
-      aria-controls="home-code-panel-server"
-      aria-selected="false"
-      tabindex="-1"
-      data-tab="server"
-      class:list={[tabClass, inactiveTab, 'rounded-tr-xl']}
-    >
-      Server (Node.js)
-    </button>
+  <div
+    class="flex overflow-x-auto border-b border-border bg-bg-elevated"
+    role="tablist"
+    aria-label="Micdrop quick start"
+  >
+    {
+      panels.map((panel, index) => (
+        <button
+          type="button"
+          role="tab"
+          id={`home-code-tab-${panel.id}`}
+          aria-controls={`home-code-panel-${panel.id}`}
+          aria-selected={index === 0 ? 'true' : 'false'}
+          tabindex={index === 0 ? 0 : -1}
+          data-tab={panel.id}
+          class:list={[tabBase, index === 0 ? tabOn : tabOff]}
+        >
+          {panel.label}
+        </button>
+      ))
+    }
   </div>
 
-  <div class="tab-content flex flex-1 flex-col gap-6 rounded-b-xl p-6">
-    <div
-      class="flex flex-col gap-6"
-      role="tabpanel"
-      id="home-code-panel-client"
-      aria-labelledby="home-code-tab-client"
-      data-panel="client"
-    >
-      <Code code={clientInstall} lang="bash" frame="none" />
-      <Code code={clientCode} lang="typescript" frame="none" />
-    </div>
-    <div
-      class="hidden flex-col gap-6"
-      role="tabpanel"
-      id="home-code-panel-server"
-      aria-labelledby="home-code-tab-server"
-      data-panel="server"
-      hidden
-    >
-      <Code code={serverInstall} lang="bash" frame="none" />
-      <Code code={serverCode} lang="typescript" frame="none" />
-    </div>
+  <div class="grid">
+    {
+      panels.map((panel, index) => (
+        <div
+          class:list={[
+            // `min-w-0` keeps a long line inside the card: without it the grid
+            // item grows to its content and the code is clipped rather than
+            // scrolled.
+            'col-start-1 row-start-1 flex min-w-0 flex-col',
+            index > 0 && 'invisible',
+          ]}
+          role="tabpanel"
+          id={`home-code-panel-${panel.id}`}
+          aria-labelledby={`home-code-tab-${panel.id}`}
+          data-panel={panel.id}
+        >
+          {/* The install command is one line of shell, not a sample worth a
+              frame of its own: it sits on a strip under the tabs. */}
+          <div class="overflow-x-auto border-b border-border px-5 py-2.5 font-mono text-sm whitespace-nowrap text-text-secondary [mask-image:linear-gradient(to_right,#000_calc(100%-2.5rem),transparent)]">
+            {panel.install}
+          </div>
+          <div class="min-w-0 px-5 py-3.5">
+            <Code code={panel.code} lang={panel.lang} frame="none" />
+          </div>
+        </div>
+      ))
+    }
   </div>
 </div>
 
 <style>
   /**
-   * The tab bar and the panel below it share a single glowing outline: the
-   * active tab opens into the panel by dropping its bottom edge, the panel
-   * drops its top edge to meet it, and an inactive tab keeps only the line
-   * running underneath. The script swaps `tab-active` and `tab-inactive` on
-   * elements this component renders, so Astro's scoping still matches them.
+   * The snippet is the panel, not a block sitting inside it: it drops its
+   * frame, its rounding and its own padding, so the code starts on the same
+   * left edge as the install command above it and the two read as one column.
+   * Spacing comes from the wrapper. The snippets are cut to the shape of the
+   * call rather than to a working file, which is what lets the type stay large
+   * enough to read from a distance without the card pushing the hero down.
    */
-  .tab-active,
-  .tab-inactive,
-  .tab-content {
-    border: 2px solid;
-    animation: var(--animate-border-glow);
+  [data-home-code] {
+    --ec-codeFontSize: 0.875rem;
+    --ec-codeLineHt: 1.45;
+    --ec-codePadBlk: 0;
+    --ec-codePadInl: 0;
+    --ec-brdWd: 0px;
+    --ec-brdRad: 0px;
+    --ec-codeBg: transparent;
   }
-  .tab-active {
-    border-bottom: none;
-  }
-  .tab-inactive {
-    border-top: none;
-    border-left: none;
-    border-right: none;
-  }
-  .tab-content {
-    border-top: none;
-  }
-
-  /**
-   * The snippets are spaced by the panel's own gap, so they drop the bottom
-   * margin global.css gives code blocks. Everything else (surface, colours,
-   * radius) comes from the shared Expressive Code configuration.
-   */
   [data-home-code] :global(.expressive-code) {
     margin: 0;
     text-align: left;
+  }
+  /**
+   * The frame keeps a drop shadow of its own, which draws the edge of a panel
+   * that is no longer there. Set on the element rather than through
+   * `--ec-frm-frameBoxShdCssVal`: the light theme redefines that variable at a
+   * higher specificity than this block, so the override only held in the dark
+   * one and the shadow came back under the light palette.
+   */
+  [data-home-code] :global(.expressive-code .frame) {
+    box-shadow: none;
   }
 </style>
 
@@ -168,29 +206,26 @@ const inactiveTab =
   const root = document.querySelector('[data-home-code]')
 
   if (root) {
-    const active =
-      'tab-active text-ai-primary-800 dark:text-ai-primary-200 bg-ai-surface-100 dark:bg-ai-surface-800'
-    const inactive =
-      'tab-inactive text-ai-surface-700 dark:text-ai-surface-400 bg-ai-surface-200 dark:bg-ai-surface-700'
+    const on = ['border-primary', 'text-text-main']
+    const off = ['border-transparent', 'text-text-secondary', 'hover:text-text-main']
 
     const tabs = root.querySelectorAll<HTMLButtonElement>('[data-tab]')
     const panels = root.querySelectorAll<HTMLElement>('[data-panel]')
 
     const showTab = (name: string) => {
       tabs.forEach((tab) => {
-        const on = tab.dataset.tab === name
-        tab.setAttribute('aria-selected', String(on))
+        const selected = tab.dataset.tab === name
+        tab.setAttribute('aria-selected', String(selected))
         // Only the selected tab is in the tab order; the arrow keys move
         // between them, as expected of a tablist.
-        tab.tabIndex = on ? 0 : -1
-        tab.classList.remove(...active.split(' '), ...inactive.split(' '))
-        tab.classList.add(...(on ? active : inactive).split(' '))
+        tab.tabIndex = selected ? 0 : -1
+        tab.classList.remove(...on, ...off)
+        tab.classList.add(...(selected ? on : off))
       })
+      // The panels share one grid cell, so hiding is a visibility change: the
+      // card keeps the height of its tallest snippet whichever tab is open.
       panels.forEach((panel) => {
-        const on = panel.dataset.panel === name
-        panel.hidden = !on
-        panel.classList.toggle('hidden', !on)
-        panel.classList.toggle('flex', on)
+        panel.classList.toggle('invisible', panel.dataset.panel !== name)
       })
     }
 
@@ -209,7 +244,6 @@ const inactiveTab =
       next.focus()
     }
 
-    showTab('client')
     tabs.forEach((tab) => {
       tab.addEventListener('click', handleTabClick)
       tab.addEventListener('keydown', handleTabKeyDown)

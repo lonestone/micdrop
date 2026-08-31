@@ -1,5 +1,5 @@
 ---
-/** One European AI provider, linking to its integration page. */
+/** One European AI provider, as a row linking to its integration page. */
 interface Props {
   name: string
   role: string
@@ -9,16 +9,17 @@ interface Props {
 const { name, role, href } = Astro.props
 ---
 
-<a href={href} class="ai-card group text-center hover:no-underline">
-  <h3
-    class="mt-0 mb-1 text-xl font-bold group-hover:text-ai-primary-500 dark:text-ai-primary-300 dark:group-hover:text-ai-primary-400"
+<a
+  href={href}
+  class="group flex flex-col gap-1 border-b border-border py-5 no-underline hover:no-underline sm:flex-row sm:gap-8"
+>
+  <span
+    class="font-semibold text-text-main transition-colors group-hover:text-primary sm:w-36 sm:shrink-0"
   >
     {name}
-  </h3>
-  <p class="mb-2 text-sm font-medium text-ai-primary-600 dark:text-ai-primary-400">
-    {role}
-  </p>
-  <p class="mb-0 text-sm text-ai-surface-700 dark:text-ai-surface-300">
-    <slot />
-  </p>
+  </span>
+  <span class="flex-1">
+    <span class="block font-mono text-xs text-primary">{role}</span>
+    <span class="mt-1 block text-sm text-text-secondary"><slot /></span>
+  </span>
 </a>

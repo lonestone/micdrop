@@ -1,0 +1,41 @@
+---
+/**
+ * The closing line and the same call to action as the hero, on an emerald
+ * band. The one place on the page where centring earns its keep: there is a
+ * single sentence and a single next step.
+ */
+interface Props {
+  before: string
+  code: string
+  after: string
+  note: string
+  ctaLabel: string
+  ctaHref: string
+}
+
+const { before, code, after, note, ctaLabel, ctaHref } = Astro.props
+---
+
+<section
+  class="w-full border-t border-border bg-bg-secondary bg-gradient-to-b from-ai-primary-500/8 to-transparent"
+>
+  <div class="mx-auto w-full max-w-3xl px-6 py-20 text-center md:py-28">
+    <p
+      class="reveal mt-0 mb-8 text-3xl leading-tight font-semibold tracking-tight text-balance text-text-main md:text-4xl"
+    >
+      {before}{' '}<code
+        class="rounded-lg bg-bg-elevated px-2 py-1 font-mono text-2xl text-primary md:text-3xl"
+        >{code}</code
+      >{' '}{after}
+    </p>
+    <a
+      href={ctaHref}
+      class="inline-flex items-center rounded-lg bg-cta px-5 py-2.5 font-medium whitespace-nowrap text-on-cta no-underline transition duration-200 hover:brightness-110 hover:no-underline active:translate-y-px"
+    >
+      {ctaLabel}
+    </a>
+    <p class="mx-auto mt-6 mb-0 max-w-[52ch] text-sm text-text-secondary">
+      {note}
+    </p>
+  </div>
+</section>

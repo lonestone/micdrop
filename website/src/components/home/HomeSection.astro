@@ -1,0 +1,42 @@
+---
+/**
+ * The shell every homepage section shares: one width, one horizontal padding,
+ * one vertical rhythm and one heading block. Sections differ by what they put
+ * below the heading, never by how they sit on the page.
+ *
+ * Props:
+ *   - `band`: drop the section onto the secondary surface, so the run of
+ *     sections reads as alternating bands rather than one long column.
+ *   - `bare`: skip the heading block entirely, for the sections that compose
+ *     their own two-column header.
+ */
+interface Props {
+  title?: string
+  intro?: string
+  band?: boolean
+  bare?: boolean
+  class?: string
+}
+
+const { title, intro, band = false, bare = false, class: className } = Astro.props
+---
+
+<section class:list={['w-full', band && 'border-y border-border bg-bg-secondary']}>
+  <div
+    class:list={['mx-auto w-full max-w-7xl px-6 py-20 md:py-28', className]}
+  >
+    {
+      !bare && title && (
+        <div class="reveal mb-12 md:mb-16">
+          <h2 class="mt-0 mb-4 max-w-[18ch] text-3xl font-semibold tracking-tight text-balance text-text-main md:text-4xl">
+            {title}
+          </h2>
+          {intro && (
+            <p class="mb-0 max-w-[62ch] text-lg text-text-secondary">{intro}</p>
+          )}
+        </div>
+      )
+    }
+    <slot />
+  </div>
+</section>

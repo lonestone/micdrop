@@ -1,9 +1,10 @@
 ---
 /**
- * "How it works": the animated pipeline, followed by the steps passed as
- * children (see `ArchitectureStep`).
+ * "How it works": the animated pipeline, with the three stages it draws listed
+ * underneath (see `ArchitectureStep`).
  */
 import ArchitectureVisualization from './ArchitectureVisualization.astro'
+import HomeSection from './HomeSection.astro'
 
 interface Props {
   title: string
@@ -13,50 +14,12 @@ interface Props {
 const { title, intro } = Astro.props
 ---
 
-<section class="container mx-auto px-4">
-  <div class="mb-12 text-center">
-    <h2 class="mt-0 mb-4 text-3xl font-bold">{title}</h2>
-    <p class="mx-auto max-w-3xl text-lg text-ai-surface-700 dark:text-ai-surface-300">
-      {intro}
-    </p>
+<HomeSection title={title} intro={intro}>
+  <div class="reveal rounded-xl border border-border bg-bg-secondary p-4 sm:p-8">
+    <ArchitectureVisualization />
   </div>
 
-  <ArchitectureVisualization />
-
-  <div
-    class="architecture-steps mx-auto mt-20 flex max-w-6xl flex-col items-center justify-center gap-8 text-center md:flex-row"
-  >
+  <div class="reveal mt-12 grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-10">
     <slot />
   </div>
-</section>
-
-<style>
-  /**
-   * A glowing chevron in the gap before each step but the first. Drawn from CSS
-   * so the steps stay a plain list of components in the MDX file. The children
-   * come through the slot, so they sit outside this component's style scope and
-   * need `:global`.
-   */
-  @media (min-width: 768px) {
-    .architecture-steps {
-      gap: 5rem;
-    }
-    .architecture-steps > :global(*) {
-      position: relative;
-    }
-    .architecture-steps > :global(*:not(:first-child))::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: -4rem;
-      width: 3rem;
-      height: 4rem;
-      transform: translateY(-50%);
-      background-color: #eab308;
-      filter: drop-shadow(0 0 3px #eab308);
-      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 64'%3E%3Cpath d='M16 16L32 32L16 48' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-      mask-repeat: no-repeat;
-      mask-position: center;
-    }
-  }
-</style>
+</HomeSection>

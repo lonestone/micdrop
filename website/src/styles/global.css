@@ -9,6 +9,13 @@
  */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
+/**
+ * Corner radius runs on two steps and no more: `rounded-xl` on every panel,
+ * card, code block and media frame, `rounded-lg` on every control, chip and
+ * button. Inline code keeps the smallest radius, and nothing on the site is
+ * a pill.
+ */
+
 @theme {
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
@@ -29,7 +36,7 @@
   --color-ai-primary-900: #064e3b;
   --color-ai-primary-950: #022c22;
 
-  /* Sky: the secondary accent, on AI provider packages. */
+  /* Sky: reserved for the informational callout, never for decoration. */
   --color-ai-accent-50: #f0f9ff;
   --color-ai-accent-100: #e0f2fe;
   --color-ai-accent-200: #bae6fd;
@@ -55,12 +62,8 @@
   --color-ai-surface-900: #0f172a;
   --color-ai-surface-950: #020617;
 
-  --animate-shadow-glow: shadow-glow 3s ease-in-out infinite;
-  --animate-border-glow: border-glow 2s ease-in-out infinite;
-  --animate-text-glow: text-glow 2s ease-in-out infinite;
-  --animate-fade-in: fade-in 0.6s ease-out;
-  --animate-slide-up: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-listening: listening 1.6s ease-in-out infinite;
+  /* The single easing curve the site animates on. */
+  --ease-rise: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /**
@@ -77,6 +80,9 @@
   --color-primary: var(--primary);
   --color-primary-light: var(--primary-light);
   --color-code-bg: var(--code-bg);
+  /* Solid emerald button, and the ink that stays legible on top of it. */
+  --color-cta: var(--cta);
+  --color-on-cta: var(--on-cta);
 }
 
 :root,
@@ -90,6 +96,8 @@
   --border: #1e293b;
   --primary: #10b981;
   --primary-light: #34d399;
+  --cta: #34d399;
+  --on-cta: #022c22;
   --code-bg: #1e293b;
   --callout-info: rgba(14, 165, 233, 0.12);
   --callout-info-border: #38bdf8;
@@ -111,6 +119,8 @@
   --border: #e2e8f0;
   --primary: #047857;
   --primary-light: #059669;
+  --cta: #10b981;
+  --on-cta: #022c22;
   --code-bg: #f1f5f9;
   --callout-info: #e0f2fe;
   --callout-info-border: #0ea5e9;
@@ -122,159 +132,47 @@
   --callout-danger-border: #ef4444;
 }
 
-@keyframes shadow-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(16, 185, 129, 0.3);
-  }
-}
-
-@keyframes border-glow {
-  0%,
-  100% {
-    border-color: rgba(16, 185, 129, 0.8);
-  }
-  50% {
-    border-color: rgba(16, 185, 129, 0.4);
-  }
-}
-
-@keyframes text-glow {
-  0%,
-  100% {
-    text-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
-  }
-  50% {
-    text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
-  }
-}
-
-@keyframes fade-in {
-  0% {
+/**
+ * The one entrance the site uses: content lifts into place as it arrives.
+ * `animate-rise` plays once on load, `reveal` hands the same keyframes to the
+ * scroll position so a section animates as it enters the viewport, with no
+ * JavaScript and no layout thrash. Both stop at the reduced-motion preference,
+ * and `reveal` needs scroll-driven animations, so anywhere it is unsupported
+ * the content is simply already there.
+ */
+@keyframes rise {
+  from {
     opacity: 0;
-    transform: translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translateY(1.25rem);
   }
 }
 
-@keyframes slide-up {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
+@utility animate-rise {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: rise 0.7s var(--ease-rise) backwards;
   }
 }
 
-/* Pulsing ring on the demo microphone. */
-@keyframes listening {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.55;
-  }
-  50% {
-    transform: scale(1.35);
-    opacity: 0;
+@utility reveal {
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 22%;
+    }
   }
 }
 
-/* Faint grid, used behind the hero. */
+/**
+ * Faint ruled grid, drawn from the theme border so it follows the theme. It is
+ * deliberately unmasked: every caller fades it with its own `mask-image`, since
+ * the hero and a bento cell want the fade running in different directions.
+ */
 @utility bg-grid {
   background-image:
-    linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
-  background-size: 32px 32px;
-}
-
-@utility glass {
-  background-color: rgba(148, 163, 184, 0.05);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-}
-
-@utility text-glow {
-  animation: var(--animate-text-glow);
-}
-
-@utility shadow-glow {
-  animation: var(--animate-shadow-glow);
-}
-
-/* A 2px emerald border that breathes. Used on cards and code panels. */
-@utility border-glow {
-  border-width: 2px;
-  border-style: solid;
-  animation: var(--animate-border-glow);
-}
-
-@layer components {
-  .ai-card {
-    @apply rounded-2xl border-2 border-solid bg-ai-surface-100 p-8 backdrop-blur-sm dark:bg-ai-surface-800;
-    /* Both animations are declared here rather than through two utilities:
-       they share the `animation` property, so one would silently win. */
-    animation: var(--animate-slide-up), var(--animate-border-glow);
-  }
-
-  .ai-button {
-    @apply inline-flex items-center rounded-xl bg-gradient-to-r from-ai-primary-500 to-ai-primary-400 px-8 py-4 font-semibold text-white no-underline shadow-xl transition-all duration-300 dark:from-ai-primary-600 dark:to-ai-primary-500;
-  }
-  .ai-button:hover {
-    color: #fff;
-    text-decoration: none;
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.4);
-  }
-
-  .ai-button-secondary {
-    @apply inline-flex items-center rounded-xl border-2 border-ai-primary-500 bg-transparent px-8 py-4 font-semibold text-ai-primary-700 no-underline transition-all duration-300 dark:text-ai-primary-400;
-  }
-  .ai-button-secondary:hover {
-    color: rgb(16 185 129);
-    background-color: rgba(16, 185, 129, 0.1);
-    border-color: rgb(16 185 129);
-    text-decoration: none;
-    transform: translateY(-2px);
-  }
-
-  /**
-   * Package pills, one gradient per family. Keyed on the group rather than on
-   * the link, so a `<PackageLink>` in MDX carries a name and an href only.
-   */
-  [data-packages] a {
-    @apply inline-flex items-center rounded-full bg-gradient-to-r px-4 py-2 text-sm font-semibold text-white no-underline shadow-lg transition-all duration-300;
-  }
-  [data-packages] a:hover {
-    color: #fff;
-    text-decoration: none;
-    transform: translateY(-2px) scale(1.02);
-  }
-  [data-packages='core'] a {
-    @apply from-ai-primary-500 to-ai-primary-400 dark:from-ai-primary-900 dark:to-ai-primary-800;
-  }
-  [data-packages='core'] a:hover {
-    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
-  }
-  [data-packages='ai'] a {
-    @apply from-ai-accent-500 to-ai-accent-400 dark:from-ai-accent-900 dark:to-ai-accent-800;
-  }
-  [data-packages='ai'] a:hover {
-    box-shadow: 0 8px 25px rgba(14, 165, 233, 0.3);
-  }
-  [data-packages='utility'] a {
-    @apply from-ai-surface-600 to-ai-surface-500 dark:from-ai-surface-700 dark:to-ai-surface-600;
-  }
-  [data-packages='utility'] a:hover {
-    box-shadow: 0 8px 25px rgba(100, 116, 139, 0.3);
-  }
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 72px 72px;
 }
 
 body {
@@ -315,7 +213,7 @@ code.md {
   @apply rounded bg-code-bg px-1.5 py-0.5 text-inherit;
 }
 pre.md {
-  @apply mb-5 overflow-x-auto rounded-lg border border-border p-5 text-sm;
+  @apply mb-5 overflow-x-auto rounded-xl border border-border p-5 text-sm;
 }
 pre.md code {
   @apply bg-transparent p-0 text-sm;
@@ -366,7 +264,7 @@ img.md {
 
 /* Admonitions produced by remark-admonitions.ts */
 .admonition {
-  @apply my-6 rounded-r-lg border-l-4 py-4 pr-4 pl-4;
+  @apply my-6 rounded-r-xl border-l-4 py-4 pr-4 pl-4;
   background-color: var(--callout-info);
   border-left-color: var(--callout-info-border);
 }
@@ -445,7 +343,7 @@ pre.mermaid svg {
   margin: 0;
   padding: 0 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   background: transparent;
   color: var(--text-secondary);
 }
@@ -468,6 +366,31 @@ pre.mermaid svg {
   color: var(--text-secondary);
   padding: 0;
   width: 1.25rem;
+}
+
+/**
+ * In the mobile drawer the search is the reason the panel is open most of the
+ * time, so it takes the full width of its row and keeps its label, which
+ * DocSearch drops on small screens in favour of a bare icon.
+ */
+[data-mobile-menu] .DocSearch-Button {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+}
+[data-mobile-menu] .DocSearch-Button-Container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+[data-mobile-menu] .DocSearch-Button-Placeholder {
+  display: block;
+  padding: 0;
+  font-size: 0.875rem;
+}
+[data-mobile-menu] .DocSearch-Button-Keys {
+  display: none;
 }
 
 ::-webkit-scrollbar {

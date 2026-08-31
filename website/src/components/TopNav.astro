@@ -1,65 +1,80 @@
 ---
-// Top navigation: logo on the left, sections in the middle, search / theme /
-// GitHub on the right, and a burger menu on mobile that mirrors the desktop nav
+// Top navigation: brand on the left, sections next to it, search / theme /
+// repository on the right, and a burger on mobile that mirrors the desktop nav
 // plus the page sidebar into a panel.
+//
+// The bar sits on the page background rather than on its own surface, so the
+// blur actually reads and the grid behind the hero runs under it instead of
+// being cut off. The persistent frames, the docs sidebar and the mobile
+// drawer, keep their own surface: they are structure, not something scrolling
+// content passes behind.
 import config from '../../website.config'
 import { mainNav } from '../navigation'
+import GithubMark from './GithubMark.astro'
 import Logo from './Logo.astro'
 import NavLink from './NavLink.astro'
 import SearchButton from './SearchButton.astro'
 import ThemeToggle from './ThemeToggle.astro'
+
+const controlClass =
+  'flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-main'
 ---
 
 <header
-  class="sticky top-0 z-50 border-b border-border bg-bg-secondary/95 backdrop-blur-sm"
+  class="sticky top-0 z-50 border-b border-border bg-bg-main/75 backdrop-blur-md"
 >
-  <div class="flex h-14 items-center justify-between px-4 sm:px-6">
+  <div class="flex h-14 items-center gap-4 px-4 sm:gap-6 sm:px-6">
     <a
       href="/"
-      class="flex shrink-0 items-center gap-2 no-underline hover:no-underline"
+      class="flex shrink-0 items-center gap-2.5 no-underline hover:no-underline"
     >
-      <Logo class="h-7 w-7" />
-      <span class="text-lg font-bold text-text-main">{config.siteName}</span>
+      <Logo class="text-xl" />
+      <span class="text-[15px] font-semibold tracking-tight text-text-main">
+        {config.siteName}
+      </span>
     </a>
 
-    <div class="hidden flex-1 items-center gap-3 md:ml-6 md:flex lg:ml-10">
-      <nav class="flex min-w-0 gap-1" data-nav>
-        {
-          mainNav.map((link) => (
-            <NavLink path={link.href} match={link.match}>
-              {link.label}
-            </NavLink>
-          ))
-        }
-      </nav>
-      <div class="min-w-0 flex-1"></div>
-      <div class="flex shrink-0 items-center gap-2" data-right>
-        <SearchButton />
-        <ThemeToggle />
-        <a
-          href={config.github}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="rounded-md p-2 text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-main"
-          aria-label="Micdrop on GitHub"
-        >
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path
-              d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.1.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.17 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0C17.3 4.55 18.3 4.87 18.3 4.87c.66 1.65.25 2.87.12 3.17.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.58A11.99 11.99 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"
-            />
-          </svg>
-        </a>
-      </div>
+    <nav class="hidden min-w-0 gap-1 md:flex" data-nav>
+      {
+        mainNav.map((link) => (
+          <NavLink path={link.href} match={link.match}>
+            {link.label}
+          </NavLink>
+        ))
+      }
+    </nav>
+
+    <div class="hidden min-w-0 flex-1 md:block"></div>
+
+    <div class="hidden shrink-0 items-center gap-1 md:flex" data-right>
+      <SearchButton />
+      {/* Separates what searches the site from what configures it. Dropped
+          from the mobile clone, where the row is laid out differently. */}
+      <span
+        class="mx-1.5 h-5 w-px shrink-0 bg-border"
+        data-nav-separator
+        aria-hidden="true"
+      />
+      <ThemeToggle />
+      <a
+        href={config.github}
+        target="_blank"
+        rel="noopener noreferrer"
+        class={controlClass}
+        aria-label="Micdrop on GitHub"
+      >
+        <GithubMark />
+      </a>
     </div>
 
     <button
-      class="-mr-2 cursor-pointer p-2 text-text-secondary md:hidden"
+      class:list={['-mr-1 ml-auto md:hidden', controlClass]}
       data-burger
       aria-label="Menu"
       aria-expanded="false"
     >
       <svg
-        class="block h-6 w-6"
+        class="block h-5 w-5"
         data-icon="open"
         fill="none"
         viewBox="0 0 24 24"
@@ -69,7 +84,7 @@ import ThemeToggle from './ThemeToggle.astro'
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
       </svg>
       <svg
-        class="hidden h-6 w-6"
+        class="hidden h-5 w-5"
         data-icon="close"
         fill="none"
         viewBox="0 0 24 24"
@@ -100,14 +115,16 @@ import ThemeToggle from './ThemeToggle.astro'
   const desktopNav = header.querySelector('[data-nav]') as HTMLElement
   const desktopRight = header.querySelector('[data-right]') as HTMLElement
 
-  const mobileNav = desktopNav.cloneNode(true) as HTMLElement
-  mobileNav.className = 'flex flex-col gap-1 px-6 pt-4'
-  mobileNav.removeAttribute('data-nav')
-  menu.appendChild(mobileNav)
-
+  // The controls come first in the drawer: on a phone, search is what the panel
+  // is opened for most of the time, so it takes the width that is left and the
+  // two settings sit next to it. The desktop separator has nothing to separate
+  // here and goes.
   const mobileRight = desktopRight.cloneNode(true) as HTMLElement
-  mobileRight.className = 'flex items-center gap-3 px-5 pt-3 pb-5'
+  mobileRight.className =
+    'flex items-center gap-2 border-b border-border px-3 py-3'
   mobileRight.removeAttribute('data-right')
+  mobileRight.querySelector('[data-nav-separator]')?.remove()
+  mobileRight.querySelector('[data-docsearch]')?.classList.add('min-w-0', 'flex-1')
   // The clone carries the rendered search button without its listeners; reset
   // it so DocSearch can claim it as a fresh container.
   mobileRight
@@ -116,11 +133,16 @@ import ThemeToggle from './ThemeToggle.astro'
   menu.appendChild(mobileRight)
   mountDocSearch()
 
+  const mobileNav = desktopNav.cloneNode(true) as HTMLElement
+  mobileNav.className = 'flex flex-col gap-0.5 px-3 py-3'
+  mobileNav.removeAttribute('data-nav')
+  menu.appendChild(mobileNav)
+
   // If the page has a docs sidebar, clone it into the mobile menu too.
   const desktopSidebar = document.querySelector('[data-sidebar]') as HTMLElement | null
   if (desktopSidebar) {
     const mobileSidebar = desktopSidebar.cloneNode(true) as HTMLElement
-    mobileSidebar.className = 'border-t border-border px-6 pt-4 pb-8'
+    mobileSidebar.className = 'border-t border-border px-3 pt-3 pb-10'
     mobileSidebar.removeAttribute('data-sidebar')
     // Groups start collapsed in the drawer; open the branch leading to the page.
     mobileSidebar

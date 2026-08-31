@@ -1,8 +1,11 @@
 ---
 /**
- * The European stack pitch. Providers come as `<ProviderCard>` children, the
- * closing line and its link as props.
+ * The European stack pitch. The argument sits on the left and the providers
+ * that make it true on the right, as a plain divided list: they are four
+ * links, not four cards.
  */
+import HomeSection from './HomeSection.astro'
+
 interface Props {
   title: string
   intro: string
@@ -14,24 +17,28 @@ interface Props {
 const { title, intro, note, linkLabel, linkHref } = Astro.props
 ---
 
-<section class="container mx-auto max-w-5xl px-4">
-  <div class="mb-10 text-center">
-    <div class="mb-4 text-4xl">
-      <span title="France">🇫🇷</span>
-      <span title="European Union">🇪🇺</span>
+<HomeSection band bare>
+  <div
+    class="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-20"
+  >
+    <div class="reveal">
+      <h2
+        class="mt-0 mb-4 max-w-[18ch] text-3xl font-semibold tracking-tight text-balance text-text-main md:text-4xl"
+      >
+        {title}
+      </h2>
+      <p class="mb-4 max-w-[52ch] text-lg text-text-secondary">{intro}</p>
+      <p class="mb-8 max-w-[52ch] text-text-secondary">{note}</p>
+      <a
+        href={linkHref}
+        class="inline-flex items-center rounded-lg border border-primary px-5 py-2.5 font-medium whitespace-nowrap text-primary no-underline transition duration-200 hover:bg-ai-primary-500/10 hover:no-underline active:translate-y-px"
+      >
+        {linkLabel}
+      </a>
     </div>
-    <h2 class="mt-0 mb-4 text-3xl font-bold">{title}</h2>
-    <p class="mx-auto mb-0 max-w-2xl text-lg text-ai-surface-700 dark:text-ai-surface-300">
-      {intro}
-    </p>
-  </div>
 
-  <div class="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-    <slot />
+    <div class="reveal border-t border-border">
+      <slot />
+    </div>
   </div>
-
-  <div class="text-center">
-    <p class="mb-4 text-ai-surface-600 dark:text-ai-surface-400">{note}</p>
-    <a href={linkHref} class="ai-button-secondary">{linkLabel}</a>
-  </div>
-</section>
+</HomeSection>

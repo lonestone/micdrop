@@ -13,23 +13,23 @@ const PADDING = 10
 const blocks = [
   {
     id: 'microphone',
-    label: '🎙️ Mic',
+    label: 'Mic',
     x: 100 / 2 + PADDING,
     y: HEIGHT * 0.3,
     width: 100,
     height: 40,
-    color: '#715603',
-    flashColor: '#EAB308',
+    color: '#334155',
+    flashColor: '#f59e0b',
   },
   {
     id: 'speaker',
-    label: '🔈 Speaker',
+    label: 'Speaker',
     x: 100 / 2 + PADDING,
     y: HEIGHT * 0.7,
     width: 100,
     height: 40,
-    color: '#715603',
-    flashColor: '#EAB308',
+    color: '#334155',
+    flashColor: '#f59e0b',
   },
   {
     id: 'client',
@@ -38,7 +38,7 @@ const blocks = [
     y: HEIGHT * 0.5,
     width: 120,
     height: 60,
-    color: '#10B981',
+    color: '#047857',
   },
   {
     id: 'server',
@@ -47,7 +47,7 @@ const blocks = [
     y: HEIGHT * 0.5,
     width: 120,
     height: 60,
-    color: '#10B981',
+    color: '#047857',
   },
   {
     id: 'stt',
@@ -56,8 +56,8 @@ const blocks = [
     y: 40 / 2 + PADDING,
     width: 80,
     height: 40,
-    color: '#133976',
-    flashColor: '#3B82F6',
+    color: '#334155',
+    flashColor: '#0ea5e9',
   },
   {
     id: 'agent',
@@ -66,8 +66,8 @@ const blocks = [
     y: HEIGHT * 0.5,
     width: 80,
     height: 40,
-    color: '#133976',
-    flashColor: '#3B82F6',
+    color: '#334155',
+    flashColor: '#0ea5e9',
   },
   {
     id: 'tts',
@@ -76,8 +76,8 @@ const blocks = [
     y: HEIGHT - 40 / 2 - PADDING,
     width: 80,
     height: 40,
-    color: '#133976',
-    flashColor: '#3B82F6',
+    color: '#334155',
+    flashColor: '#0ea5e9',
   },
 ]
 
@@ -101,7 +101,7 @@ const connections = [
 }))
 ---
 
-<div class="relative w-full overflow-hidden rounded-xl bg-transparent">
+<div class="relative w-full">
   <svg
     class="w-full"
     viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -124,7 +124,7 @@ const connections = [
       connections.map((connection, index) => (
         <path
           d={connection.path}
-          stroke="#6C799051"
+          stroke="#47556966"
           stroke-width="3"
           fill="none"
           opacity="0.8"
@@ -164,21 +164,19 @@ const connections = [
     }
   </svg>
 
-  <div class="absolute bottom-4 left-4 text-xs text-ai-surface-600 dark:text-ai-surface-400">
-    <div class="flex flex-wrap items-center gap-4">
-      <div class="flex items-center gap-1">
-        <span class="h-2 w-2 rounded-full bg-yellow-500"></span>
-        <span>Audio</span>
-      </div>
-      <div class="flex items-center gap-1">
-        <span class="h-2 w-2 rounded-full bg-blue-500"></span>
-        <span>Message chunks</span>
-      </div>
-      <div class="flex items-center gap-1">
-        <span class="h-3 w-3 rounded-full bg-blue-500"></span>
-        <span>Messages</span>
-      </div>
-    </div>
+  <div class="mt-2 flex flex-wrap items-center gap-5 text-xs text-text-secondary">
+    <span class="flex items-center gap-2">
+      <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+      Audio
+    </span>
+    <span class="flex items-center gap-2">
+      <span class="h-2 w-2 rounded-full bg-sky-400"></span>
+      Message chunks
+    </span>
+    <span class="flex items-center gap-2">
+      <span class="h-3 w-3 rounded-full bg-sky-400"></span>
+      Messages
+    </span>
   </div>
 </div>
 
@@ -240,7 +238,7 @@ const connections = [
     const spawn = (connection: number, kind: string) => {
       const circle = document.createElementNS(NS, 'circle')
       circle.setAttribute('r', kind === 'message' ? '12' : '6')
-      circle.setAttribute('fill', kind === 'audio' ? '#EAB308' : '#3B82F6')
+      circle.setAttribute('fill', kind === 'audio' ? '#f59e0b' : '#38bdf8')
       circle.setAttribute('filter', 'url(#particle-glow)')
       layer.appendChild(circle)
       particles.push({ connection, progress: 0, kind, circle })

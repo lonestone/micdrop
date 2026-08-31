@@ -9,14 +9,16 @@ import { defineEcConfig } from 'astro-expressive-code'
  * inline (`themeCssSelector` is a function, so it cannot be serialized).
  */
 export default defineEcConfig({
-  // Same pair of themes the previous docs site used. Expressive Code emits both
-  // and switches on the `data-theme` attribute of `<html>`.
-  themes: ['one-dark-pro', 'one-light'],
+  // A muted, green-leaning pair rather than the loud editor defaults: the code
+  // has to sit inside an emerald and slate page without turning into a rainbow,
+  // in the hero as much as in the documentation. Expressive Code emits both and
+  // switches on the `data-theme` attribute of `<html>`.
+  themes: ['vitesse-dark', 'vitesse-light'],
   themeCssSelector: (theme) => `[data-theme='${theme.type}']`,
   useDarkModeMediaQuery: false,
   defaultProps: { wrap: false },
   styleOverrides: {
-    borderRadius: '0.5rem',
+    borderRadius: '0.75rem',
     codeFontFamily: 'var(--font-mono)',
     uiFontFamily: 'var(--font-sans)',
     // Both themes ship their own surface, warm grey for one-dark-pro, which

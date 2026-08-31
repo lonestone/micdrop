@@ -1,50 +1,75 @@
 ---
+/**
+ * Site footer: the brand and the repository on the left, the four columns of
+ * the navigation next to it, and the licence on a line of its own under a
+ * hairline. It shares the homepage's container width, so the columns line up
+ * with the sections above them.
+ */
 import config from '../../website.config'
 import { footerNav } from '../navigation'
+import GithubMark from './GithubMark.astro'
 import Logo from './Logo.astro'
-
-const linkClass = 'no-underline hover:text-text-main hover:underline transition-colors'
 ---
 
-<footer class="border-t border-border bg-bg-secondary px-6 py-12">
-  <div class="mx-auto max-w-6xl">
-    <div
-      class="grid grid-cols-2 gap-8 text-sm text-text-secondary md:grid-cols-3 lg:grid-cols-5"
-    >
-      <div class="col-span-2 flex flex-col gap-3 md:col-span-1">
+<footer class="border-t border-border bg-bg-secondary">
+  <div class="mx-auto w-full max-w-7xl px-6 py-16">
+    <div class="grid grid-cols-2 gap-x-8 gap-y-10 md:grid-cols-3 lg:grid-cols-6">
+      <div class="col-span-2 flex flex-col items-start gap-4">
         <a
           href="/"
-          class="flex items-center gap-2 no-underline hover:no-underline"
+          class="flex items-center gap-2.5 no-underline hover:no-underline"
         >
           <Logo class="text-xl" />
-          <span class="text-lg font-bold text-text-main">{config.siteName}</span>
+          <span class="text-[15px] font-semibold tracking-tight text-text-main">
+            {config.siteName}
+          </span>
         </a>
-        <p class="mb-0 max-w-xs">{config.tagline}</p>
+        <p class="mb-0 max-w-[32ch] text-sm text-text-secondary">
+          {config.tagline}
+        </p>
+        <a
+          href={config.github}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm text-text-secondary no-underline transition-colors hover:border-text-secondary hover:text-text-main hover:no-underline"
+        >
+          <GithubMark class="h-4 w-4" />
+          View on GitHub
+        </a>
       </div>
 
       {
         footerNav.map((column) => (
-          <div class="flex flex-col gap-2">
-            <span class="font-semibold text-primary">{column.title}</span>
-            {column.links.map((link) => (
-              <a
-                href={link.href}
-                class={linkClass}
-                target={link.external ? '_blank' : undefined}
-                rel={link.external ? 'noopener noreferrer' : undefined}
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
+          <nav class="flex flex-col gap-3" aria-label={column.title}>
+            <span class="text-sm font-semibold text-text-main">{column.title}</span>
+            <span class="flex flex-col gap-2.5">
+              {column.links.map((link) => (
+                <a
+                  href={link.href}
+                  class="text-sm text-text-secondary no-underline transition-colors hover:text-text-main hover:no-underline"
+                  target={link.external ? '_blank' : undefined}
+                  rel={link.external ? 'noopener noreferrer' : undefined}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </span>
+          </nav>
         ))
       }
     </div>
 
-    <p class="mt-10 mb-0 text-sm text-text-secondary">
-      Made by <a href={config.author.href} class="text-text-secondary underline"
-        >{config.author.label}</a
-      > • MIT License
-    </p>
+    <div
+      class="mt-14 flex flex-col gap-2 border-t border-border pt-6 text-sm text-text-secondary sm:flex-row sm:items-center sm:justify-between"
+    >
+      <p class="mb-0">
+        Made by <a
+          href={config.author.href}
+          class="text-text-secondary underline underline-offset-2 transition-colors hover:text-text-main"
+          >{config.author.label}</a
+        >
+      </p>
+      <p class="mb-0">Released under the MIT License</p>
+    </div>
   </div>
 </footer>
