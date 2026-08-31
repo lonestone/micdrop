@@ -24,11 +24,100 @@ For the React hooks:
 npm install @micdrop/react
 ```
 
-The [Silero voice detection](./vad) needs `onnxruntime-react-native` as well,
-which does not autolink on Expo SDK 57 today. The volume detection needs
-nothing.
+The [Silero voice detection](./vad) and [turn detection](./turn-detection) both
+run their model on `onnxruntime-react-native`, which takes a patch before it
+links. The volume detection needs nothing.
 
 Native code is involved, so the app runs from a development build. Expo Go does not include these libraries.
+
+## The ONNX runtime
+
+Skip this section unless you want [Silero](./vad) or
+[turn detection](./turn-detection). Version 1.24.3 does not link on Expo SDK 57
+as it ships, so the install takes a patch. Four steps with pnpm.
+
+**1. Install the runtime.**
+
+```bash
+npx expo install onnxruntime-react-native
+```
+
+**2. Take the patch**, next to your root `package.json`.
+
+```bash
+mkdir -p patches
+curl -o "patches/onnxruntime-react-native@1.24.3.patch" \
+  "https://raw.githubusercontent.com/Godefroy/micdrop/main/patches/onnxruntime-react-native@1.24.3.patch"
+```
+
+**3. Name it** in the root `package.json` of the workspace.
+
+```json
+{
+  "pnpm": {
+    "patchedDependencies": {
+      "onnxruntime-react-native@1.24.3": "patches/onnxruntime-react-native@1.24.3.patch"
+    }
+  }
+}
+```
+
+**4. Install and rebuild.** Metro alone does not pick up a change to a native
+module.
+
+```bash
+pnpm install
+npx expo run:android
+# or
+npx expo run:ios
+```
+
+The [React Native example](https://github.com/Godefroy/micdrop/tree/main/examples/react-native)
+runs on exactly this setup.
+
+### With npm or Yarn
+
+[patch-package](https://github.com/ds300/patch-package) writes the paths inside
+a patch differently, so the file above will not serve. Make the two edits below
+in `node_modules/onnxruntime-react-native`, then record them:
+
+```bash
+npm install --save-dev patch-package
+npx patch-package onnxruntime-react-native
+```
+
+Add `"postinstall": "patch-package"` to your scripts to replay it. Yarn Berry
+has the flow built in, as `yarn patch` and `yarn patch-commit -s`.
+
+### What the patch changes
+
+Two edits, both inside the package, which is why they need a patch rather than
+a setting of your own. Redo them by hand for a newer version of the runtime.
+
+**Delete `unimodule.json`** at the root of the package. Expo autolinking reads
+that file as the mark of an Expo module and leaves the package out of the React
+Native side, so `OnnxruntimePackage` is never registered and the first import
+throws `Cannot read property 'install' of null`. Without the file, autolinking
+treats it as the plain React Native module it is.
+
+**Rewrite line 250 of `android/build.gradle`**, since `VersionNumber` is a class
+Gradle 9 no longer exposes. The minor version it needs is already computed a few
+lines above.
+
+```groovy
+// Before
+if (VersionNumber.parse(REACT_NATIVE_VERSION) < VersionNumber.parse("0.71")) {
+
+// After
+if (REACT_NATIVE_MINOR_VERSION < 71) {
+```
+
+<Callout type="info">
+  Adding the package to `plugins` in `app.json` looks like the answer and is
+  not. Its config plugin adds the Gradle project and the pod, neither of which
+  registers the native module. Bare React Native never meets the first edit,
+  since the community autolinking ignores `unimodule.json`.
+</Callout>
 
 ## Expo
 

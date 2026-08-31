@@ -1,0 +1,107 @@
+---
+title: 'Turn Detection'
+description: 'Hold the turn open while someone hesitates on a phone, and answer as soon as their question lands, with the Smart Turn model running on the native ONNX runtime.'
+order: 25
+---
+
+# Turn Detection
+
+[Voice activity detection](./vad) hears whether someone is speaking right now.
+Closing a turn on it alone means waiting for a fixed amount of silence, and that
+number is a compromise: short enough to answer quickly, long enough to survive a
+pause between two words. On a phone, held in the hand and often used on the
+move, the pauses are longer and the compromise is worse.
+
+Turn detection hears whether the sentence has landed. Pair the two and the wait
+becomes adaptive, short when the speaker is clearly done and long when they are
+visibly searching for a word.
+
+Everything about how it behaves during a call, the deadline on a held turn, the
+threshold, and how to write a detector of your own, is in
+[Turn Detection](/docs/client/turn-detection). The state machine is the same
+code on both platforms. This page covers what is specific to a phone.
+
+## Installation
+
+```bash
+npm install @micdrop/smart-turn
+npx expo install onnxruntime-react-native
+```
+
+The runtime needs a patch before it links, described in
+[Installation](./installation#the-onnx-runtime). The same patch serves the
+Silero voice detection, so an app already running Silero has nothing more to do.
+
+## Usage
+
+```ts
+import { Micdrop } from '@micdrop/react-native'
+import { SmartTurn } from '@micdrop/smart-turn'
+import '@micdrop/smart-turn/react-native'
+
+await Micdrop.start({
+  url: 'wss://example.com/call',
+  vad: 'volume',
+  turnDetector: new SmartTurn(),
+})
+```
+
+Importing `@micdrop/smart-turn/react-native` is what registers the native
+runtime. Without it the model has nowhere to load and the call reports
+`No Smart Turn model`. The import carries the native runtime with it, which is
+why it is separate from the package itself: an app that never asks for turn
+detection never pays for it.
+
+## The model
+
+A phone runs the model on its own processor, with none of the penalty a browser
+pays for WebAssembly, so the quantised checkpoint of eight megabytes is the
+right one and is what this entry point loads by default. It is fetched once on
+the first call and kept for as long as the app runs.
+
+To ship it with the app instead, so the first call costs nothing:
+
+```ts
+import { setSmartTurnOptions } from '@micdrop/smart-turn/react-native'
+
+setSmartTurnOptions({ model: modelPathOnTheDevice })
+```
+
+`model` takes an address to fetch, a file already on the device, or the bytes
+themselves. The full precision checkpoint is exported as `FULL_MODEL_URL`,
+thirty megabytes for a couple of points more accuracy, which a phone rarely
+justifies.
+
+The processor handles the model comfortably on its own, so leave
+`executionProviders` alone unless you have measured that `nnapi` or `coreml`
+helps on the devices you ship to.
+
+## Loading it when you choose
+
+`new SmartTurn()` loads nothing. The model is fetched on the first turn it has
+to judge, which puts a download in the middle of a conversation. Loading it
+ahead of time, while the user is still on the screen before the call, keeps that
+out of the way:
+
+```ts
+const smartTurn = new SmartTurn()
+
+await smartTurn.load()
+
+await Micdrop.start({ url, turnDetector: smartTurn })
+```
+
+A detector can also be attached and removed during a call, which is how the
+[example app](https://github.com/Godefroy/micdrop/tree/main/examples/react-native)
+puts it behind a button:
+
+```ts
+Micdrop.setTurnDetector(enabled ? smartTurn : undefined)
+```
+
+## Running it on the server instead
+
+An old phone, or an app that would rather not carry the ONNX runtime at all, can
+have the model run where the audio already arrives. See
+[Semantic Turn Detection](/docs/server/semantic-turn-detection). The client then
+needs nothing, at the cost of the network round trip the local model avoids.

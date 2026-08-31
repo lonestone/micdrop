@@ -39,12 +39,10 @@ hears the difference between a voice and a noise, where the volume detection
 only hears how loud the room is, which is worth it in a car or in a street.
 
 <Callout type="warning">
-Check that `onnxruntime-react-native` links in your app before counting on this.
-Version 1.24.3 still ships the retired `unimodule.json` marker, which React
-Native autolinking skips and Expo SDK 57 no longer reads, so on that stack the
-native module stays unregistered and the app throws
-`Cannot read property 'install' of null` at startup. Its Gradle file also uses
-`VersionNumber`, removed in Gradle 9. Both need patching or a manual link.
+  `onnxruntime-react-native` 1.24.3 takes a patch before it links on Expo SDK
+  57, otherwise the first import throws `Cannot read property 'install' of
+  null`. The two edits and how to record them are in
+  [Installation](./installation#the-onnx-runtime).
 </Callout>
 
 ```bash
@@ -127,17 +125,4 @@ await Micdrop.start({
 
 Voice detection says whether someone is speaking. Deciding that the turn is over then means waiting for a fixed amount of silence, which cuts people off mid-hesitation or makes every answer late.
 
-[Turn detection](/docs/client/turn-detection) reads the sound of the sentence instead, and the same package runs on a phone through the native ONNX runtime:
-
-```ts
-import { SmartTurn } from '@micdrop/smart-turn'
-import { setSmartTurnOptions } from '@micdrop/smart-turn/react-native'
-
-setSmartTurnOptions({ model: modelPath })
-
-await Micdrop.start({
-  url: 'wss://example.com/call',
-  vad: 'volume',
-  turnDetector: new SmartTurn(),
-})
-```
+[Turn detection](./turn-detection) reads the sound of the sentence instead, and runs on the same native ONNX runtime as Silero.

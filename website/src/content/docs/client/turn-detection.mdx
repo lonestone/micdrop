@@ -43,10 +43,10 @@ Importing `@micdrop/smart-turn/web` is what registers the browser runtime. Witho
 
 ## Options
 
-| Option         | Type            | Description                                                        |
-| -------------- | --------------- | ------------------------------------------------------------------ |
-| `turnDetector` | `TurnDetector`  | Reads the turn and says whether it sounds finished                  |
-| `turnMaxWait`  | `number`        | How long a turn stays open once the detector asked to wait, 4000 ms |
+| Option         | Type           | Description                                                         |
+| -------------- | -------------- | ------------------------------------------------------------------- |
+| `turnDetector` | `TurnDetector` | Reads the turn and says whether it sounds finished                  |
+| `turnMaxWait`  | `number`       | How long a turn stays open once the detector asked to wait, 4000 ms |
 
 `SmartTurn` takes a `threshold` of its own, `0.5` by default, the value the model's own benchmarks are measured at. Anything between 0.3 and 0.7 scores within half a point of it, so move it only to lean deliberately: lower to answer sooner and cut people off more often, higher to let hesitations run longer.
 
@@ -96,26 +96,7 @@ On a browser without WebGPU, weigh the fallback against what your users run. A l
 
 ## On React Native
 
-The same package covers phones, with the native ONNX runtime instead of WebAssembly:
-
-```bash
-npm install @micdrop/smart-turn onnxruntime-react-native
-```
-
-```typescript
-import { SmartTurn } from '@micdrop/smart-turn'
-import { setSmartTurnOptions } from '@micdrop/smart-turn/react-native'
-
-// Ship the checkpoint with the app rather than fetching it on the first call
-setSmartTurnOptions({ model: modelPath })
-
-await Micdrop.start({
-  url: 'ws://localhost:8081',
-  turnDetector: new SmartTurn(),
-})
-```
-
-A phone runs the model on its own processor, with none of the penalty a browser pays for WebAssembly, so the quantised checkpoint of eight megabytes is the right one and is what this entry point loads by default.
+The same package covers phones, with the native ONNX runtime instead of WebAssembly, and the model then runs on the processor with none of the penalty a browser pays. See [Turn Detection on React Native](/docs/react-native/turn-detection).
 
 ## Sharing the runtime with the voice detector
 

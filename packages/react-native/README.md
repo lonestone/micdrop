@@ -142,7 +142,14 @@ The call itself is the very same code, [`@micdrop/client`](../client), which thi
 
 `VolumeVAD` follows the level of the room and costs nothing. It is the default and needs no extra package.
 
-`SileroVAD` runs a small model that hears the difference between a voice and a noise. It needs `onnxruntime-react-native`, which **does not autolink on Expo SDK 57**: version 1.24.3 ships the retired `unimodule.json` marker that React Native autolinking skips and Expo no longer reads, and its Gradle file uses `VersionNumber`, removed in Gradle 9. Both need patching or a manual link before this works.
+`SileroVAD` runs a small model that hears the difference between a voice and a noise. It needs `onnxruntime-react-native`, and version 1.24.3 needs one patch, fixing two things, before it runs on Expo SDK 57:
+
+- Delete its `unimodule.json`. Expo autolinking reads that file, decides the package is an Expo module and leaves it out of the React Native side, so `OnnxruntimePackage` is never registered and the app throws `Cannot read property 'install' of null` on the first import. Without the file, autolinking treats it as the plain React Native module it is.
+- In `android/build.gradle`, replace `VersionNumber.parse(REACT_NATIVE_VERSION) < VersionNumber.parse("0.71")` with `REACT_NATIVE_MINOR_VERSION < 71`. `VersionNumber` is gone from Gradle 9.
+
+Adding the package to `plugins` in `app.json` looks like the answer and is not: its config plugin adds the Gradle project and the pod, neither of which registers the native module. Bare React Native never meets the first half, since the community autolinking ignores `unimodule.json`.
+
+The finished patch lives at [`patches/onnxruntime-react-native@1.24.3.patch`](https://github.com/Godefroy/micdrop/blob/main/patches/onnxruntime-react-native%401.24.3.patch), so with pnpm you drop it in your own `patches/`, name it under `pnpm.patchedDependencies` and install. [Installation](https://micdrop.dev/docs/react-native/installation#the-onnx-runtime) has that and the npm and Yarn route.
 
 ```ts
 import '@micdrop/react-native/silero'

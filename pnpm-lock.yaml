@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  onnxruntime-react-native@1.24.3:
+    hash: yw2mqouhi7dcvb2o44jlu2fhdy
+    path: patches/onnxruntime-react-native@1.24.3.patch
+
 importers:
 
   .:
@@ -275,6 +280,9 @@ importers:
       expo-status-bar:
         specifier: ~57.0.1
         version: 57.0.1(expo@57.0.17)(react-native@0.86.3)(react@19.2.3)
+      onnxruntime-react-native:
+        specifier: 1.24.3
+        version: 1.24.3(patch_hash=yw2mqouhi7dcvb2o44jlu2fhdy)(react-native@0.86.3)(react@19.2.3)
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -599,7 +607,7 @@ importers:
     devDependencies:
       onnxruntime-react-native:
         specifier: ^1.24.3
-        version: 1.24.3(react-native@0.87.1)(react@19.2.3)
+        version: 1.24.3(patch_hash=yw2mqouhi7dcvb2o44jlu2fhdy)(react-native@0.87.1)(react@19.2.3)
       react-native-audio-api:
         specifier: ^0.13.3
         version: 0.13.3(react-native@0.87.1)(react@19.2.3)
@@ -645,7 +653,7 @@ importers:
         version: 1.29.0
       onnxruntime-react-native:
         specifier: ^1.24.3
-        version: 1.24.3(react-native@0.86.3)(react@18.3.1)
+        version: 1.24.3(patch_hash=yw2mqouhi7dcvb2o44jlu2fhdy)(react-native@0.86.3)(react@18.3.1)
       onnxruntime-web:
         specifier: ^1.23.2
         version: 1.29.0
@@ -662,7 +670,7 @@ importers:
   packages/web:
     dependencies:
       '@micdrop/client':
-        specifier: ^3.0.0
+        specifier: ^3.1.0
         version: link:../client
       onnxruntime-web:
         specifier: ^1.23.2
@@ -15365,7 +15373,6 @@ packages:
 
   /onnxruntime-common@1.24.3:
     resolution: {integrity: sha512-GeuPZO6U/LBJXvwdaqHbuUmoXiEdeCjWi/EG7Y1HNnDwJYuk6WUbNXpF6luSUY8yASul3cmUlLGrCCL1ZgVXqA==}
-    dev: true
 
   /onnxruntime-common@1.29.0:
     resolution: {integrity: sha512-/F63/e2VJoaVXGGNu6S5QH7jivBThGO95OzAVXXQ8hTta/b1QxI8udHa6cI3+3mAb5WWIIaMMwfZw01oivjJ1g==}
@@ -15389,7 +15396,7 @@ packages:
       onnxruntime-common: 1.29.0
     dev: true
 
-  /onnxruntime-react-native@1.24.3(react-native@0.86.3)(react@18.3.1):
+  /onnxruntime-react-native@1.24.3(patch_hash=yw2mqouhi7dcvb2o44jlu2fhdy)(react-native@0.86.3)(react@18.3.1):
     resolution: {integrity: sha512-vMxFcnO1YDtT6auv719Zk0Zj/EXujqeEzSjTe5W7A915qaRrM4pRfXlI4ye/ExOwcTan7NYVZ/wpLX+YBU2aWQ==}
     engines: {node: '>=18'}
     peerDependencies:
@@ -15400,8 +15407,22 @@ packages:
       react: 18.3.1
       react-native: 0.86.3(@babel/core@7.29.0)(react@18.3.1)
     dev: true
+    patched: true
 
-  /onnxruntime-react-native@1.24.3(react-native@0.87.1)(react@19.2.3):
+  /onnxruntime-react-native@1.24.3(patch_hash=yw2mqouhi7dcvb2o44jlu2fhdy)(react-native@0.86.3)(react@19.2.3):
+    resolution: {integrity: sha512-vMxFcnO1YDtT6auv719Zk0Zj/EXujqeEzSjTe5W7A915qaRrM4pRfXlI4ye/ExOwcTan7NYVZ/wpLX+YBU2aWQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+    dependencies:
+      onnxruntime-common: 1.24.3
+      react: 19.2.3
+      react-native: 0.86.3(@babel/core@7.29.0)(@react-native/metro-config@0.87.1)(@types/react@19.2.18)(react@19.2.3)
+    dev: false
+    patched: true
+
+  /onnxruntime-react-native@1.24.3(patch_hash=yw2mqouhi7dcvb2o44jlu2fhdy)(react-native@0.87.1)(react@19.2.3):
     resolution: {integrity: sha512-vMxFcnO1YDtT6auv719Zk0Zj/EXujqeEzSjTe5W7A915qaRrM4pRfXlI4ye/ExOwcTan7NYVZ/wpLX+YBU2aWQ==}
     engines: {node: '>=18'}
     peerDependencies:
@@ -15412,6 +15433,7 @@ packages:
       react: 19.2.3
       react-native: 0.87.1(@babel/core@7.29.0)(react@19.2.3)
     dev: true
+    patched: true
 
   /onnxruntime-web@1.22.0-dev.20250409-89f8206ba4:
     resolution: {integrity: sha512-0uS76OPgH0hWCPrFKlL8kYVV7ckM7t/36HfbgoFw6Nd0CZVVbQC4PkrR8mBX8LtNUFZO25IQBqV2Hx2ho3FlbQ==}

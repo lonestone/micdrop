@@ -23,6 +23,7 @@
     "expo-constants": "~57.0.15",
     "expo-dev-client": "~57.0.16",
     "expo-status-bar": "~57.0.1",
+    "onnxruntime-react-native": "1.24.3",
     "react": "19.2.3",
     "react-native": "0.86.3",
     "react-native-audio-api": "^0.13.3",

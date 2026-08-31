@@ -17,10 +17,9 @@ import {
   MicdropState,
   SPEAKER_DEVICE,
 } from '@micdrop/react-native'
-// TEMPORAIRE : onnxruntime-react-native ne configure pas sous Gradle 9
-// import '@micdrop/react-native/silero'
-// import '@micdrop/smart-turn/react-native'
+import '@micdrop/react-native/silero'
 import { SmartTurn } from '@micdrop/smart-turn'
+import '@micdrop/smart-turn/react-native'
 import { StatusBar } from 'expo-status-bar'
 import React, { useCallback, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
@@ -39,7 +38,7 @@ import { colors } from './src/theme'
 /**
  * Hears whether a sentence has landed, so a pause in the middle of a thought
  * keeps the floor. It holds no native code of its own: the model runs on the
- * ONNX runtime that the commented import above brings in.
+ * ONNX runtime that the import above brings in.
  * https://micdrop.dev/docs/client/turn-detection
  */
 const smartTurn = new SmartTurn()
