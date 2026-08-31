@@ -46,6 +46,20 @@ Run (watch) a specific package
 pnpm --filter <package-name> dev
 ```
 
+### Ports
+
+Each example owns its own pair of ports, so several of them can run at the same
+time without fighting over one.
+
+| Example        | Client                   | Server |
+| -------------- | ------------------------ | ------ |
+| `advanced`     | 8080                     | 8081   |
+| `demo-world`   | 8082                     | 8083   |
+| `basic`        | 8084                     | 8085   |
+| `react-native` | 8086 (the Metro bundler) | 8087   |
+
+The website runs on 4321, the Astro default.
+
 ### Tests
 
 `@micdrop/client` has a test suite that runs in Node, from the audio helpers up

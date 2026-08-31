@@ -8,9 +8,9 @@
   "scripts": {
     "dev": "concurrently -n server,app -c blue,green \"pnpm dev:server\" \"pnpm dev:app\"",
     "dev:server": "tsx watch --env-file=server/.env server/src/server.ts",
-    "dev:app": "expo start --dev-client",
-    "ios": "expo run:ios",
-    "android": "expo run:android",
+    "dev:app": "expo start --dev-client --port 8086",
+    "ios": "expo run:ios --port 8086",
+    "android": "expo run:android --port 8086",
     "prebuild": "expo prebuild",
     "bundle": "expo export --platform ios --output-dir .expo-export",
     "typecheck": "tsc --noEmit"

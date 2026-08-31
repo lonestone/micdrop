@@ -29,7 +29,7 @@ Then add your OpenAI key, which belongs to the server:
 cp server/.env.example server/.env
 ```
 
-Start the server and the Metro bundler:
+Start the server and the Metro bundler, which listen on 8087 and 8086:
 
 ```bash
 pnpm dev
