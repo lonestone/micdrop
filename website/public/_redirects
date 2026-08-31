@@ -1,11 +1,6 @@
 # Netlify redirects. One-to-one rules live in src/redirects.ts; this file is
 # for the ones Astro cannot emit as a static HTML page.
 
-# The previous site published its docs index pages with a trailing slash.
-/docs/client/          /docs/client          301!
-/docs/server/          /docs/server          301!
-/docs/ai-integration/  /docs/ai-integration  301!
-
 # Astro splits the sitemap into an index plus one file; the previous site
 # served a single sitemap.xml.
 /sitemap.xml  /sitemap-index.xml  301
