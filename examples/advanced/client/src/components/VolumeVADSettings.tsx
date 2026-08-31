@@ -1,7 +1,7 @@
 import { VolumeVAD, VolumeVADOptions } from '@micdrop/web'
 import { useState } from 'react'
 import ResetButton from './ResetButton'
-import SliderRow from './SliderRow'
+import Slider from './ui/Slider'
 
 /** What VolumeVAD counts as speech, and how long it waits before giving up */
 export default function VolumeVADSettings({ vad }: { vad: VolumeVAD }) {
@@ -19,7 +19,7 @@ export default function VolumeVADSettings({ vad }: { vad: VolumeVAD }) {
 
   return (
     <>
-      <SliderRow
+      <Slider
         label="History"
         help="Level readings, one every 100 ms, that must all be quiet before the turn ends"
         value={options.history}
@@ -28,7 +28,7 @@ export default function VolumeVADSettings({ vad }: { vad: VolumeVAD }) {
         step={1}
         onChange={(value) => setOption('history', value)}
       />
-      <SliderRow
+      <Slider
         label="Threshold"
         help="Level above which the audio counts as speech"
         value={options.threshold}

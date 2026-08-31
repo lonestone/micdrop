@@ -1,5 +1,6 @@
 import { useMicdropState } from '@micdrop/react'
 import { useProviders } from '../providers'
+import Group from './ui/Group'
 
 /**
  * The system prompt given to the agent, written for the next call.
@@ -17,19 +18,22 @@ export default function PromptSettings() {
   if (prompt === undefined) return null
 
   return (
-    <div className="flex items-start gap-3">
-      <span className="w-32 shrink-0 pt-0.5 text-sm text-gray-600">
-        System prompt
-      </span>
+    <Group
+      title="System prompt"
+      description="What the assistant is told before the first word is said."
+      className="border-t border-line pt-4"
+    >
       <textarea
-        className="min-w-0 flex-1 rounded-md border border-gray-300 px-2 py-1 font-mono text-xs shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 disabled:bg-gray-100 disabled:text-gray-400"
-        rows={8}
+        className="w-full resize-y rounded-lg border border-line bg-inset px-3 py-2
+          font-mono text-xs leading-relaxed text-main transition-colors duration-150
+          ease-rise hover:border-line-strong disabled:cursor-not-allowed disabled:text-faint"
+        rows={7}
         spellCheck={false}
         value={prompt}
         disabled={isStarted}
         aria-label="System prompt"
         onChange={(event) => writePrompt(event.target.value)}
       />
-    </div>
+    </Group>
   )
 }

@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { FaChevronDown } from 'react-icons/fa'
+import { ReactNode } from 'react'
+import Panel from './ui/Panel'
+import Switch from './ui/Switch'
 
 interface DetectorCardProps {
   name: string
@@ -11,8 +12,8 @@ interface DetectorCardProps {
   /** Something else is doing this job, so it cannot be switched on */
   lockedOff?: boolean
   note?: string
-  status?: React.ReactNode
-  children: React.ReactNode
+  status?: ReactNode
+  children: ReactNode
 }
 
 /**
@@ -20,6 +21,8 @@ interface DetectorCardProps {
  *
  * The header carries what is worth seeing without opening anything: whether
  * the detector is on, what it is doing right now, and what it just answered.
+ * The switch sits outside the fold button, so neither control swallows the
+ * other's clicks.
  */
 export default function DetectorCard({
   name,
@@ -32,41 +35,32 @@ export default function DetectorCard({
   status,
   children,
 }: DetectorCardProps) {
-  const [isOpen, setIsOpen] = useState(false)
   return (
-    <div
-      className={`border border-gray-200 shadow-sm rounded-lg ${
-        enabled ? '' : 'opacity-60'
-      }`}
-    >
-      <div
-        className="flex items-center gap-2 p-4 cursor-pointer"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-200 disabled:opacity-50"
+    <Panel
+      collapsible
+      title={name}
+      description={description}
+      note={note}
+      muted={!enabled}
+      aside={status}
+      lead={
+        <Switch
+          hideLabel
+          label={`Turn ${name} ${enabled ? 'off' : 'on'}`}
           checked={enabled}
           disabled={lockedOn || lockedOff}
-          title={
+          reason={
             lockedOn
               ? 'Keep at least one voice detector on'
               : lockedOff
                 ? 'The server is doing this job'
-                : `Turn ${name} ${enabled ? 'off' : 'on'}`
+                : undefined
           }
-          onClick={(event) => event.stopPropagation()}
-          onChange={(event) => onToggle(event.target.checked)}
+          onChange={onToggle}
         />
-        <div className="flex-1">
-          <strong>{name}</strong>
-          <span className="ml-3 text-sm text-gray-600">{description}</span>
-          {note && <span className="ml-3 text-sm text-blue-500">{note}</span>}
-        </div>
-        {status}
-        <FaChevronDown className={`w-4 h-4 ${isOpen ? 'rotate-180' : ''}`} />
-      </div>
-      {isOpen && <div className="flex flex-col gap-4 p-4 pt-2">{children}</div>}
-    </div>
+      }
+    >
+      {children}
+    </Panel>
   )
 }

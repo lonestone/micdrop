@@ -7,37 +7,37 @@ import {
   Selection,
   useProviders,
 } from '../providers'
-import AgentOptions from './AgentOptions'
-import PromptSettings from './PromptSettings'
-
-const SELECT_CLASS =
-  'form-select min-w-0 rounded-md border-gray-300 shadow-sm focus:border-blue-300 ' +
-  'focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-1 text-sm disabled:bg-gray-100'
+import Field from './ui/Field'
+import Select from './ui/Select'
 
 /**
- * The three lines at the top of the demo, one per part of a call.
+ * What runs the call: the language it is held in, and one provider per part.
  *
  * The catalog comes from the server, so a provider whose API key is missing,
  * or whose local model is not installed, appears greyed out rather than
  * failing once the call has started.
  */
-export default function ProvidersSettings() {
+export default function ProvidersFields() {
   const { isStarted } = useMicdropState()
   const { catalog, error, lang, selectLang, selections, select } =
     useProviders()
 
-  // The agent prompts are independent of the catalog, so a server that cannot
-  // be read loses the provider rows and keeps the checkboxes.
   return (
-    <div className="flex flex-col gap-2">
-      {error && <div className="text-sm text-red-500">{error}</div>}
-      {!error && !catalog && (
-        <div className="text-sm text-gray-500">Loading providers…</div>
+    <div className="flex flex-col gap-3">
+      {error && (
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs leading-relaxed text-danger">
+          {error}
+        </p>
       )}
-      <div className="flex items-center gap-3">
-        <label className="w-32 shrink-0 text-sm text-gray-600">Language</label>
-        <select
-          className={`${SELECT_CLASS} w-44 shrink-0`}
+      {!error && !catalog && (
+        <p className="text-xs text-faint">
+          Reading the catalog from the server…
+        </p>
+      )}
+
+      <Field label="Language">
+        <Select
+          className="w-full"
           value={lang}
           disabled={isStarted}
           aria-label="Language"
@@ -48,8 +48,9 @@ export default function ProvidersSettings() {
               {option.label}
             </option>
           ))}
-        </select>
-      </div>
+        </Select>
+      </Field>
+
       {catalog &&
         PARTS.map((part) => (
           <PartRow
@@ -61,13 +62,6 @@ export default function ProvidersSettings() {
             onChange={(selection) => select(part, selection)}
           />
         ))}
-      <AgentOptions />
-      <PromptSettings />
-      {isStarted && (
-        <p className="text-xs text-gray-500">
-          Stop the call to change these settings.
-        </p>
-      )}
     </div>
   )
 }
@@ -80,6 +74,7 @@ interface PartRowProps {
   onChange: (selection: Selection) => void
 }
 
+/** One part of the call, and the model the chosen provider runs it with */
 function PartRow({
   label,
   providers,
@@ -88,6 +83,7 @@ function PartRow({
   onChange,
 }: PartRowProps) {
   const provider = providers.find((item) => item.id === selection.provider)
+  const hasModels = provider && provider.models.length > 0
 
   const handleProvider = (event: React.ChangeEvent<HTMLSelectElement>) => {
     onChange({ provider: event.target.value })
@@ -98,10 +94,9 @@ function PartRow({
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <label className="w-32 shrink-0 text-sm text-gray-600">{label}</label>
-      <select
-        className={`${SELECT_CLASS} w-44 shrink-0`}
+    <Field label={label}>
+      <Select
+        className="w-full"
         value={selection.provider ?? ''}
         disabled={disabled}
         aria-label={label}
@@ -123,11 +118,11 @@ function PartRow({
             {item.available ? '' : ' (unavailable)'}
           </option>
         ))}
-      </select>
+      </Select>
 
-      {provider && provider.models.length > 0 && (
-        <select
-          className={`${SELECT_CLASS} flex-1 max-w-64`}
+      {hasModels && (
+        <Select
+          className="w-full"
           value={selection.model ?? ''}
           disabled={disabled}
           aria-label={`${label} model`}
@@ -139,8 +134,8 @@ function PartRow({
               {model.language ? ` (${model.language})` : ''}
             </option>
           ))}
-        </select>
+        </Select>
       )}
-    </div>
+    </Field>
   )
 }

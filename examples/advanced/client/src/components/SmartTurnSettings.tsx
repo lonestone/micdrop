@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { smartTurn, useDetection } from '../detection'
 import ResetButton from './ResetButton'
-import SliderRow from './SliderRow'
+import Slider from './ui/Slider'
 
 /**
  * What the turn detection model answers, and what happens when it is wrong.
@@ -26,7 +26,7 @@ export default function SmartTurnSettings() {
 
   return (
     <>
-      <SliderRow
+      <Slider
         label="Threshold"
         help="Above this, the sentence counts as finished"
         value={threshold}
@@ -35,7 +35,7 @@ export default function SmartTurnSettings() {
         step={0.01}
         onChange={setOption}
       />
-      <SliderRow
+      <Slider
         label="Max wait"
         help="A held turn ends after this, so a wrong verdict never leaves the call hanging"
         value={maxWait}
@@ -46,17 +46,34 @@ export default function SmartTurnSettings() {
         onChange={setMaxWait}
       />
       <ResetButton onClick={resetOptions} />
+
       {lastResult && (
-        <div className="text-sm text-gray-600">
-          Last sentence read as{' '}
-          <strong>{lastResult.complete ? 'finished' : 'unfinished'}</strong> at{' '}
-          {Math.round(lastResult.probability * 100)}% confidence, answered in{' '}
-          {lastResult.duration} ms
+        <div className="flex flex-col gap-2 rounded-lg bg-inset px-3 py-2.5">
+          <p className="text-xs text-faint">Last verdict</p>
+          <p className="text-sm leading-relaxed text-main">
+            The sentence sounded{' '}
+            <strong
+              className={`font-semibold ${
+                lastResult.complete ? 'text-accent-ink' : 'text-warn'
+              }`}
+            >
+              {lastResult.complete ? 'finished' : 'unfinished'}
+            </strong>{' '}
+            at{' '}
+            <span className="font-mono tabular-nums">
+              {Math.round(lastResult.probability * 100)}%
+            </span>{' '}
+            confidence, answered in{' '}
+            <span className="font-mono tabular-nums">
+              {lastResult.duration} ms
+            </span>
+            .
+          </p>
           {!lastResult.complete && (
-            <>
-              . The agent answers anyway if nothing more comes within{' '}
-              {(maxWait / 1000).toFixed(1)} s
-            </>
+            <p className="text-xs leading-relaxed text-faint">
+              The agent answers anyway if nothing more comes within{' '}
+              {(maxWait / 1000).toFixed(1)} s.
+            </p>
           )}
         </div>
       )}

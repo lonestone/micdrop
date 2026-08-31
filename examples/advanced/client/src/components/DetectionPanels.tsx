@@ -2,7 +2,7 @@ import { SMART_TURN_HELP, useDetection, VAD_INFO, vads } from '../detection'
 import DetectorCard from './DetectorCard'
 import SileroVADSettings from './SileroVADSettings'
 import SmartTurnSettings from './SmartTurnSettings'
-import VADStatusCircle from './VADStatusCircle'
+import VADIndicator from './VADIndicator'
 import VolumeVADSettings from './VolumeVADSettings'
 
 /**
@@ -12,11 +12,7 @@ import VolumeVADSettings from './VolumeVADSettings'
  * turn is over, so the two answer different questions and stack rather than
  * replace each other.
  */
-export default function DetectionSettings({
-  className,
-}: {
-  className?: string
-}) {
+export default function DetectionPanels() {
   const {
     vads: enabled,
     smartTurn: turnEnabled,
@@ -30,7 +26,7 @@ export default function DetectionSettings({
   const lastOneOn = VAD_INFO.filter((info) => enabled[info.name]).length === 1
 
   return (
-    <div className={`flex flex-col gap-2 ${className ?? ''}`}>
+    <>
       {VAD_INFO.map((info) => (
         <DetectorCard
           key={info.name}
@@ -42,7 +38,7 @@ export default function DetectionSettings({
           onToggle={(next) => toggleVAD(info.name, next)}
           status={
             enabled[info.name] ? (
-              <VADStatusCircle vad={vads[info.name]} />
+              <VADIndicator vad={vads[info.name]} />
             ) : undefined
           }
         >
@@ -63,16 +59,20 @@ export default function DetectionSettings({
         onToggle={toggleSmartTurn}
         note={
           serverTurnDetection
-            ? 'Handled by the server'
+            ? 'On the server'
             : loading
-              ? 'Loading the model…'
+              ? 'Loading the model'
               : undefined
         }
       >
         <SmartTurnSettings />
       </DetectorCard>
 
-      {error && <div className="text-sm text-red-500">{error}</div>}
-    </div>
+      {error && (
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs leading-relaxed text-danger">
+          {error}
+        </p>
+      )}
+    </>
   )
 }

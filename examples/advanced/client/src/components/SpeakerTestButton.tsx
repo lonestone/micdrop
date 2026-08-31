@@ -1,11 +1,11 @@
 import { Speaker } from '@micdrop/web'
 import { useMicdropState } from '@micdrop/react'
-import React, { useRef, useState } from 'react'
-import { FaPlay, FaStop } from 'react-icons/fa'
+import { useRef, useState } from 'react'
+import { PiPlayFill, PiStopFill } from 'react-icons/pi'
+import Button from './ui/Button'
 
-interface SpeakerTestButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
-
-export default function SpeakerTestButton(props: SpeakerTestButtonProps) {
+/** Plays a recorded answer through the chosen speaker, to hear it before a call */
+export default function SpeakerTestButton() {
   const { isAssistantSpeaking } = useMicdropState()
   const [loading, setLoading] = useState(false)
   const timeoutRef = useRef<number | undefined>()
@@ -42,29 +42,20 @@ export default function SpeakerTestButton(props: SpeakerTestButtonProps) {
     playNextChunk()
   }
 
-  const { className, disabled, ...restProps } = props
-
   return (
-    <button
-      type="button"
+    <Button
+      size="sm"
+      disabled={loading}
+      icon={
+        isAssistantSpeaking ? (
+          <PiStopFill aria-hidden="true" className="h-3 w-3" />
+        ) : (
+          <PiPlayFill aria-hidden="true" className="h-3 w-3" />
+        )
+      }
       onClick={handleClick}
-      disabled={loading || disabled}
-      className={`
-        inline-flex items-center px-4 py-1
-        border-2 border-blue-500 text-blue-500 rounded-md
-        hover:bg-blue-50
-        disabled:opacity-50 disabled:cursor-not-allowed
-        transition-colors duration-200
-        ${className || ''}
-      `}
-      {...restProps}
     >
-      {isAssistantSpeaking ? (
-        <FaStop size={14} className="mr-2" />
-      ) : (
-        <FaPlay size={14} className="mr-2" />
-      )}
       Test
-    </button>
+    </Button>
   )
 }
