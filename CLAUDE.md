@@ -149,8 +149,10 @@ over Fragment slots for simple strings; reserve slots for rich content.
   Stale renders survive otherwise, which hides changes to the remark plugins.
 - When you remove an import, check whether the source file is still referenced
   anywhere. If not, delete it (and follow its own imports).
-- The dev server is assumed to be already running; don't start a fresh
-  `pnpm dev` unless asked.
+- The astro dev server normally already runs on the port set in
+  `astro.config.ts` (`server.port`). Use that port only. If nothing responds
+  there, start it; if it responds but is broken, kill it and restart it. Never
+  start it on another port.
 - `astrocms.json` drives the bundled CMS UI. Keep `contentDir`, `contentConfig`,
   `assetsDir` and `componentsDir` in sync if those paths move.
 
