@@ -189,6 +189,9 @@ The [getting started guide](/docs/getting-started) gets a browser talking to a N
   <FaqItem question="Can I use the Realtime API only for transcription?">
     Yes. A transcription session streams text back without generating a spoken answer, which is what a speech-to-text stage needs. Micdrop's `OpenaiSTT` works this way: it opens a WebSocket to the realtime endpoint, streams the browser's audio into it, and passes the transcripts to whichever agent you configured.
   </FaqItem>
+  <FaqItem question="Is there an OpenAI SDK for TypeScript?">
+    Yes. OpenAI publishes an official Node and TypeScript package on npm, with generated types for the API. `@micdrop/openai` builds `OpenaiAgent` and `OpenaiTTS` on that package. The SDK stops at the model. The microphone, the playback, the interruptions and the turn-taking are still yours to write, and the [OpenAI integration page](/docs/ai-integration/provided-integrations/openai) shows what Micdrop takes off that list.
+  </FaqItem>
   <FaqItem question="Is the Realtime API available on Azure?">
     Yes, Azure exposes the realtime models through its own resource and deployment model, over WebRTC and WebSocket. Authentication and endpoints follow Azure conventions, so the calling code differs from OpenAI's own API, and the billing and the regional controls come from your Azure subscription.
   </FaqItem>
