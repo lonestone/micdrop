@@ -43,6 +43,7 @@ pointed at Ollama or any local server speaking the OpenAI protocol.
 ### Demo Applications
 
 - [`basic`](./examples/basic/README.md) - The smallest possible app, one button in the browser and a WebSocket server, with OpenAI for the agent, the transcription and the voice. Start here.
+- [`dictation`](./examples/dictation/README.md) - A call with ears only, no agent and no voice, filling a text area as you speak, in the language of the browser. Shows what a server looks like without an agent, and how a call parameter reaches it.
 - [`advanced`](./examples/advanced/README.md) - Full featured demo, a React client and a Fastify server in one folder, with every provider wired in and picked from the browser.
 - [`react-native`](./examples/react-native/README.md) - Voice call on a phone, an Expo app with the conversation, level meters and call controls, and the Node server it talks to.
 - [`demo-world`](./examples/demo-world/README.md) - Immersive 3D demo where a newborn planet talks to you and reshapes itself as the conversation goes. Client and server in one folder, with a test page that runs the whole interface without a call.

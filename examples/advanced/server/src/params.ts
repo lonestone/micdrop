@@ -34,7 +34,7 @@ export const callParamsSchema = z.object({
       say_something_later: z.boolean().optional(),
     })
     .optional(),
-  // Weigh the turns here rather than in the browser, ticked in the client
+  // Run Smart Turn here rather than in the browser, ticked in the client
   smartTurn: z.boolean().optional(),
   // System prompt written in the client. Absent, or empty, means the default
   // one the server exposes in its catalog.

@@ -59,13 +59,12 @@ const turnDetector: TurnDetector = {
   },
 }
 
-
 const STORAGE_KEY = 'micdrop-demo-detection'
 
 interface State {
   vads: Record<VADName, boolean>
   smartTurn: boolean
-  /** The server weighs the turns instead of the browser */
+  /** Smart Turn runs on the server instead of the browser */
   serverTurnDetection: boolean
   /** How long a held turn waits before giving up on the rest of the sentence */
   maxWait: number
@@ -86,10 +85,9 @@ let state: State = {
 
 const listeners = new Set<() => void>()
 
-function readStored<K extends 'vads' | 'smartTurn' | 'maxWait' | 'serverTurnDetection'>(
-  key: K,
-  fallback: State[K]
-): State[K] {
+function readStored<
+  K extends 'vads' | 'smartTurn' | 'maxWait' | 'serverTurnDetection',
+>(key: K, fallback: State[K]): State[K] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return fallback
@@ -146,7 +144,9 @@ export function getVADConfig(): VADConfig {
  * so running both would pay the round trip for nothing.
  */
 export function getTurnDetector(): TurnDetector | undefined {
-  return state.smartTurn && !state.serverTurnDetection ? turnDetector : undefined
+  return state.smartTurn && !state.serverTurnDetection
+    ? turnDetector
+    : undefined
 }
 
 /** Whether the server is asked to weigh the turns for this call */

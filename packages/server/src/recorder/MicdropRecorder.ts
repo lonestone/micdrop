@@ -34,12 +34,7 @@ export class MicdropRecorder extends EventEmitter<MicdropRecorderEvents> {
     this.server.on('UserAudio', this.onUserAudio)
     this.server.on('AssistantAudio', this.onAssistantAudio)
     this.server.on('End', this.onEnd)
-
-    // Listen to message events from agent
-    const agent = this.server.config?.agent
-    if (agent) {
-      agent.on('Message', this.onMessage)
-    }
+    this.server.on('Message', this.onMessage)
   }
 
   private onUserAudio = (chunk: Buffer) => {
@@ -75,10 +70,7 @@ export class MicdropRecorder extends EventEmitter<MicdropRecorderEvents> {
   }
 
   private onMessage = (message: MicdropConversationItem) => {
-    const conversation = this.server.config?.agent.conversation
-    if (!conversation) return
-
-    const messageIndex = conversation.length - 1
+    const messageIndex = this.server.conversation.length - 1
 
     if (message.role === 'user') {
       this.lastUserMessageIndex = messageIndex
@@ -97,10 +89,8 @@ export class MicdropRecorder extends EventEmitter<MicdropRecorderEvents> {
     if (this.currentUserChunks.length === 0) return
     if (this.lastUserMessageIndex < 0) return
 
-    const conversation = this.server.config?.agent.conversation
-    if (!conversation) return
-
-    const message = conversation[this.lastUserMessageIndex]
+    const message = this.server.conversation[this.lastUserMessageIndex]
+    if (!message) return
     const buffer = Buffer.concat(this.currentUserChunks)
 
     const audioMessage: AudioMessage = {
@@ -125,10 +115,8 @@ export class MicdropRecorder extends EventEmitter<MicdropRecorderEvents> {
     if (this.currentAssistantChunks.length === 0) return
     if (this.lastAssistantMessageIndex < 0) return
 
-    const conversation = this.server.config?.agent.conversation
-    if (!conversation) return
-
-    const message = conversation[this.lastAssistantMessageIndex]
+    const message = this.server.conversation[this.lastAssistantMessageIndex]
+    if (!message) return
     const buffer = Buffer.concat(this.currentAssistantChunks)
 
     const audioMessage: AudioMessage = {
@@ -171,11 +159,7 @@ export class MicdropRecorder extends EventEmitter<MicdropRecorderEvents> {
     this.server.off('UserAudio', this.onUserAudio)
     this.server.off('AssistantAudio', this.onAssistantAudio)
     this.server.off('End', this.onEnd)
-
-    const agent = this.server.config?.agent
-    if (agent) {
-      agent.off('Message', this.onMessage)
-    }
+    this.server.off('Message', this.onMessage)
 
     this.removeAllListeners()
   }

@@ -31,7 +31,7 @@ export default async (app: FastifyInstance) => {
         console.log('With the system prompt written in the client')
       }
 
-      // Weigh the turns here when the client asked for it
+      // Run Smart Turn here when the client asked for it
       const turnDetector = smartTurn ? await createSmartTurn() : undefined
       if (turnDetector) {
         console.log('Turn detection on the server')
@@ -45,6 +45,9 @@ export default async (app: FastifyInstance) => {
         stt,
         tts,
         turnDetector,
+        // The transcript shows the answer as the agent writes it, ahead of the
+        // voice that reads it out
+        partialMessages: true,
       })
 
       // Listen to End event

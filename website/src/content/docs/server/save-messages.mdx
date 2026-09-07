@@ -1,7 +1,7 @@
 ---
 title: 'Save Messages'
 description: 'Capture and store conversation messages by listening to the Agent "Message" event for analytics, logging, and conversation history.'
-order: 33
+order: 35
 ---
 
 # Save Messages
@@ -28,6 +28,20 @@ agent.on('Message', (message) => {
 })
 
 new MicdropServer(socket, { agent, tts })
+```
+
+## Listening on the Server
+
+`MicdropServer` emits the same event, for every message added on either side.
+This is the one to use in a call that has no agent, since nothing else keeps the
+conversation:
+
+```typescript
+const server = new MicdropServer(socket, { stt })
+
+server.on('Message', (message) => {
+  console.log(message.role, message.content)
+})
 ```
 
 ## Save Messages to Database

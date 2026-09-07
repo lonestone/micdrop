@@ -23,8 +23,8 @@ export default function ServerPanel() {
   const { serverTurnDetection, toggleServerTurnDetection } = useDetection()
   const { resetAll } = useProviders()
 
-  // Turn detection is stored with the other detectors, so the panel puts it
-  // back itself rather than through the providers store
+  // Smart Turn is stored with the other detectors, so the panel puts it back
+  // itself rather than through the providers store
   const handleReset = () => {
     resetAll()
     toggleServerTurnDetection(false)
@@ -45,8 +45,8 @@ export default function ServerPanel() {
 
       <Group title="Turn detection" className="border-t border-line pt-4">
         <Switch
-          label="Weigh turns on the server"
-          help="The server reads the sound of the sentence instead of the browser. It spares the phone the model, and it can only ever decide to wait longer, never to answer sooner."
+          label="Run Smart Turn on the server"
+          help="The same model as the Smart Turn detector, loaded by the server instead of the browser. Nothing to download on the device, at the cost of a round trip before each answer. The browser then leaves turns alone."
           checked={serverTurnDetection}
           disabled={isStarted}
           onChange={toggleServerTurnDetection}

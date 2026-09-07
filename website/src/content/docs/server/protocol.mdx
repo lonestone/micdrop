@@ -2,7 +2,7 @@
 title: 'Micdrop Protocol'
 titleBrand: false
 description: 'Micdrop uses a simple custom protocol over WebSocket for real-time communication between the client and server.'
-order: 42
+order: 44
 ---
 
 # Micdrop Protocol
@@ -62,6 +62,15 @@ While WebRTC is a powerful protocol for real-time communication, Micdrop uses a 
 
 This approach gives us the real-time capabilities we need while keeping the implementation lean and efficient.
 
+## Calls without a voice
+
+A call configured without a text to speech carries no audio chunk back. The
+answer arrives as a `Message`, followed by `SkipAnswer`, which is what tells the
+client to stop waiting and listen again. A call configured without an agent
+sends `SkipAnswer` right after the transcribed user message.
+
+See [Dictation and text-only calls](./dictation).
+
 ## Client Commands
 
 The client can send the following commands to the server:
@@ -74,7 +83,9 @@ The client can send the following commands to the server:
 
 The server can send the following commands to the client:
 
-- `MicdropServerCommands.Message` - A message from the assistant.
+- `MicdropServerCommands.Message` - A settled message, from the user or the assistant.
+- `MicdropServerCommands.PartialAssistantMessage` - The answer being written, before it is finished. Sent when [`partialMessages`](./partial-messages) is on.
 - `MicdropServerCommands.CancelLastUserMessage` - Cancel the last user message.
 - `MicdropServerCommands.SkipAnswer` - Notify that the last generated answer was ignored, it's listening again.
 - `MicdropServerCommands.EndCall` - End the call.
+- `MicdropServerCommands.ToolCall` - A tool the agent called, with its result.

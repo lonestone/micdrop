@@ -35,6 +35,10 @@ This is a pnpm monorepo with packages in `packages/`, examples in `examples/`, a
 - **Agent System**: Abstract base class for LLM agents with conversation management and event handling
 - **Modular AI Providers**: Separate packages for OpenAI, ElevenLabs, Cartesia, Mistral, and Gladia integrations
 
+`@micdrop/web` and `@micdrop/react-native` are the two platform layers over the
+same client. Any improvement to one goes to the other, packages and examples
+alike, and both are published together.
+
 ### Key Components
 
 **MicdropClient** (`packages/client/src/client/MicdropClient.ts`):

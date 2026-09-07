@@ -24,6 +24,10 @@ export interface MicdropEvents {
   Error: [MicdropClientError]
   StateChange: [MicdropState, MicdropState]
   ToolCall: [MicdropToolCall]
+  /** A message was added to the conversation, by the user or the assistant */
+  Message: [MicdropConversationItem]
+  /** What the assistant is answering, before it is finished */
+  PartialAssistantMessage: [string]
 }
 
 export interface MicdropReconnectOptions {
@@ -66,6 +70,12 @@ export interface MicdropState {
   micDevices: MicdropDevice[]
   speakerDevices: MicdropDevice[]
   conversation: MicdropConversation
+  /**
+   * Answer being written, sent by servers configured with `partialMessages`.
+   * Empty the rest of the time, and replaced by a conversation message once
+   * the answer is finished.
+   */
+  partialAssistantMessage: string
   error: MicdropClientError | undefined
 }
 
@@ -81,6 +91,7 @@ export class MicdropClient
 {
   public micRecorder?: MicRecorder
   public conversation: MicdropConversation = []
+  public partialAssistantMessage = ''
   public error: MicdropClientError | undefined
   public speakerDevices: MicdropDevice[] = []
   public micDevices: MicdropDevice[] = []
@@ -198,6 +209,7 @@ export class MicdropClient
       isMicStarted: this.isMicStarted,
       isMicMuted: this.isMicMuted,
       conversation: this.conversation,
+      partialAssistantMessage: this.partialAssistantMessage,
       error: this.error,
       micDeviceId: this.micDeviceId,
       speakerDeviceId: this.speakerDeviceId,
@@ -213,6 +225,7 @@ export class MicdropClient
     // Reset state
     this.startTime = Date.now()
     this.conversation = []
+    this.partialAssistantMessage = ''
     this._isProcessing = true
     this._isMuted = false
     this._isPaused = false
@@ -233,6 +246,7 @@ export class MicdropClient
   }
 
   stop = async () => {
+    this.partialAssistantMessage = ''
     this._isProcessing = false
     this._isMuted = false
     this._isPaused = false
@@ -339,6 +353,7 @@ export class MicdropClient
           this.log('User start speaking')
           this.ws?.send(MicdropClientCommands.StartSpeaking)
           // Interruption
+          this.partialAssistantMessage = ''
           this._isProcessing = false
           this.notifyStateChange()
           Speaker.stopAudio()
@@ -540,11 +555,15 @@ export class MicdropClient
       } catch (error) {
         console.error('[MicdropClient] Error parsing message:', data, error)
       }
+    } else if (data.startsWith(MicdropServerCommands.PartialAssistantMessage)) {
+      // The answer is still being written
+      this.setPartialAssistantMessage(data)
     } else if (data === MicdropServerCommands.EndCall) {
       // Call ended
       this.emit('EndCall')
     } else if (data === MicdropServerCommands.SkipAnswer) {
       // Answer was skipped, listen again
+      this.partialAssistantMessage = ''
       this._isProcessing = false
       this.notifyStateChange()
     } else if (data === MicdropServerCommands.CancelLastUserMessage) {
@@ -663,7 +682,24 @@ export class MicdropClient
   }
 
   private addMessage(message: MicdropConversationItem) {
+    // The settled answer takes the place of the one being written
+    if (message.role === 'assistant') this.partialAssistantMessage = ''
     this.conversation = [...this.conversation, message]
+    this.notifyStateChange()
+    this.emit('Message', message)
+  }
+
+  private setPartialAssistantMessage(data: string) {
+    const command = MicdropServerCommands.PartialAssistantMessage
+    let content: string
+    try {
+      content = JSON.parse(data.substring(command.length + 1))
+    } catch (error) {
+      console.error('[MicdropClient] Error parsing partial answer:', data)
+      return
+    }
+    this.partialAssistantMessage = content
+    this.emit('PartialAssistantMessage', content)
     this.notifyStateChange()
   }
 

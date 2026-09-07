@@ -68,15 +68,43 @@ interface MicdropConversationToolResult {
 
 ## Message Events
 
-Listen for message events to handle real-time updates:
+The `Message` event fires once per message added to the conversation, which
+saves comparing the array against the one you saw last time:
 
 ```typescript
 import { Micdrop } from '@micdrop/web'
 
+Micdrop.on('Message', (message) => {
+  if (message.role === 'user') {
+    console.log('The user said:', message.content)
+  }
+})
+```
+
+`StateChange` carries the whole conversation instead, for a view that redraws
+from the current state rather than reacting to what changed:
+
+```typescript
 Micdrop.on('StateChange', (state) => {
   console.log('Messages:', state.conversation)
 })
 ```
+
+## The Answer Being Written
+
+A server configured with [`partialMessages`](../server/partial-messages) also
+sends the answer before it is finished. The client keeps it next to the
+conversation:
+
+```typescript
+Micdrop.on('StateChange', (state) => {
+  console.log('Being written:', state.partialAssistantMessage)
+})
+```
+
+It is an empty string the rest of the time, and empties as soon as the settled
+message lands in `conversation`. The `PartialAssistantMessage` event carries the
+same text.
 
 ## React Integration
 

@@ -83,6 +83,9 @@ The `MicdropClient` emits the following events:
 - `EndCall`: Emitted when the call ends
 - `Error`: Emitted when an error occurs, provides a `MicdropClientError` object
 - `StateChange`: Emitted when any state change occurs in the handler, provides a `MicdropState` object
+- `Message`: Emitted for each message added to the conversation, provides a `MicdropConversationItem` object
+- `PartialAssistantMessage`: Emitted while the answer is being written, provides the text so far. Sent by servers running with [`partialMessages`](../../server/partial-messages)
+- `ToolCall`: Emitted when the agent calls a tool the client should know about, provides a `MicdropToolCall` object
 
 ## Properties
 
@@ -159,6 +162,9 @@ interface MicdropState {
 
   // Array storing the conversation history
   conversation: MicdropConversation
+
+  // The answer being written, when the server streams it. Empty otherwise
+  partialAssistantMessage: string
 
   // The error object if an error occurred
   error: MicdropClientError | undefined

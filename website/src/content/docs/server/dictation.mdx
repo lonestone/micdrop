@@ -1,0 +1,123 @@
+---
+title: 'Dictation and Text-Only Calls'
+description: 'Leave out the agent, the voice, or both, to build a dictation tool, a text-only assistant, or a call your own code drives.'
+order: 33
+---
+
+# Dictation and Text-Only Calls
+
+`agent` and `tts` are optional. Leaving one of them out changes what a call
+does, while the microphone, the voice activity detection and the transport keep
+working the same way.
+
+| Configuration       | What the user gets                                            |
+| ------------------- | ------------------------------------------------------------- |
+| `stt + agent + tts` | A full spoken conversation                                     |
+| `stt + agent`       | An assistant that answers in writing                           |
+| `stt`               | Dictation, with nothing answering back                         |
+| `stt + tts`         | A call your own code drives, speaking when it decides to       |
+
+## Dictation
+
+With a speech to text alone, the call transcribes and stays quiet. Each sentence
+reaches the client as a message, exactly as a user message does in a full
+conversation.
+
+```typescript
+import { MicdropServer } from '@micdrop/server'
+import { GladiaSTT } from '@micdrop/gladia'
+
+new MicdropServer(socket, {
+  stt: new GladiaSTT({ apiKey: process.env.GLADIA_API_KEY }),
+})
+```
+
+The client displays them from `conversation`, like any other message:
+
+```typescript
+Micdrop.on('StateChange', (state) => {
+  const text = state.conversation
+    .filter((message) => message.role === 'user')
+    .map((message) => message.content)
+    .join(' ')
+  textarea.value = text
+})
+```
+
+Each sentence lands once the speech to text has settled it, so the text grows
+sentence by sentence, at the pauses.
+
+The [dictation example](https://github.com/Godefroy/micdrop/tree/main/examples/dictation)
+does exactly this, in a page with a microphone button, a language picker and a
+text area.
+
+## An assistant that writes instead of speaking
+
+Without a text to speech, the agent still answers, and its answer reaches the
+client as a message. Nothing is synthesized, so nothing plays.
+
+```typescript
+new MicdropServer(socket, {
+  stt,
+  agent: new OpenaiAgent({
+    apiKey: process.env.OPENAI_API_KEY,
+    systemPrompt: 'You are a helpful assistant',
+  }),
+})
+```
+
+The client leaves its processing state as soon as the answer is complete, and
+`isAssistantSpeaking` stays false for the whole call, since no voice ever plays.
+
+Turn on [`partialMessages`](./partial-messages) to stream the answer as it is
+written, which is what makes a text answer feel as immediate as a spoken one.
+
+## Driving the conversation yourself
+
+A call with a voice and no agent speaks only when your code asks it to. This is
+the shape to reach for when the answers come from a state machine, a workflow
+engine, or an orchestration framework you already run.
+
+```typescript
+const server = new MicdropServer(socket, { stt, tts })
+
+server.on('Message', async (message) => {
+  if (message.role !== 'user') return
+  const answer = await myOwnOrchestrator(message.content)
+  server.speak(answer)
+})
+```
+
+`speak()` accepts a string or a stream of text. Given a string, it also records
+the sentence in the conversation, since no agent is there to do it.
+
+## Reading the conversation
+
+`server.conversation` holds everything said, whether an agent keeps it or the
+server does, and stays readable once the call is over.
+
+```typescript
+const server = new MicdropServer(socket, { stt })
+
+server.on('End', ({ conversation, duration }) => {
+  console.log(`${conversation.length} sentences in ${duration}s`)
+})
+```
+
+The `Message` event fires for every message added on either side. See
+[Save Messages](./save-messages) for storing them as they arrive.
+
+<Callout type="info">
+  With an agent, the conversation opens with the system message that carries the
+  prompt. Without one, it holds nothing but what was said.
+</Callout>
+
+## What still needs an agent
+
+`generateFirstMessage` asks the agent for its opening line, so it does nothing
+without one. A static `firstMessage` works either way, and is spoken when a text
+to speech is configured.
+
+Tools, [automatic call ending](./auto-end-call),
+[extraction](./extract) and [semantic turn detection](./semantic-turn-detection)
+are agent features, and are out of reach in a call that has no agent.

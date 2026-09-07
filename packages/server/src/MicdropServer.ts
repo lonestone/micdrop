@@ -1,5 +1,5 @@
 import { EventEmitter } from 'eventemitter3'
-import { Duplex, PassThrough, Readable } from 'stream'
+import { Duplex, PassThrough, Readable, Transform } from 'stream'
 import { WebSocket } from 'ws'
 import type { Agent } from './agent'
 import { pcm16ToFloat32 } from './audio'
@@ -7,9 +7,12 @@ import { Logger } from './Logger'
 import type { STT } from './stt'
 import type { TTS } from './tts'
 import {
+  MicdropAnswerMetadata,
   MicdropCallSummary,
   MicdropClientCommands,
+  MicdropConversation,
   MicdropConversationItem,
+  MicdropConversationMessage,
   MicdropServerCommands,
   TurnDetector,
 } from './types'
@@ -27,16 +30,64 @@ const DEFAULT_TURN_MAX_WAIT = 4000 // ms
 
 export interface MicdropServerEvents {
   End: [MicdropCallSummary]
+  /** A message was added to the conversation, by the agent or by the server */
+  Message: [MicdropConversationItem]
   UserAudio: [Buffer]
   AssistantAudio: [Buffer]
 }
 
 export interface MicdropConfig {
+  /**
+   * Opening line, spoken before the user has said anything.
+   *
+   * It goes into the conversation like any other assistant message. Leaving it
+   * out, along with `generateFirstMessage`, hands the first turn to the user.
+   */
   firstMessage?: string
+
+  /**
+   * Asks the agent for its opening line instead of fixing one, so the greeting
+   * can lean on the system prompt and on whatever the call was given.
+   *
+   * Ignored when `firstMessage` is set, and out of reach without an agent.
+   */
   generateFirstMessage?: boolean
-  agent: Agent
+
+  /**
+   * Generates the answers.
+   *
+   * Leaving it out turns the call into a one-way one: what the user says is
+   * transcribed and sent to the client, and the assistant stays quiet unless
+   * the application calls `speak()` itself.
+   */
+  agent?: Agent
+
+  /**
+   * Turns what the user says into text, the one component a call cannot do
+   * without.
+   *
+   * It is fed the audio of each turn as it arrives, and the transcripts it
+   * returns drive everything that follows.
+   */
   stt: STT
-  tts: TTS
+
+  /**
+   * Gives the answers a voice.
+   *
+   * Leaving it out keeps the call textual: the answer reaches the client as a
+   * message and nothing is synthesized.
+   */
+  tts?: TTS
+
+  /**
+   * Sends the answer to the client while it is still being written, on top of
+   * the complete message that follows.
+   *
+   * Works with any agent, since the text is read from the stream it writes to.
+   * Off by default, since a client that only displays finished messages has
+   * nothing to do with it.
+   */
+  partialMessages?: boolean
 
   /**
    * Waits for the rest of the sentence when the speaker paused in the middle
@@ -60,6 +111,10 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
   private startTime = Date.now()
   private lastMessageSpeeched?: MicdropConversationItem
 
+  // Holds the conversation when no agent does, and keeps it readable once the
+  // call is over and the config is gone
+  private ownConversation: MicdropConversation = []
+
   // Queue system for operations
   private operationQueue: Array<() => Promise<void>> = []
   private isProcessingQueue = false
@@ -79,40 +134,44 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
     this.log(`Call started`)
 
     // Setup STT
-    this.config.stt.on('Transcript', this.onTranscriptSTT)
+    config.stt.on('Transcript', this.onTranscriptSTT)
 
     // Setup TTS
-    this.config.tts.on('Audio', this.onAudioTTS)
+    config.tts?.on('Audio', this.onAudioTTS)
 
     // Setup agent
-    this.config.agent.on('Message', (message) =>
-      this.socket?.send(
-        `${MicdropServerCommands.Message} ${JSON.stringify(message)}`
+    const agent = config.agent
+    if (agent) {
+      agent.on('Message', this.onMessageAgent)
+      agent.on('CancelLastUserMessage', () =>
+        this.socket?.send(MicdropServerCommands.CancelLastUserMessage)
       )
-    )
-    this.config.agent.on('CancelLastUserMessage', () =>
-      this.socket?.send(MicdropServerCommands.CancelLastUserMessage)
-    )
-    this.config.agent.on('SkipAnswer', () =>
-      this.socket?.send(MicdropServerCommands.SkipAnswer)
-    )
-    this.config.agent.on('EndCall', () =>
-      this.socket?.send(MicdropServerCommands.EndCall)
-    )
-    this.config.agent.on('ToolCall', (toolCall) =>
-      this.socket?.send(
-        `${MicdropServerCommands.ToolCall} ${JSON.stringify(toolCall)}`
+      agent.on('SkipAnswer', () =>
+        this.socket?.send(MicdropServerCommands.SkipAnswer)
       )
-    )
+      agent.on('EndCall', () =>
+        this.socket?.send(MicdropServerCommands.EndCall)
+      )
+      agent.on('ToolCall', (toolCall) =>
+        this.socket?.send(
+          `${MicdropServerCommands.ToolCall} ${JSON.stringify(toolCall)}`
+        )
+      )
+    }
 
     // Assistant speaks first
-    // Deferred so consumers (e.g. MicdropRecorder) can subscribe to agent
+    // Deferred so consumers (e.g. MicdropRecorder) can subscribe to the server
     // events before the first message is added to the conversation.
     queueMicrotask(() => this.sendFirstMessage())
 
     // Listen to events
     socket.on('close', this.onClose)
     socket.on('message', this.onMessage)
+  }
+
+  /** Everything said so far, whether an agent or the server keeps it */
+  get conversation(): MicdropConversation {
+    return this.config?.agent?.conversation ?? this.ownConversation
   }
 
   private log(...message: any[]) {
@@ -144,8 +203,8 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
   }
 
   public cancel() {
-    this.config?.tts.cancel()
-    this.config?.agent.cancel()
+    this.config?.tts?.cancel()
+    this.config?.agent?.cancel()
     // Clear the queue
     this.operationQueue = []
   }
@@ -155,19 +214,21 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
     if (!this.config) return
     this.log('Connection closed')
     const duration = Math.round((Date.now() - this.startTime) / 1000)
+    const conversation = this.conversation
 
     // Destroy instances
-    this.config.agent.destroy()
+    this.config.agent?.destroy()
     this.config.stt.destroy()
-    this.config.tts.destroy()
+    this.config.tts?.destroy()
 
     // Emit End event
     this.emit('End', {
-      conversation: this.config.agent.conversation,
+      conversation,
       duration,
     })
 
-    // Unset params
+    // Unset params, keeping the conversation readable
+    this.ownConversation = conversation
     this.socket = null
     this.config = null
   }
@@ -246,8 +307,8 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
     // Weigh the stretch of audio that just ended, before the next one starts
     this.turnComplete = this.predictTurnComplete()
 
-    const conversation = this.config?.agent.conversation
-    const lastMessage = conversation?.[conversation.length - 1]
+    const conversation = this.conversation
+    const lastMessage = conversation[conversation.length - 1]
     if (
       lastMessage?.role === 'user' &&
       this.lastMessageSpeeched !== lastMessage
@@ -318,7 +379,7 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
     }
 
     this.log(`User transcript: "${transcript}"`)
-    this.config.agent.addUserMessage(transcript)
+    this.addUserMessage(transcript)
 
     // Answer if user stopped speaking
     if (!this.currentUserStream) {
@@ -334,13 +395,70 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
     this.emit('AssistantAudio', audio)
   }
 
+  private onMessageAgent = (message: MicdropConversationItem) => {
+    this.sendMessage(message)
+  }
+
+  /** Adds a message to the conversation and sends it to the client */
+  public addUserMessage(text: string, metadata?: MicdropAnswerMetadata) {
+    if (this.config?.agent) {
+      this.config.agent.addUserMessage(text, metadata)
+    } else {
+      this.addOwnMessage('user', text, metadata)
+    }
+  }
+
+  /** Adds a message to the conversation and sends it to the client */
+  public addAssistantMessage(text: string, metadata?: MicdropAnswerMetadata) {
+    if (this.config?.agent) {
+      this.config.agent.addAssistantMessage(text, metadata)
+    } else {
+      this.addOwnMessage('assistant', text, metadata)
+    }
+  }
+
+  private addOwnMessage(
+    role: 'user' | 'assistant',
+    text: string,
+    metadata?: MicdropAnswerMetadata
+  ) {
+    if (text.trim() === '') {
+      this.log(`Skipping empty ${role} message`)
+      return
+    }
+    this.log(`Adding ${role} message to conversation: ${text}`)
+    const message: MicdropConversationMessage = {
+      role,
+      content: text,
+      metadata,
+    }
+    this.ownConversation.push(message)
+    this.sendMessage(message)
+  }
+
+  private sendMessage(message: MicdropConversationItem) {
+    this.socket?.send(
+      `${MicdropServerCommands.Message} ${JSON.stringify(message)}`
+    )
+    this.emit('Message', message)
+  }
+
+  private sendPartialAnswer(content: string) {
+    if (!this.socket || content === '') return
+    this.log(`Send partial answer: "${content}"`)
+    this.socket.send(
+      `${MicdropServerCommands.PartialAssistantMessage} ${JSON.stringify(content)}`
+    )
+  }
+
   private sendFirstMessage() {
     if (!this.config) return
     if (this.config.firstMessage) {
       // Send first message
-      this.config.agent.addAssistantMessage(this.config.firstMessage)
+      // Without an agent, speak() is the one adding it to the conversation
+      this.config.agent?.addAssistantMessage(this.config.firstMessage)
       this.speak(this.config.firstMessage)
-    } else if (this.config.generateFirstMessage) {
+    } else if (this.config.generateFirstMessage && this.config.agent) {
       // Generate first message
       this.answer()
     } else {
@@ -359,9 +477,16 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
   private async _answer() {
     if (!this.config) return
 
+    // Nothing generates an answer, hand the turn back to the user
+    if (!this.config.agent) {
+      this.log('No agent, skipping answer')
+      this.socket?.send(MicdropServerCommands.SkipAnswer)
+      return
+    }
+
     // Prevent answering twice
-    const lastMessage =
-      this.config.agent.conversation[this.config.agent.conversation.length - 1]
+    const conversation = this.config.agent.conversation
+    const lastMessage = conversation[conversation.length - 1]
     if (this.lastMessageSpeeched === lastMessage) {
       this.log('Already answered, skipping')
       return
@@ -381,12 +506,32 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
       // this way) then drops the audio of the sentence still playing, so a
       // skipped answer cuts the assistant off mid-word.
       if (await hasContent(stream)) {
-        await this._speak(stream)
+        await this._speak(
+          this.config.partialMessages
+            ? this.forwardPartialAnswer(stream)
+            : stream
+        )
+      } else {
+        this.socket?.send(MicdropServerCommands.SkipAnswer)
       }
     } catch (error) {
       this.socket?.send(MicdropServerCommands.SkipAnswer)
       throw error
     }
+  }
+
+  /** Sends the answer to the client as it is written, ahead of the voice */
+  private forwardPartialAnswer(stream: Readable): Readable {
+    let content = ''
+    const send = (text: string) => this.sendPartialAnswer(text)
+    const forward = new Transform({
+      transform(chunk, _encoding, callback) {
+        content += chunk.toString()
+        send(content)
+        callback(null, chunk)
+      },
+    })
+    return stream.pipe(forward)
   }
 
   // Run text-to-speech and send to client
@@ -402,6 +547,10 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
     // Convert message to stream if needed
     let textStream: Readable
     if (typeof message === 'string') {
+      // Without an agent, nothing else records what the assistant says
+      if (!this.config.agent) {
+        this.addOwnMessage('assistant', message)
+      }
       const stream = new PassThrough()
       stream.write(message)
       stream.end()
@@ -411,7 +560,16 @@ export class MicdropServer extends EventEmitter<MicdropServerEvents> {
     }
 
     // Run TTS
-    this.config.tts.speak(textStream)
+    if (this.config.tts) {
+      this.config.tts.speak(textStream)
+      return
+    }
+
+    // No voice to synthesize: read the answer to the end, then hand the turn
+    // back, since it is the first audio chunk that normally tells the client
+    // it can stop waiting.
+    await drain(textStream)
+    this.socket?.send(MicdropServerCommands.SkipAnswer)
   }
 }
 
@@ -438,5 +596,15 @@ function hasContent(stream: Readable): Promise<boolean> {
     }
     stream.on('readable', onReadable)
     stream.on('end', onEnd)
+  })
+}
+
+/** Reads a stream to its end, for when nothing else consumes it */
+function drain(stream: Readable): Promise<void> {
+  return new Promise((resolve) => {
+    stream.on('data', () => {})
+    stream.once('end', () => resolve())
+    stream.once('error', () => resolve())
+    stream.once('close', () => resolve())
   })
 }

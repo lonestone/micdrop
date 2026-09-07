@@ -1,0 +1,64 @@
+---
+title: 'Partial Messages'
+description: 'Send the answer to the client while the agent is still writing it, so a page can display it before it is finished.'
+order: 34
+---
+
+# Partial Messages
+
+The answer normally reaches the client once the agent has finished writing it.
+`partialMessages` adds an earlier stream, carrying it as it is being written.
+
+```typescript
+new MicdropServer(socket, {
+  stt,
+  agent,
+  tts,
+  partialMessages: true,
+})
+```
+
+It stays off by default, since a page that only displays finished messages has
+nothing to do with it. Any agent works, since the text is read from the stream
+the agent writes to.
+
+## Reading it in the client
+
+The client keeps the answer being written in its state, next to the
+conversation:
+
+```typescript
+Micdrop.on('StateChange', (state) => {
+  answerText.textContent = state.partialAssistantMessage
+})
+```
+
+An event carries the same text, for a page that would rather react than
+re-render:
+
+```typescript
+Micdrop.on('PartialAssistantMessage', (content) => {
+  answerText.textContent = content
+})
+```
+
+Each one carries the whole answer so far, replacing the previous one. Display it
+as it comes, no reassembly needed.
+
+It empties as soon as the settled message lands in `conversation`, so the two
+never show the same sentence twice. It also empties when the user interrupts the
+assistant, and when the answer is skipped.
+
+## Where it earns its place
+
+A [call without a voice](./dictation) is the clearest case: the answer would
+otherwise appear all at once, several seconds after the question. Streaming it
+makes a written answer feel as immediate as a spoken one.
+
+In a spoken call, the voice already carries the answer, so partial messages are
+worth their bandwidth only when the page displays the text beside it.
+
+<Callout type="info">
+  What the user says is not streamed this way. A transcript reaches the client
+  once the speech to text has settled the sentence, as a regular message.
+</Callout>

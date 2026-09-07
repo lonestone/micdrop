@@ -136,7 +136,10 @@ function Call() {
         <StatusPill label={status.label} color={status.color} />
       </View>
 
-      <Conversation conversation={state.conversation} />
+      <Conversation
+        conversation={state.conversation}
+        partialAssistantMessage={state.partialAssistantMessage}
+      />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 

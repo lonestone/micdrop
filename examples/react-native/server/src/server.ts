@@ -32,6 +32,11 @@ server.on('connection', (socket) => {
     // The ears, speech to text.
     stt: new OpenaiSTT({ apiKey, language: 'en' }),
 
+    // The conversation shows the answer as the agent writes it, ahead of the
+    // voice that reads it out.
+    // https://micdrop.dev/docs/server/partial-messages
+    partialMessages: true,
+
     // The mouth, text to speech.
     tts: new OpenaiTTS({ apiKey, voice: 'alloy' }),
   })

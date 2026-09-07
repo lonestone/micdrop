@@ -64,9 +64,13 @@ wss.on('connection', (socket) => {
 
 Micdrop server has 3 main components:
 
-- `Agent` - AI agent using LLM
+- `Agent` - AI agent using LLM, optional
 - `STT` - Speech-to-text
-- `TTS` - Text-to-speech
+- `TTS` - Text-to-speech, optional
+
+A server given a speech to text alone transcribes and stays quiet, which is all
+a dictation tool needs. One given an agent and no voice answers in writing. See
+[dictation and text-only calls](https://micdrop.dev/docs/server/dictation).
 
 ### Available implementations
 

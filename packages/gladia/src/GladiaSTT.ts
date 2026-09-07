@@ -100,6 +100,7 @@ export class GladiaSTT extends STT {
         sample_rate: SAMPLE_RATE,
         bit_depth: BIT_DEPTH,
         channels: 1,
+        ...this.options.settings,
         messages_config: {
           receive_final_transcripts: true,
           receive_speech_events: false,
@@ -109,8 +110,8 @@ export class GladiaSTT extends STT {
           receive_acknowledgments: false,
           receive_errors: true,
           receive_lifecycle_events: false,
+          ...this.options.settings?.messages_config,
         },
-        ...this.options.settings,
       }),
     })
 

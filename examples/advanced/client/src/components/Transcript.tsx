@@ -17,12 +17,14 @@ interface Props {
  * be rendered against a conversation of its own.
  */
 export default function Transcript({ className }: Props) {
-  const { conversation, isStarted, isProcessing } = useMicdropState()
+  const { conversation, isStarted, isProcessing, partialAssistantMessage } =
+    useMicdropState()
   return (
     <TranscriptView
       conversation={conversation}
       isStarted={isStarted}
       isProcessing={isProcessing}
+      partialAssistantMessage={partialAssistantMessage}
       className={className}
     />
   )
@@ -32,6 +34,12 @@ interface TranscriptViewProps extends Props {
   conversation: MicdropConversationItem[]
   isStarted: boolean
   isProcessing: boolean
+  /**
+   * The answer as the agent writes it, sent by a server running with
+   * `partialMessages`. Empty until the first words arrive, and empty again once
+   * the finished message has taken its place in the conversation.
+   */
+  partialAssistantMessage?: string
 }
 
 /**
@@ -45,6 +53,7 @@ export function TranscriptView({
   conversation,
   isStarted,
   isProcessing,
+  partialAssistantMessage = '',
   className = '',
 }: TranscriptViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -62,7 +71,14 @@ export function TranscriptView({
   useEffect(() => {
     if (!isPinnedRef.current) return
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [conversation.length, isProcessing])
+  }, [conversation.length, isProcessing, partialAssistantMessage])
+
+  // The answer being written takes the place the finished one will occupy, so
+  // the two share a key and React keeps the same bubble. Nothing moves when the
+  // message settles, only the caret goes.
+  const lines: MicdropConversationItem[] = partialAssistantMessage
+    ? [...conversation, { role: 'assistant', content: partialAssistantMessage }]
+    : conversation
 
   return (
     <div
@@ -70,14 +86,19 @@ export function TranscriptView({
       onScroll={handleScroll}
       className={`overflow-y-auto rounded-xl border border-line bg-panel p-4 ${className}`}
     >
-      {conversation.length === 0 ? (
+      {lines.length === 0 ? (
         <EmptyTranscript isStarted={isStarted} />
       ) : (
         <div className="mx-auto flex max-w-3xl flex-col gap-3">
-          {conversation.map((item, index) => (
-            <Line key={index} item={item} conversation={conversation} />
+          {lines.map((item, index) => (
+            <Line
+              key={index}
+              item={item}
+              conversation={conversation}
+              pending={index === conversation.length}
+            />
           ))}
-          {isProcessing && <Thinking />}
+          {isProcessing && !partialAssistantMessage && <Thinking />}
           <div ref={bottomRef} />
         </div>
       )}
@@ -124,9 +145,11 @@ function Thinking() {
 interface LineProps {
   item: MicdropConversationItem
   conversation: MicdropConversationItem[]
+  /** This answer is still being written */
+  pending?: boolean
 }
 
-function Line({ item, conversation }: LineProps) {
+function Line({ item, conversation, pending }: LineProps) {
   switch (item.role) {
     case 'user':
       return (
@@ -137,8 +160,12 @@ function Line({ item, conversation }: LineProps) {
 
     case 'assistant':
       return (
-        <p className="mr-auto max-w-[85%] animate-rise whitespace-pre-wrap rounded-xl rounded-bl-lg border border-line bg-raised px-3.5 py-2.5 text-sm leading-relaxed text-main">
+        <p
+          aria-busy={pending}
+          className="mr-auto max-w-[85%] animate-rise whitespace-pre-wrap rounded-xl rounded-bl-lg border border-line bg-raised px-3.5 py-2.5 text-sm leading-relaxed text-main"
+        >
           {item.content}
+          {pending && <Caret />}
         </p>
       )
 
@@ -181,6 +208,16 @@ function Line({ item, conversation }: LineProps) {
     default:
       return null
   }
+}
+
+/** Marks an answer that is still arriving, word after word */
+function Caret() {
+  return (
+    <span
+      aria-hidden="true"
+      className="ml-1 inline-block h-3.5 w-1.5 translate-y-px animate-breathe rounded-sm bg-accent align-middle"
+    />
+  )
 }
 
 interface JsonProps {

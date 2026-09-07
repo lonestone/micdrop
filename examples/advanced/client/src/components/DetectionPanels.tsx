@@ -53,7 +53,7 @@ export default function DetectionPanels() {
       <DetectorCard
         name="Smart Turn"
         description={SMART_TURN_HELP}
-        // The server weighs the turns, so the browser leaves them alone
+        // Smart Turn runs on the server, so the browser leaves turns alone
         enabled={turnEnabled && !serverTurnDetection}
         lockedOff={serverTurnDetection}
         onToggle={toggleSmartTurn}

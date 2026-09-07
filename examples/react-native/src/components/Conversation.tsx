@@ -5,15 +5,30 @@ import { colors, radius } from '../theme'
 
 interface ConversationProps {
   conversation: MicdropConversation
+  /**
+   * The answer as the agent writes it, sent by a server running with
+   * `partialMessages`. Empty until the first words arrive, and empty again once
+   * the finished message has taken its place in the conversation.
+   */
+  partialAssistantMessage?: string
 }
 
 /** What has been said so far, kept scrolled to the last message */
-export function Conversation({ conversation }: ConversationProps) {
+export function Conversation({
+  conversation,
+  partialAssistantMessage = '',
+}: ConversationProps) {
   const scrollView = useRef<React.ComponentRef<typeof ScrollView>>(null)
 
-  const messages = conversation.filter(
+  const said = conversation.filter(
     (item) => item.role === 'user' || item.role === 'assistant'
   )
+
+  // The answer being written takes the place the finished one will occupy, so
+  // the two share a key and the bubble stays put when the message settles
+  const messages: MicdropConversation = partialAssistantMessage
+    ? [...said, { role: 'assistant', content: partialAssistantMessage }]
+    : said
 
   const handleContentSizeChange = () => {
     scrollView.current?.scrollToEnd({ animated: true })
