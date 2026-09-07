@@ -12,6 +12,12 @@ import {
   PiWarningBold,
 } from 'react-icons/pi'
 import { getServerTurnDetection, getVADConfig } from '../detection'
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
+import {
+  formatWait,
+  ReplyLatency,
+  useReplyLatency,
+} from '../hooks/useReplyLatency'
 import {
   getAutoOptions,
   getLang,
@@ -20,17 +26,18 @@ import {
   getToolOptions,
   SERVER_URL,
 } from '../providers'
+import AudioTimeline from './AudioTimeline'
 import CallStatusOrb from './CallStatusOrb'
 import Button from './ui/Button'
 import Meter from './ui/Meter'
 
 /**
- * The call itself: what it is doing, how loud each side is, and the two or
- * three buttons that act on it.
+ * The call itself: what it is doing, how it sounds, and the two or three
+ * buttons that act on it.
  *
  * It sits under the transcript rather than above it so the newest line, the
- * levels and the button that ends the call are all in the same glance, the
- * way a call is laid out everywhere else.
+ * audio and the button that ends the call are all in the same glance, the way
+ * a call is laid out everywhere else.
  */
 export default function CallDock() {
   const state = useMicdropState()
@@ -40,8 +47,8 @@ export default function CallDock() {
   // Muting and pausing both stop the detectors, so nothing is being heard even
   // though the microphone carries on reporting a level
   const isHeard = isMicStarted && !isMuted && !isPaused
-  const { micVolume } = useMicVolume()
-  const { speakerVolume } = useSpeakerVolume()
+  const { measures, pendingSince } = useReplyLatency()
+  const reduced = usePrefersReducedMotion()
 
   // One button: the microphone is asked for as the call starts
   const handleStart = () => {
@@ -83,25 +90,9 @@ export default function CallDock() {
       <div className="flex flex-wrap items-center gap-3">
         <CallStatusOrb />
 
-        <div className="flex min-w-0 flex-1 basis-40 flex-col gap-2">
+        <div className="flex min-w-0 flex-1 basis-40 flex-col gap-1">
           <span className="text-sm text-main">{statusLine(state)}</span>
-          {/* The microphone can be started from the rail before a call, and
-              its level is worth watching from the moment it is live */}
-          {isMicStarted && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <Meter
-                label="Mic"
-                value={isHeard ? decibelLevel(micVolume) : 0}
-              />
-              {isStarted && (
-                <Meter
-                  label="Voice"
-                  tone="voice"
-                  value={decibelLevel(speakerVolume)}
-                />
-              )}
-            </div>
-          )}
+          <ReplyLatencyLine measures={measures} />
         </div>
 
         <div className="flex items-center gap-2">
@@ -145,6 +136,25 @@ export default function CallDock() {
         </div>
       </div>
 
+      {/* The microphone can be started from the rail before a call, and what it
+          hears is worth watching from the moment it is live. Whoever asked
+          their system to stop animating reads the same two levels standing
+          still. */}
+      {isMicStarted && (
+        <div className="mt-3">
+          {reduced ? (
+            <Levels isHeard={isHeard} isStarted={isStarted} />
+          ) : (
+            <AudioTimeline
+              measures={measures}
+              pendingSince={pendingSince}
+              isUserLive={isHeard}
+              isAssistantLive={state.isAssistantSpeaking}
+            />
+          )}
+        </div>
+      )}
+
       {error && (
         <p className="mt-3 flex items-start gap-2 rounded-lg bg-danger-soft px-3 py-2 text-xs leading-relaxed text-danger">
           <PiWarningBold
@@ -158,6 +168,64 @@ export default function CallDock() {
         </p>
       )}
     </div>
+  )
+}
+
+/**
+ * The two levels, standing still.
+ *
+ * What the timeline draws, for whoever asked their system to stop animating.
+ * The readings are taken here rather than in the dock, so a level arriving ten
+ * times a second leaves the call around it alone.
+ */
+function Levels({
+  isHeard,
+  isStarted,
+}: {
+  isHeard: boolean
+  isStarted: boolean
+}) {
+  const { micVolume } = useMicVolume()
+  const { speakerVolume } = useSpeakerVolume()
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <Meter label="You" value={isHeard ? decibelLevel(micVolume) : 0} />
+      {isStarted && (
+        <Meter
+          label="Assistant"
+          tone="voice"
+          value={decibelLevel(speakerVolume)}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * How long the last answers kept the caller waiting.
+ *
+ * The timeline already brackets each wait where it happened. This is the same
+ * reading settled into words, and it survives the audio scrolling away.
+ */
+function ReplyLatencyLine({ measures }: { measures: ReplyLatency[] }) {
+  const last = measures[measures.length - 1]
+  if (!last) return null
+
+  const average =
+    measures.reduce((total, measure) => total + measure.ms, 0) / measures.length
+
+  return (
+    <span className="text-xs text-faint">
+      Answered in{' '}
+      <span className="font-mono text-dim">{formatWait(last.ms)}</span>
+      {measures.length > 1 && (
+        <>
+          , <span className="font-mono text-dim">{formatWait(average)}</span> on
+          average over {measures.length} turns
+        </>
+      )}
+    </span>
   )
 }
 
