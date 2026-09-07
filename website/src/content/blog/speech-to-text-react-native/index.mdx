@@ -3,6 +3,7 @@ title: 'Speech to Text in React Native: The Options in 2026'
 h1: 'Speech to text in React Native: three ways to get a transcript'
 summary: 'The system recogniser, a model on the device, or streaming to a server. Three ways to transcribe voice in a React Native app, and what each one costs.'
 date: 2026-08-30
+update: 2026-09-07
 author: godefroy
 image: ./thumbnail.jpg
 keywords:
@@ -161,53 +162,28 @@ graph TD
 
 ### Transcribing on a Node server
 
-`MicdropServer` orchestrates transcription, an agent and a voice. Dictation needs only the transcription, so the server talks to the [STT interface](/docs/ai-integration/custom-integrations/custom-stt) directly. The protocol it has to honour holds three messages: the client announces `StartSpeaking`, sends binary audio, then announces `StopSpeaking`.
+`MicdropServer` runs the call and takes three AI components, of which only the speech to text is required. Leave the agent and the voice out and the call transcribes and stays quiet, which is the whole of a [dictation server](/docs/server/dictation).
 
 ```ts
-import { MicdropClientCommands, MicdropServerCommands } from '@micdrop/server'
 import { OpenaiSTT } from '@micdrop/openai'
-import { PassThrough } from 'stream'
+import { MicdropServer } from '@micdrop/server'
 import { WebSocketServer } from 'ws'
 
 const server = new WebSocketServer({ port: 8087, host: '0.0.0.0' })
 
 server.on('connection', (socket) => {
-  const stt = new OpenaiSTT({
-    apiKey: process.env.OPENAI_API_KEY || '',
-    language: 'en',
-  })
-  let speech: PassThrough | undefined
-
-  stt.on('Transcript', (transcript) => {
-    const message = { role: 'user' as const, content: transcript }
-    socket.send(`${MicdropServerCommands.Message} ${JSON.stringify(message)}`)
-    // No agent answers here, so tell the client to listen again
-    socket.send(MicdropServerCommands.SkipAnswer)
-  })
-
-  socket.on('message', (data: Buffer, isBinary: boolean) => {
-    if (isBinary) {
-      speech?.write(data)
-      return
-    }
-    const command = data.toString()
-    if (command === MicdropClientCommands.StartSpeaking) {
-      speech = new PassThrough()
-      stt.transcribe(speech)
-    } else if (command === MicdropClientCommands.StopSpeaking) {
-      speech?.end()
-      speech = undefined
-    }
-  })
-
-  socket.on('close', () => {
-    speech?.end()
-    stt.destroy()
+  new MicdropServer(socket, {
+    stt: new OpenaiSTT({
+      apiKey: process.env.OPENAI_API_KEY || '',
+      language: 'en',
+    }),
   })
 })
 ```
 
-One utterance is one stream. `stt.transcribe()` takes a readable, so the audio arrives as a `PassThrough` rather than a buffer and transcription starts on the first chunk. It emits `Transcript` once the provider has decided the sentence is done.
+That is the entire server. The [WebSocket protocol](/docs/server/protocol) is handled for you: the client announces the start of an utterance, streams the audio, announces the end, and each sentence comes back as a user message once the speech to text has settled it. With nothing to answer, the call goes straight back to listening, so the text grows at the pauses.
+
+One utterance is one stream. The audio reaches the transcription chunk by chunk rather than as a finished file, so the provider starts working before the user has stopped talking.
 
 Swapping the provider means changing the constructor, since every integration implements the same `STT` interface. `OpenaiSTT` sends the audio to OpenAI's realtime transcription endpoint, and [`GladiaSTT`](/docs/ai-integration/provided-integrations/gladia) or any other [STT integration](/docs/ai-integration) takes its place.
 
@@ -261,7 +237,7 @@ export default function Dictation() {
 
 ### Turning dictation into a conversation
 
-Writing the protocol by hand is worth it for a transcript alone. Once you want an agent and a voice too, `MicdropServer` takes the protocol over, so the conversational server is shorter than the dictation one, eighteen lines against about forty. The phone code stays exactly as it is. The whole server becomes:
+The same server becomes a conversation by filling in the two arguments dictation left empty. The phone code stays exactly as it is:
 
 ```ts
 import { OpenaiAgent, OpenaiSTT, OpenaiTTS } from '@micdrop/openai'
