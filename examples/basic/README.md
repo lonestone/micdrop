@@ -1,4 +1,4 @@
-# @micdrop/basic
+# Micdrop example app: the smallest voice call in a browser
 
 The smallest possible [Micdrop](https://micdrop.dev) app: a browser page with one
 button, a Node WebSocket server, and OpenAI for the three AI steps (agent,

@@ -14,7 +14,7 @@ machine. The weights are downloaded on first use and shared by every call.
 npm install @micdrop/whisper
 ```
 
-## Usage
+## Usage with MicdropServer
 
 ```typescript
 import { WhisperSTT } from '@micdrop/whisper'
@@ -31,6 +31,33 @@ new MicdropServer(socket, {
   // ... other options
 })
 ```
+
+## Usage without MicdropServer
+
+```typescript
+import { WhisperSTT } from '@micdrop/whisper'
+import { createReadStream } from 'fs'
+
+const stt = new WhisperSTT({
+  model: 'base',
+  language: 'en',
+})
+
+stt.on('Transcript', (text) => console.log('Transcript:', text))
+stt.on('Failed', (chunks) => console.error('Failed:', chunks.length, 'chunks'))
+
+// Audio is raw PCM, 16 bits, 16 kHz, mono
+stt.transcribe(createReadStream('speech.pcm'))
+```
+
+## Events
+
+| Event        | Payload    | Description                                                                    |
+| ------------ | ---------- | ------------------------------------------------------------------------------ |
+| `Transcript` | `string`   | Transcription of one utterance. The text is empty when nothing was recognized. |
+| `Failed`     | `Buffer[]` | Transcription gave up after its retries, with the audio chunks left pending.   |
+
+See the [STT interface](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-stt) for the full contract.
 
 ## Picking a model
 

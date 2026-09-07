@@ -18,7 +18,7 @@ the English rules. Use [@micdrop/piper](https://micdrop.dev/docs/ai-integration/
 npm install @micdrop/kokoro
 ```
 
-## Usage
+## Usage with MicdropServer
 
 ```typescript
 import { KokoroTTS } from '@micdrop/kokoro'
@@ -34,6 +34,32 @@ new MicdropServer(socket, {
   // ... other options
 })
 ```
+
+## Usage without MicdropServer
+
+```typescript
+import { KokoroTTS } from '@micdrop/kokoro'
+import { Readable } from 'stream'
+
+const tts = new KokoroTTS({
+  voice: 'britishFemale',
+})
+
+// Audio is raw PCM, 16 bits, 16 kHz, mono
+tts.on('Audio', (chunk) => console.log('Audio:', chunk.length, 'bytes'))
+tts.on('Failed', (texts) => console.error('Failed:', texts))
+
+tts.speak(Readable.from(['Hello! ', 'What can I do for you?']))
+```
+
+## Events
+
+| Event    | Payload    | Description                                                              |
+| -------- | ---------- | ------------------------------------------------------------------------ |
+| `Audio`  | `Buffer`   | A chunk of audio, PCM 16 bits, 16 kHz, mono, ready to be played.         |
+| `Failed` | `string[]` | Synthesis gave up after its retries, with the text that stayed unspoken. |
+
+See the [TTS interface](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-tts) for the full contract.
 
 ## Documentation
 

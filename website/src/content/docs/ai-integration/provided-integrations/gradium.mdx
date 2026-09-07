@@ -18,7 +18,7 @@ npm install @micdrop/gradium
 
 ## Gradium STT (Speech-to-Text)
 
-### Usage
+### Usage with MicdropServer
 
 ```typescript
 import { GradiumSTT } from '@micdrop/gradium'
@@ -38,6 +38,33 @@ new MicdropServer(socket, {
   // ... other options
 })
 ```
+
+### Usage without MicdropServer
+
+```typescript
+import { GradiumSTT } from '@micdrop/gradium'
+import { createReadStream } from 'fs'
+
+const stt = new GradiumSTT({
+  apiKey: process.env.GRADIUM_API_KEY || '',
+  language: 'en',
+})
+
+stt.on('Transcript', (text) => console.log('Transcript:', text))
+stt.on('Failed', (chunks) => console.error('Failed:', chunks.length, 'chunks'))
+
+// Audio is raw PCM, 16 bits, 16 kHz, mono
+stt.transcribe(createReadStream('speech.pcm'))
+```
+
+### Events
+
+| Event        | Payload    | Description                                                                     |
+| ------------ | ---------- | ------------------------------------------------------------------------------- |
+| `Transcript` | `string`   | Transcription of one utterance. The text is empty when nothing was recognized.   |
+| `Failed`     | `Buffer[]` | Transcription gave up after its retries, with the audio chunks left pending.     |
+
+See the [STT interface](../custom-integrations/custom-stt) for the full contract.
 
 ### Options
 
@@ -71,7 +98,7 @@ const stt = new GradiumSTT({
 
 ## Gradium TTS (Text-to-Speech)
 
-### Usage
+### Usage with MicdropServer
 
 ```typescript
 import { GradiumTTS } from '@micdrop/gradium'
@@ -91,6 +118,33 @@ new MicdropServer(socket, {
   // ... other options
 })
 ```
+
+### Usage without MicdropServer
+
+```typescript
+import { GradiumTTS } from '@micdrop/gradium'
+import { Readable } from 'stream'
+
+const tts = new GradiumTTS({
+  apiKey: process.env.GRADIUM_API_KEY || '',
+  voiceId: 'YTpq7expH9539ERJ',
+})
+
+// Audio is raw PCM, 16 bits, 16 kHz, mono
+tts.on('Audio', (chunk) => console.log('Audio:', chunk.length, 'bytes'))
+tts.on('Failed', (texts) => console.error('Failed:', texts))
+
+tts.speak(Readable.from(['Hello! ', 'What can I do for you?']))
+```
+
+### Events
+
+| Event    | Payload    | Description                                                              |
+| -------- | ---------- | ------------------------------------------------------------------------ |
+| `Audio`  | `Buffer`   | A chunk of audio, PCM 16 bits, 16 kHz, mono, ready to be played.          |
+| `Failed` | `string[]` | Synthesis gave up after its retries, with the text that stayed unspoken.  |
+
+See the [TTS interface](../custom-integrations/custom-tts) for the full contract.
 
 ### Options
 

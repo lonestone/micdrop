@@ -1,4 +1,4 @@
-# @micdrop/advanced
+# Micdrop example app: full voice call with every provider
 
 The full featured demo of [Micdrop](../../README.md), client and server in one
 folder. Every provider the project ships with is wired in, and the call is

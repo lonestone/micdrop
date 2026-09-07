@@ -12,7 +12,7 @@ npm install @micdrop/elevenlabs
 
 ## ElevenLabs TTS (Text-to-Speech)
 
-### Usage
+### Usage with MicdropServer
 
 ```typescript
 import { ElevenLabsTTS } from '@micdrop/elevenlabs'
@@ -36,6 +36,33 @@ new MicdropServer(socket, {
   // ... other options
 })
 ```
+
+### Usage without MicdropServer
+
+```typescript
+import { ElevenLabsTTS } from '@micdrop/elevenlabs'
+import { Readable } from 'stream'
+
+const tts = new ElevenLabsTTS({
+  apiKey: process.env.ELEVENLABS_API_KEY || '',
+  voiceId: '21m00Tcm4TlvDq8ikWAM',
+})
+
+// Audio is raw PCM, 16 bits, 16 kHz, mono
+tts.on('Audio', (chunk) => console.log('Audio:', chunk.length, 'bytes'))
+tts.on('Failed', (texts) => console.error('Failed:', texts))
+
+tts.speak(Readable.from(['Hello! ', 'What can I do for you?']))
+```
+
+### Events
+
+| Event    | Payload    | Description                                                              |
+| -------- | ---------- | ------------------------------------------------------------------------ |
+| `Audio`  | `Buffer`   | A chunk of audio, PCM 16 bits, 16 kHz, mono, ready to be played.         |
+| `Failed` | `string[]` | Synthesis gave up after its retries, with the text that stayed unspoken. |
+
+See the [TTS interface](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-tts) for the full contract.
 
 ## Documentation
 

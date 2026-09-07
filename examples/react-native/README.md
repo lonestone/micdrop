@@ -1,4 +1,4 @@
-# @micdrop/react-native-example
+# Micdrop example app: voice call on iOS and Android
 
 A [Micdrop](https://micdrop.dev) voice call on a phone: one screen with a call
 button, the conversation, two level meters, and the mute, pause and speaker

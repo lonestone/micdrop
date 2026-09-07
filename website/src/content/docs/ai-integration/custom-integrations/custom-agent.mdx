@@ -77,11 +77,12 @@ export interface AgentOptions {
 }
 
 export interface AgentEvents {
-  Message: [MicdropConversationMessage]
+  Message: [MicdropConversationItem]
   CancelLastUserMessage: []
   SkipAnswer: []
   EndCall: []
   ToolCall: [MicdropToolCall]
+  Failed: []
 }
 
 export interface MicdropConversationMessage {
@@ -353,11 +354,23 @@ The Agent emits the following events:
 
 ### `Message`
 
-Emitted when a new message is added to the conversation.
+Emitted when a message, a tool call or a tool result is added to the
+conversation.
 
 ```typescript
-agent.on('Message', (message: MicdropConversationMessage) => {
-  console.log(`New ${message.role} message: ${message.content}`)
+agent.on('Message', (message: MicdropConversationItem) => {
+  console.log('New conversation item:', message)
+})
+```
+
+### `ToolCall`
+
+Emitted when a tool declared with `emitOutput` has run, with its parameters and
+its output.
+
+```typescript
+agent.on('ToolCall', (toolCall: MicdropToolCall) => {
+  console.log(`Tool ${toolCall.name} returned`, toolCall.output)
 })
 ```
 
@@ -388,6 +401,18 @@ Emitted when the agent determines the call should end.
 ```typescript
 agent.on('EndCall', () => {
   console.log('Call should end')
+})
+```
+
+### `Failed`
+
+Emitted when the agent gives up generating an answer, for example after
+exhausting its retries. [FallbackAgent](../fallback-strategies/agent-fallback)
+listens to it to switch to the next agent.
+
+```typescript
+agent.on('Failed', () => {
+  console.error('Agent failed to answer')
 })
 ```
 

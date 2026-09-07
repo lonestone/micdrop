@@ -34,7 +34,7 @@ The archive weighs 98 MB and takes 190 MB on disk. A full precision archive,
 `sherpa-onnx-pocket-tts-2026-01-26.tar.bz2`, exists next to it and is read the
 same way.
 
-## Usage
+## Usage with MicdropServer
 
 ```typescript
 import { PocketTTS } from '@micdrop/pocket-tts'
@@ -51,6 +51,33 @@ new MicdropServer(socket, {
   // ... other options
 })
 ```
+
+## Usage without MicdropServer
+
+```typescript
+import { PocketTTS } from '@micdrop/pocket-tts'
+import { Readable } from 'stream'
+
+const tts = new PocketTTS({
+  modelDir: './sherpa-onnx-pocket-tts-int8-2026-01-26',
+  voice: 'bria',
+})
+
+// Audio is raw PCM, 16 bits, 16 kHz, mono
+tts.on('Audio', (chunk) => console.log('Audio:', chunk.length, 'bytes'))
+tts.on('Failed', (texts) => console.error('Failed:', texts))
+
+tts.speak(Readable.from(['Hello! ', 'What can I do for you?']))
+```
+
+## Events
+
+| Event    | Payload    | Description                                                              |
+| -------- | ---------- | ------------------------------------------------------------------------ |
+| `Audio`  | `Buffer`   | A chunk of audio, PCM 16 bits, 16 kHz, mono, ready to be played.         |
+| `Failed` | `string[]` | Synthesis gave up after its retries, with the text that stayed unspoken. |
+
+See the [TTS interface](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-tts) for the full contract.
 
 ## Voices
 

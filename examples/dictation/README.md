@@ -1,4 +1,4 @@
-# @micdrop/dictation
+# Micdrop example app: live dictation, without agent and voice
 
 A [Micdrop](https://micdrop.dev) call with ears only: no agent, no voice, just a
 big text area that fills up as you speak.

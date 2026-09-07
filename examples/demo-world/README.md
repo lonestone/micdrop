@@ -1,4 +1,4 @@
-# Une planète qui en fait trop
+# Micdrop example app : une planète qui en fait trop
 
 Une démo immersive de [Micdrop](../../README.md) : une planète nouvelle-née
 écoute une voix, prend tout au premier degré, et s'arrête toujours trop tard.

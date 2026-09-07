@@ -12,7 +12,7 @@ npm install @micdrop/openai
 
 ## OpenAI Agent
 
-### Usage
+### Usage with MicdropServer
 
 ```typescript
 import { OpenaiAgent } from '@micdrop/openai'
@@ -42,9 +42,40 @@ new MicdropServer(socket, {
 })
 ```
 
+### Usage without MicdropServer
+
+```typescript
+import { OpenaiAgent } from '@micdrop/openai'
+
+const agent = new OpenaiAgent({
+  apiKey: process.env.OPENAI_API_KEY || '',
+  systemPrompt: 'You are a helpful assistant',
+})
+
+agent.on('Message', (message) => console.log('Message:', message))
+
+agent.addUserMessage('Hello, what can you do?')
+
+// The answer is a text stream, written as the model generates it
+agent.answer().on('data', (chunk) => process.stdout.write(chunk))
+```
+
+### Events
+
+| Event                   | Payload                   | Description                                                             |
+| ----------------------- | ------------------------- | ----------------------------------------------------------------------- |
+| `Message`               | `MicdropConversationItem` | A message, a tool call or a tool result was added to the conversation.  |
+| `ToolCall`              | `MicdropToolCall`         | A tool declared with `emitOutput` ran, with its parameters and output.  |
+| `CancelLastUserMessage` | none                      | The last user message was dropped because it carried no intent.         |
+| `SkipAnswer`            | none                      | The agent stays silent and waits for the user to finish their sentence. |
+| `EndCall`               | none                      | The agent decided that the call is over.                                |
+| `Failed`                | none                      | The agent gave up generating an answer after its retries.               |
+
+See the [Agent interface](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-agent) for the full contract.
+
 ## OpenAI STT (Speech-to-Text)
 
-### Usage
+### Usage with MicdropServer
 
 ```typescript
 import { OpenaiSTT } from '@micdrop/openai'
@@ -63,9 +94,36 @@ new MicdropServer(socket, {
 })
 ```
 
+### Usage without MicdropServer
+
+```typescript
+import { OpenaiSTT } from '@micdrop/openai'
+import { createReadStream } from 'fs'
+
+const stt = new OpenaiSTT({
+  apiKey: process.env.OPENAI_API_KEY || '',
+  language: 'en',
+})
+
+stt.on('Transcript', (text) => console.log('Transcript:', text))
+stt.on('Failed', (chunks) => console.error('Failed:', chunks.length, 'chunks'))
+
+// Audio is raw PCM, 16 bits, 16 kHz, mono
+stt.transcribe(createReadStream('speech.pcm'))
+```
+
+### Events
+
+| Event        | Payload    | Description                                                                    |
+| ------------ | ---------- | ------------------------------------------------------------------------------ |
+| `Transcript` | `string`   | Transcription of one utterance. The text is empty when nothing was recognized. |
+| `Failed`     | `Buffer[]` | Transcription gave up after its retries, with the audio chunks left pending.   |
+
+See the [STT interface](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-stt) for the full contract.
+
 ## OpenAI TTS (Text-to-Speech)
 
-### Usage
+### Usage with MicdropServer
 
 ```typescript
 import { OpenaiTTS } from '@micdrop/openai'
@@ -89,6 +147,33 @@ new MicdropServer(socket, {
   // ... other options
 })
 ```
+
+### Usage without MicdropServer
+
+```typescript
+import { OpenaiTTS } from '@micdrop/openai'
+import { Readable } from 'stream'
+
+const tts = new OpenaiTTS({
+  apiKey: process.env.OPENAI_API_KEY || '',
+  voice: 'alloy',
+})
+
+// Audio is raw PCM, 16 bits, 16 kHz, mono
+tts.on('Audio', (chunk) => console.log('Audio:', chunk.length, 'bytes'))
+tts.on('Failed', (texts) => console.error('Failed:', texts))
+
+tts.speak(Readable.from(['Hello! ', 'What can I do for you?']))
+```
+
+### Events
+
+| Event    | Payload    | Description                                                              |
+| -------- | ---------- | ------------------------------------------------------------------------ |
+| `Audio`  | `Buffer`   | A chunk of audio, PCM 16 bits, 16 kHz, mono, ready to be played.         |
+| `Failed` | `string[]` | Synthesis gave up after its retries, with the text that stayed unspoken. |
+
+See the [TTS interface](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-tts) for the full contract.
 
 > **Language**: OpenAI's speech API has no language parameter, the voice follows the language of the input text. To influence the spoken language or accent, use `instructions` (e.g. `'Speak in French'`) with the `gpt-4o-mini-tts` model.
 

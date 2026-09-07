@@ -18,7 +18,7 @@ npm install @micdrop/cartesia
 
 ## Cartesia TTS (Text-to-Speech)
 
-### Usage
+### Usage with MicdropServer
 
 ```typescript
 import { CartesiaTTS } from '@micdrop/cartesia'
@@ -38,6 +38,34 @@ new MicdropServer(socket, {
   // ... other options
 })
 ```
+
+### Usage without MicdropServer
+
+```typescript
+import { CartesiaTTS } from '@micdrop/cartesia'
+import { Readable } from 'stream'
+
+const tts = new CartesiaTTS({
+  apiKey: process.env.CARTESIA_API_KEY || '',
+  modelId: 'sonic-turbo',
+  voiceId: 'a0e99841-438c-4a64-b679-ae501e7d6091',
+})
+
+// Audio is raw PCM, 16 bits, 16 kHz, mono
+tts.on('Audio', (chunk) => console.log('Audio:', chunk.length, 'bytes'))
+tts.on('Failed', (texts) => console.error('Failed:', texts))
+
+tts.speak(Readable.from(['Hello! ', 'What can I do for you?']))
+```
+
+### Events
+
+| Event    | Payload    | Description                                                              |
+| -------- | ---------- | ------------------------------------------------------------------------ |
+| `Audio`  | `Buffer`   | A chunk of audio, PCM 16 bits, 16 kHz, mono, ready to be played.          |
+| `Failed` | `string[]` | Synthesis gave up after its retries, with the text that stayed unspoken.  |
+
+See the [TTS interface](../custom-integrations/custom-tts) for the full contract.
 
 ### Options
 

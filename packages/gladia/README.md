@@ -10,7 +10,7 @@ Gladia implementation for [@micdrop/server](https://micdrop.dev/docs/server).
 npm install @micdrop/gladia
 ```
 
-## Usage
+## Usage with MicdropServer
 
 ```typescript
 import { GladiaSTT } from '@micdrop/gladia'
@@ -26,6 +26,32 @@ new MicdropServer(socket, {
   // ... other options
 })
 ```
+
+## Usage without MicdropServer
+
+```typescript
+import { GladiaSTT } from '@micdrop/gladia'
+import { createReadStream } from 'fs'
+
+const stt = new GladiaSTT({
+  apiKey: process.env.GLADIA_API_KEY || '',
+})
+
+stt.on('Transcript', (text) => console.log('Transcript:', text))
+stt.on('Failed', (chunks) => console.error('Failed:', chunks.length, 'chunks'))
+
+// Audio is raw PCM, 16 bits, 16 kHz, mono
+stt.transcribe(createReadStream('speech.pcm'))
+```
+
+## Events
+
+| Event        | Payload    | Description                                                                    |
+| ------------ | ---------- | ------------------------------------------------------------------------------ |
+| `Transcript` | `string`   | Transcription of one utterance. The text is empty when nothing was recognized. |
+| `Failed`     | `Buffer[]` | Transcription gave up after its retries, with the audio chunks left pending.   |
+
+See the [STT interface](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-stt) for the full contract.
 
 ## Documentation
 

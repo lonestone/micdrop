@@ -20,7 +20,7 @@ npm install @ai-sdk/openai
 
 ## AI SDK Agent
 
-### Usage
+### Usage with MicdropServer
 
 ```typescript
 import { AiSdkAgent } from '@micdrop/ai-sdk'
@@ -49,6 +49,38 @@ new MicdropServer(socket, {
   // ... other options
 })
 ```
+
+### Usage without MicdropServer
+
+```typescript
+import { AiSdkAgent } from '@micdrop/ai-sdk'
+import { openai } from '@ai-sdk/openai'
+
+const agent = new AiSdkAgent({
+  model: openai('gpt-4o'),
+  systemPrompt: 'You are a helpful assistant',
+})
+
+agent.on('Message', (message) => console.log('Message:', message))
+
+agent.addUserMessage('Hello, what can you do?')
+
+// The answer is a text stream, written as the model generates it
+agent.answer().on('data', (chunk) => process.stdout.write(chunk))
+```
+
+### Events
+
+| Event                   | Payload                   | Description                                                             |
+| ----------------------- | ------------------------- | ----------------------------------------------------------------------- |
+| `Message`               | `MicdropConversationItem` | A message, a tool call or a tool result was added to the conversation.  |
+| `ToolCall`              | `MicdropToolCall`         | A tool declared with `emitOutput` ran, with its parameters and output.  |
+| `CancelLastUserMessage` | none                      | The last user message was dropped because it carried no intent.         |
+| `SkipAnswer`            | none                      | The agent stays silent and waits for the user to finish their sentence. |
+| `EndCall`               | none                      | The agent decided that the call is over.                                |
+| `Failed`                | none                      | The agent gave up generating an answer after its retries.               |
+
+See the [Agent interface](https://micdrop.dev/docs/ai-integration/custom-integrations/custom-agent) for the full contract.
 
 ### Supported Providers
 
